@@ -1,0 +1,7 @@
+model_category,model_name,source,model_size,description,power_consumption,latency,accuracy_en,accuracy_zh,accuracy_es,accuracy_overall,test_date
+ASR,Model-A,Internal Benchmark Set A,1.2B,面向通用语音识别优化的轻量化模型，强调实时转写与端侧部署能力。,72.8,118.4,0.946,0.931,0.919,0.932,
+TTS,Model-B,Internal TTS Baseline,980M,面向语音合成的标准基线模型，兼顾音色稳定性与时延表现。,79.3,126.7,0.938,0.926,0.911,0.925,
+Translation,Model-C,Translation Eval Pack,1.6B,多语言翻译模型，强调中英西班牙语三语互译的准确率与吞吐。,68.5,109.2,0.952,0.936,0.924,0.937,
+VoicecallTranslation Solution,Model-D,Voicecall Solution Suite,2.1B,实时通话翻译方案模型，针对语音流式处理和链路稳定性做过优化。,83.6,131.8,0.929,0.917,0.906,0.917,
+ASR,Model-E,ASR Robustness Set,1.4B,ASR 增强模型，重点优化复杂噪声场景下的识别鲁棒性。,75.1,121.3,0.943,0.928,0.914,0.928,
+Translation,Model-F,Global Translation Benchmark v2,1.9B,新一代多语言翻译模型，强化长句语义保持与跨领域术语一致性。,70.2,112.7,0.958,0.941,0.929,0.943,
