@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text, ForeignKey, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -9,6 +9,7 @@ class TestProgress(Base):
     id = Column(Integer, primary_key=True, index=True)
     test_name = Column(String, index=True)
     model_name = Column(String, index=True)  # 功能描述，简述FR功能
+    fr_number = Column(String, default="", index=True)  # FR号码，用于 issue 标题追踪
     description = Column(Text, default="")  # 功能的具体描述
     config_method = Column(Text, default="")  # 配置方式
     status = Column(String)  # pending, running, completed, failed
@@ -17,12 +18,15 @@ class TestProgress(Base):
     l0_total_cases = Column(Integer, default=0)
     l0_passed_cases = Column(Integer, default=0)
     l0_failed_cases = Column(Integer, default=0)
+    l0_due_date = Column(Date, nullable=True)
     l2_total_cases = Column(Integer, default=0)
     l2_passed_cases = Column(Integer, default=0)
     l2_failed_cases = Column(Integer, default=0)
+    l2_due_date = Column(Date, nullable=True)
     l4_total_cases = Column(Integer, default=0)
     l4_passed_cases = Column(Integer, default=0)
     l4_failed_cases = Column(Integer, default=0)
+    l4_due_date = Column(Date, nullable=True)
     # 总计（可冗余存储便于查询，也可从各阶段求和）
     total_cases = Column(Integer, default=0)
     passed_cases = Column(Integer, default=0)

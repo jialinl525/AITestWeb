@@ -89,9 +89,20 @@
         </div>
       </template>
 
-      <el-table :data="testProgressList" v-loading="loading" stripe>
+      <el-table :data="testProgressList" v-loading="loading" stripe :row-class-name="getTableRowClassName">
+        <el-table-column prop="fr_number" label="FR号码" width="130" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span>{{ row.fr_number || '-' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="test_name" label="测试名称" width="180" show-overflow-tooltip />
-        <el-table-column prop="model_name" label="功能描述" min-width="160" show-overflow-tooltip />
+        <el-table-column label="风险" width="100">
+          <template #default="{ row }">
+            <el-tag :type="getRiskTagType(row)" size="small">
+              {{ getRiskText(row) }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)" size="small">
@@ -99,36 +110,51 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="L0" width="190">
+        <el-table-column label="L0" width="220">
           <template #default="{ row }">
-            <div class="case-stats" :title="`Pass ${row.l0_passed_cases} / Fail ${getStageFailed(row, 'l0')} / Total ${row.l0_total_cases}`">
-              <span class="pass-count">{{ row.l0_passed_cases }}</span>
-              <span class="sep">/</span>
-              <span class="fail-count">{{ getStageFailed(row, 'l0') }}</span>
-              <span class="sep">/</span>
-              <span class="total-count">{{ row.l0_total_cases }}</span>
+            <div class="case-stats-wrap">
+              <div class="case-stats" :title="`Pass ${row.l0_passed_cases} / Fail ${getStageFailed(row, 'l0')} / Total ${row.l0_total_cases}`">
+                <span class="pass-count">{{ row.l0_passed_cases }}</span>
+                <span class="sep">/</span>
+                <span class="fail-count">{{ getStageFailed(row, 'l0') }}</span>
+                <span class="sep">/</span>
+                <span class="total-count">{{ row.l0_total_cases }}</span>
+              </div>
+              <div class="due-date-text" :class="`due-date-text--${getStageDeadlineLevel(row, 'l0')}`">
+                完成日期: {{ formatDueDate(row.l0_due_date) }}
+              </div>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="L2" width="190">
+        <el-table-column label="L2" width="220">
           <template #default="{ row }">
-            <div class="case-stats" :title="`Pass ${row.l2_passed_cases} / Fail ${getStageFailed(row, 'l2')} / Total ${row.l2_total_cases}`">
-              <span class="pass-count">{{ row.l2_passed_cases }}</span>
-              <span class="sep">/</span>
-              <span class="fail-count">{{ getStageFailed(row, 'l2') }}</span>
-              <span class="sep">/</span>
-              <span class="total-count">{{ row.l2_total_cases }}</span>
+            <div class="case-stats-wrap">
+              <div class="case-stats" :title="`Pass ${row.l2_passed_cases} / Fail ${getStageFailed(row, 'l2')} / Total ${row.l2_total_cases}`">
+                <span class="pass-count">{{ row.l2_passed_cases }}</span>
+                <span class="sep">/</span>
+                <span class="fail-count">{{ getStageFailed(row, 'l2') }}</span>
+                <span class="sep">/</span>
+                <span class="total-count">{{ row.l2_total_cases }}</span>
+              </div>
+              <div class="due-date-text" :class="`due-date-text--${getStageDeadlineLevel(row, 'l2')}`">
+                完成日期: {{ formatDueDate(row.l2_due_date) }}
+              </div>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="L4" width="190">
+        <el-table-column label="L4" width="220">
           <template #default="{ row }">
-            <div class="case-stats" :title="`Pass ${row.l4_passed_cases} / Fail ${getStageFailed(row, 'l4')} / Total ${row.l4_total_cases}`">
-              <span class="pass-count">{{ row.l4_passed_cases }}</span>
-              <span class="sep">/</span>
-              <span class="fail-count">{{ getStageFailed(row, 'l4') }}</span>
-              <span class="sep">/</span>
-              <span class="total-count">{{ row.l4_total_cases }}</span>
+            <div class="case-stats-wrap">
+              <div class="case-stats" :title="`Pass ${row.l4_passed_cases} / Fail ${getStageFailed(row, 'l4')} / Total ${row.l4_total_cases}`">
+                <span class="pass-count">{{ row.l4_passed_cases }}</span>
+                <span class="sep">/</span>
+                <span class="fail-count">{{ getStageFailed(row, 'l4') }}</span>
+                <span class="sep">/</span>
+                <span class="total-count">{{ row.l4_total_cases }}</span>
+              </div>
+              <div class="due-date-text" :class="`due-date-text--${getStageDeadlineLevel(row, 'l4')}`">
+                完成日期: {{ formatDueDate(row.l4_due_date) }}
+              </div>
             </div>
           </template>
         </el-table-column>
@@ -158,11 +184,6 @@
             <span :title="row.developers">{{ row.developers || '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="170">
-          <template #default="{ row }">
-            {{ formatDate(row.created_at) }}
-          </template>
-        </el-table-column>
         <el-table-column label="操作" width="220">
           <template #default="{ row }">
             <el-button size="small" @click="viewDetail(row.id)">查看详情</el-button>
@@ -180,6 +201,9 @@
       width="560px"
     >
       <el-form :model="testForm" label-width="120px">
+        <el-form-item label="FR号码">
+          <el-input v-model="testForm.fr_number" placeholder="例如：FR-2026-001" />
+        </el-form-item>
         <el-form-item label="测试名称">
           <el-input v-model="testForm.test_name" placeholder="请输入测试名称" />
         </el-form-item>
@@ -213,6 +237,15 @@
           <span class="form-divider">/</span>
           <el-input-number v-model="testForm.l0_total_cases" :min="0" size="small" style="width: 88px" />
         </el-form-item>
+        <el-form-item label="L0完成日期">
+          <el-date-picker
+            v-model="testForm.l0_due_date"
+            type="date"
+            value-format="YYYY-MM-DD"
+            placeholder="请选择L0完成日期"
+            style="width: 100%"
+          />
+        </el-form-item>
         <el-form-item label="L2 用例">
           <el-input-number v-model="testForm.l2_passed_cases" :min="0" size="small" style="width: 88px" />
           <span class="form-divider">/</span>
@@ -220,12 +253,30 @@
           <span class="form-divider">/</span>
           <el-input-number v-model="testForm.l2_total_cases" :min="0" size="small" style="width: 88px" />
         </el-form-item>
+        <el-form-item label="L2完成日期">
+          <el-date-picker
+            v-model="testForm.l2_due_date"
+            type="date"
+            value-format="YYYY-MM-DD"
+            placeholder="请选择L2完成日期"
+            style="width: 100%"
+          />
+        </el-form-item>
         <el-form-item label="L4 用例">
           <el-input-number v-model="testForm.l4_passed_cases" :min="0" size="small" style="width: 88px" />
           <span class="form-divider">/</span>
           <el-input-number v-model="testForm.l4_failed_cases" :min="0" size="small" style="width: 88px" />
           <span class="form-divider">/</span>
           <el-input-number v-model="testForm.l4_total_cases" :min="0" size="small" style="width: 88px" />
+        </el-form-item>
+        <el-form-item label="L4完成日期">
+          <el-date-picker
+            v-model="testForm.l4_due_date"
+            type="date"
+            value-format="YYYY-MM-DD"
+            placeholder="请选择L4完成日期"
+            style="width: 100%"
+          />
         </el-form-item>
         <el-form-item>
           <span class="form-helper">输入格式：Pass / Fail / Total（未测 = Total - Pass - Fail，不计入失败）</span>
@@ -255,22 +306,27 @@ const loading = ref(false)
 const testProgressList = ref([])
 const showCreateDialog = ref(false)
 const editingTest = ref(null)
+const DAYS_TO_WARNING = 3
 
 const testForm = ref({
   test_name: '',
   model_name: '',
+  fr_number: '',
   description: '',
   config_method: '',
   status: 'pending',
   l0_total_cases: 0,
   l0_passed_cases: 0,
   l0_failed_cases: 0,
+  l0_due_date: null,
   l2_total_cases: 0,
   l2_passed_cases: 0,
   l2_failed_cases: 0,
+  l2_due_date: null,
   l4_total_cases: 0,
   l4_passed_cases: 0,
   l4_failed_cases: 0,
+  l4_due_date: null,
   test_owners: '',
   developers: ''
 })
@@ -425,9 +481,72 @@ const getTotalFailed = (row) => {
   return Math.max(0, total - passed)
 }
 
+const parseDateOnly = (value) => {
+  if (!value) return null
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return null
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+const getStageRemaining = (row, stage) => {
+  const total = Number(row?.[`${stage}_total_cases`] ?? 0)
+  const passed = Number(row?.[`${stage}_passed_cases`] ?? 0)
+  const failed = Number(getStageFailed(row, stage))
+  return Math.max(0, total - passed - failed)
+}
+
+const getStageDeadlineLevel = (row, stage) => {
+  const dueDate = parseDateOnly(row?.[`${stage}_due_date`])
+  if (!dueDate) return 'normal'
+  if (getStageRemaining(row, stage) <= 0) return 'normal'
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const daysDiff = Math.floor((dueDate.getTime() - today.getTime()) / 86400000)
+  if (daysDiff < 0) return 'danger'
+  if (daysDiff <= DAYS_TO_WARNING) return 'warning'
+  return 'normal'
+}
+
+const getTaskRiskLevel = (row) => {
+  const levels = ['l0', 'l2', 'l4'].map(stage => getStageDeadlineLevel(row, stage))
+  if (levels.includes('danger')) return 'danger'
+  if (levels.includes('warning')) return 'warning'
+  return 'normal'
+}
+
+const getRiskText = (row) => {
+  const level = getTaskRiskLevel(row)
+  if (level === 'danger') return '超期'
+  if (level === 'warning') return '临期'
+  return '正常'
+}
+
+const getRiskTagType = (row) => {
+  const level = getTaskRiskLevel(row)
+  if (level === 'danger') return 'danger'
+  if (level === 'warning') return 'warning'
+  return 'success'
+}
+
+const getTableRowClassName = ({ row }) => {
+  const level = getTaskRiskLevel(row)
+  if (level === 'danger') return 'risk-row-danger'
+  if (level === 'warning') return 'risk-row-warning'
+  return ''
+}
+
 const formatDate = (dateString) => {
   if (!dateString) return ''
   return new Date(dateString).toLocaleString('zh-CN')
+}
+
+const formatDueDate = (dateString) => {
+  if (!dateString) return '-'
+  const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) return '-'
+  return date.toLocaleDateString('zh-CN')
 }
 
 const viewDetail = (testId) => {
@@ -443,18 +562,22 @@ const editTest = (test) => {
   testForm.value = {
     test_name: test.test_name,
     model_name: test.model_name,
+    fr_number: test.fr_number || '',
     description: test.description || '',
     config_method: test.config_method || '',
     status: test.status,
     l0_total_cases: test.l0_total_cases ?? 0,
     l0_passed_cases: test.l0_passed_cases ?? 0,
     l0_failed_cases: test.l0_failed_cases ?? 0,
+    l0_due_date: test.l0_due_date || null,
     l2_total_cases: test.l2_total_cases ?? 0,
     l2_passed_cases: test.l2_passed_cases ?? 0,
     l2_failed_cases: test.l2_failed_cases ?? 0,
+    l2_due_date: test.l2_due_date || null,
     l4_total_cases: test.l4_total_cases ?? 0,
     l4_passed_cases: test.l4_passed_cases ?? 0,
     l4_failed_cases: test.l4_failed_cases ?? 0,
+    l4_due_date: test.l4_due_date || null,
     test_owners: test.test_owners || '',
     developers: test.developers || ''
   }
@@ -475,18 +598,22 @@ const saveTest = async () => {
     testForm.value = {
       test_name: '',
       model_name: '',
+      fr_number: '',
       description: '',
       config_method: '',
       status: 'pending',
       l0_total_cases: 0,
       l0_passed_cases: 0,
       l0_failed_cases: 0,
+      l0_due_date: null,
       l2_total_cases: 0,
       l2_passed_cases: 0,
       l2_failed_cases: 0,
+      l2_due_date: null,
       l4_total_cases: 0,
       l4_passed_cases: 0,
       l4_failed_cases: 0,
+      l4_due_date: null,
       test_owners: '',
       developers: ''
     }
@@ -526,6 +653,25 @@ onMounted(() => {
   align-items: center;
   gap: 4px;
   font-weight: 600;
+}
+
+.case-stats-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.due-date-text {
+  font-size: 12px;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.due-date-text--warning {
+  color: #f59e0b;
+}
+
+.due-date-text--danger {
+  color: #ef4444;
 }
 
 .pass-count {
@@ -612,6 +758,14 @@ onMounted(() => {
   color: #f8fafc;
   font-size: 24px;
   font-weight: 700;
+}
+
+.test-progress-container :deep(.risk-row-warning > td.el-table__cell) {
+  background: rgba(245, 158, 11, 0.12) !important;
+}
+
+.test-progress-container :deep(.risk-row-danger > td.el-table__cell) {
+  background: rgba(239, 68, 68, 0.12) !important;
 }
 
 @media (max-width: 960px) {

@@ -8,17 +8,21 @@ import os
 DB_PATH = os.path.join(os.path.dirname(__file__), "test_management.db")
 
 NEW_COLUMNS = [
+    ("fr_number", "TEXT DEFAULT ''"),
     ("description", "TEXT DEFAULT ''"),
     ("config_method", "TEXT DEFAULT ''"),
     ("l0_total_cases", "INTEGER DEFAULT 0"),
     ("l0_passed_cases", "INTEGER DEFAULT 0"),
     ("l0_failed_cases", "INTEGER DEFAULT 0"),
+    ("l0_due_date", "DATE"),
     ("l2_total_cases", "INTEGER DEFAULT 0"),
     ("l2_passed_cases", "INTEGER DEFAULT 0"),
     ("l2_failed_cases", "INTEGER DEFAULT 0"),
+    ("l2_due_date", "DATE"),
     ("l4_total_cases", "INTEGER DEFAULT 0"),
     ("l4_passed_cases", "INTEGER DEFAULT 0"),
     ("l4_failed_cases", "INTEGER DEFAULT 0"),
+    ("l4_due_date", "DATE"),
     ("test_owners", "TEXT DEFAULT ''"),
     ("developers", "TEXT DEFAULT ''"),
 ]

@@ -96,13 +96,20 @@
               <div class="user-role">{{ getRoleLabel(userRole) }}</div>
             </div>
           </div>
-          <template v-if="userRole === 'viewer'">
-            <el-button size="small" type="primary" @click="showLoginDialog = true">登录管理端</el-button>
-          </template>
-          <template v-else>
-            <el-button size="small" @click="showPasswordDialog = true">修改密码</el-button>
-            <el-button size="small" @click="handleLogout">退出</el-button>
-          </template>
+          <div class="auth-actions">
+            <el-button
+              v-if="userRole === 'viewer'"
+              size="small"
+              class="auth-btn auth-btn--main"
+              @click="showLoginDialog = true"
+            >
+              登录
+            </el-button>
+            <template v-else>
+              <el-button size="small" class="auth-btn" @click="showPasswordDialog = true">修改密码</el-button>
+              <el-button size="small" class="auth-btn" @click="handleLogout">退出</el-button>
+            </template>
+          </div>
         </div>
       </el-header>
 
@@ -386,6 +393,42 @@ const handleLogout = () => {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.auth-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.auth-btn {
+  min-width: 76px;
+  border-radius: 10px;
+  border: 1px solid rgba(226, 232, 240, 0.78);
+  background: rgba(241, 245, 249, 0.92);
+  color: #0f172a !important;
+}
+
+.auth-btn:hover {
+  border-color: rgba(203, 213, 225, 1);
+  background: rgba(226, 232, 240, 0.96);
+  color: #0f172a !important;
+}
+
+.auth-btn :deep(span) {
+  color: inherit;
+}
+
+.auth-btn--main {
+  border-color: rgba(94, 234, 212, 0.5);
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.24), rgba(16, 185, 129, 0.26));
+  color: #ecfeff;
+}
+
+.auth-btn--main:hover {
+  border-color: rgba(34, 211, 238, 0.66);
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.34), rgba(16, 185, 129, 0.36));
 }
 
 .user-pill {

@@ -1,23 +1,27 @@
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional, List
 
 # 测试进度相关
 class TestProgressBase(BaseModel):
     test_name: str
     model_name: str  # 功能描述，简述FR功能
+    fr_number: str = ""  # FR号码，用于 issue 标题追踪
     description: str = ""  # 功能的具体描述
     config_method: str = ""  # 配置方式
     status: str
     l0_total_cases: int = 0
     l0_passed_cases: int = 0
     l0_failed_cases: int = 0
+    l0_due_date: Optional[date] = None
     l2_total_cases: int = 0
     l2_passed_cases: int = 0
     l2_failed_cases: int = 0
+    l2_due_date: Optional[date] = None
     l4_total_cases: int = 0
     l4_passed_cases: int = 0
     l4_failed_cases: int = 0
+    l4_due_date: Optional[date] = None
     test_owners: str = ""
     developers: str = ""
 

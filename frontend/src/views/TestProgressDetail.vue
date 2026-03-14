@@ -18,6 +18,7 @@
           <div>
             <h2>{{ testDetail.test_name }}</h2>
             <p class="detail-subtitle">{{ testDetail.model_name || '暂无功能描述' }}</p>
+            <p class="detail-subtitle">FR号码：{{ testDetail.fr_number || '-' }}</p>
           </div>
           <div class="inline-stats">
             <div class="glass-pill">
@@ -54,6 +55,7 @@
         </div>
 
         <div class="detail-people" v-if="testDetail.test_owners || testDetail.developers">
+          <span class="people-item"><strong>FR号码：</strong>{{ testDetail.fr_number || '-' }}</span>
           <span class="people-item"><strong>测试负责人：</strong>{{ testDetail.test_owners || '-' }}</span>
           <span class="people-item"><strong>开发人员：</strong>{{ testDetail.developers || '-' }}</span>
         </div>
@@ -70,6 +72,9 @@
           <el-descriptions :column="1" border class="detail-info">
             <el-descriptions-item label="功能描述（简述FR）">
               <div class="description-text">{{ testDetail.model_name || '-' }}</div>
+            </el-descriptions-item>
+            <el-descriptions-item label="FR号码">
+              <div class="description-text">{{ testDetail.fr_number || '-' }}</div>
             </el-descriptions-item>
             <el-descriptions-item label="功能具体描述">
               <div class="description-text">{{ testDetail.description || '-' }}</div>
@@ -102,6 +107,11 @@
                 <span class="total-count">{{ testDetail.l0_total_cases }}</span>
               </div>
             </el-descriptions-item>
+            <el-descriptions-item label="L0完成日期">
+              <span :class="`due-date-text due-date-text--${getStageDeadlineLevel(testDetail, 'l0')}`">
+                {{ formatDueDate(testDetail.l0_due_date) }}
+              </span>
+            </el-descriptions-item>
             <el-descriptions-item label="L2（Pass/Fail/Total)">
               <div class="case-stats">
                 <span class="pass-count">{{ testDetail.l2_passed_cases }}</span>
@@ -111,6 +121,11 @@
                 <span class="total-count">{{ testDetail.l2_total_cases }}</span>
               </div>
             </el-descriptions-item>
+            <el-descriptions-item label="L2完成日期">
+              <span :class="`due-date-text due-date-text--${getStageDeadlineLevel(testDetail, 'l2')}`">
+                {{ formatDueDate(testDetail.l2_due_date) }}
+              </span>
+            </el-descriptions-item>
             <el-descriptions-item label="L4（Pass/Fail/Total)">
               <div class="case-stats">
                 <span class="pass-count">{{ testDetail.l4_passed_cases }}</span>
@@ -119,6 +134,11 @@
                 <span class="sep">/</span>
                 <span class="total-count">{{ testDetail.l4_total_cases }}</span>
               </div>
+            </el-descriptions-item>
+            <el-descriptions-item label="L4完成日期">
+              <span :class="`due-date-text due-date-text--${getStageDeadlineLevel(testDetail, 'l4')}`">
+                {{ formatDueDate(testDetail.l4_due_date) }}
+              </span>
             </el-descriptions-item>
             <el-descriptions-item label="总计（Pass/Fail/Total)">
               <div class="case-stats">
@@ -184,6 +204,7 @@ const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const testDetail = ref(null)
+const DAYS_TO_WARNING = 3
 
 const loadDetail = async () => {
   const id = route.params.id
@@ -241,6 +262,34 @@ const getTotalFailed = (row) => {
   return Math.max(0, total - passed)
 }
 
+const parseDateOnly = (value) => {
+  if (!value) return null
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return null
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+const getStageRemaining = (row, stage) => {
+  const total = Number(row?.[`${stage}_total_cases`] ?? 0)
+  const passed = Number(row?.[`${stage}_passed_cases`] ?? 0)
+  const failed = Number(getStageFailed(row, stage))
+  return Math.max(0, total - passed - failed)
+}
+
+const getStageDeadlineLevel = (row, stage) => {
+  const dueDate = parseDateOnly(row?.[`${stage}_due_date`])
+  if (!dueDate) return 'normal'
+  if (getStageRemaining(row, stage) <= 0) return 'normal'
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const daysDiff = Math.floor((dueDate.getTime() - today.getTime()) / 86400000)
+  if (daysDiff < 0) return 'danger'
+  if (daysDiff <= DAYS_TO_WARNING) return 'warning'
+  return 'normal'
+}
+
 const getSeverityType = (severity) => {
   const map = { critical: 'danger', high: 'warning', medium: 'info', low: '' }
   return map[severity] || 'info'
@@ -259,6 +308,13 @@ const getBugStatusText = (status) => {
 const formatDate = (dateString) => {
   if (!dateString) return ''
   return new Date(dateString).toLocaleString('zh-CN')
+}
+
+const formatDueDate = (dateString) => {
+  if (!dateString) return '-'
+  const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) return '-'
+  return date.toLocaleDateString('zh-CN')
 }
 
 onMounted(() => loadDetail())
@@ -312,6 +368,20 @@ onMounted(() => loadDetail())
 
 .people-item {
   font-size: 14px;
+}
+
+.due-date-text {
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.due-date-text--warning {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.due-date-text--danger {
+  color: #ef4444;
+  font-weight: 600;
 }
 
 .detail-info {
