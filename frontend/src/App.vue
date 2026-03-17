@@ -3,14 +3,13 @@
     <el-aside width="248px" class="app-sidebar">
       <div class="sidebar-panel">
         <div class="sidebar-brand">
-          <div class="brand-mark">QA</div>
-          <div>
-            <div class="brand-title">测试管理驾驶舱</div>
-            <div class="brand-subtitle">质量进度、缺陷风险与模型表现统一观测</div>
+          <img :src="voiceAiLogo" alt="VoiceAI logo" class="brand-logo" />
+          <div class="brand-copy">
+            <div class="brand-subtitle">Test Management Dashboard</div>
           </div>
         </div>
 
-        <div class="sidebar-section-title">导航</div>
+        <div class="sidebar-section-title">Navigation</div>
         <el-menu
           :default-active="activeMenu"
           router
@@ -21,93 +20,103 @@
         >
           <el-menu-item index="/test-progress">
             <el-icon><Document /></el-icon>
-            <span>测试进度</span>
+            <span>FR Progress</span>
+          </el-menu-item>
+          <el-menu-item index="/work-tasks">
+            <el-icon><Document /></el-icon>
+            <span>Task</span>
           </el-menu-item>
           <el-menu-item index="/bugs">
             <el-icon><Warning /></el-icon>
-            <span>Bug追踪</span>
+            <span>CR Tracking</span>
+          </el-menu-item>
+          <el-menu-item index="/personnel">
+            <el-icon><UserFilled /></el-icon>
+            <span>Personnel</span>
           </el-menu-item>
           <el-menu-item index="/kpi">
             <el-icon><DataAnalysis /></el-icon>
-            <span>KPI表现</span>
+            <span>Model Ladder</span>
           </el-menu-item>
+
+
         </el-menu>
 
         <div class="sidebar-footer">
           <div class="glass-pill sidebar-pill">
             <span class="dot dot-green"></span>
-            当前权限：{{ getRoleLabel(userRole) }}
+            Current Role: {{ getRoleLabel(userRole) }} / {{ canEditTest ? 'Editable Test' : 'Read Only' }}
           </div>
           <div class="sidebar-mini-card">
-            <div class="sidebar-mini-card__label">工作台状态</div>
+            <div class="sidebar-mini-card__label">Workbench Status</div>
             <div class="sidebar-mini-card__value">Online</div>
-            <p>面向测试管理、问题追踪与模型评估的统一业务视图。</p>
+            <p>Unified business view for test management, issue tracking, and model evaluation.</p>
           </div>
         </div>
       </div>
     </el-aside>
 
-    <!-- 登录对话框 -->
-    <el-dialog v-model="showLoginDialog" title="登录" width="400px">
+    <!-- Login Dialog -->
+    <el-dialog v-model="showLoginDialog" title="Login" width="400px">
       <el-form :model="loginForm" label-width="80px">
-        <el-form-item label="用户名">
-          <el-input v-model="loginForm.username" placeholder="manager (管理员)" />
+        <el-form-item label="Username">
+          <el-input v-model="loginForm.username" placeholder="manager (Admin)" />
         </el-form-item>
-        <el-form-item label="密码">
-          <el-input v-model="loginForm.password" type="password" placeholder="默认 123456" show-password />
+        <el-form-item label="Password">
+          <el-input v-model="loginForm.password" type="password" placeholder="Default 123456" show-password />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showLoginDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleLogin">登录</el-button>
+        <el-button @click="showLoginDialog = false">Cancel</el-button>
+        <el-button type="primary" @click="handleLogin">Login</el-button>
       </template>
     </el-dialog>
 
-    <!-- 修改密码对话框 -->
-    <el-dialog v-model="showPasswordDialog" title="修改密码" width="400px">
+    <!-- Change Password Dialog -->
+    <el-dialog v-model="showPasswordDialog" title="Change Password" width="400px">
       <el-form :model="passwordForm" label-width="100px">
-        <el-form-item label="当前密码">
-          <el-input v-model="passwordForm.oldPassword" type="password" show-password placeholder="请输入当前密码" />
+        <el-form-item label="Current Password">
+          <el-input v-model="passwordForm.oldPassword" type="password" show-password placeholder="Please enter current password" />
         </el-form-item>
-        <el-form-item label="新密码">
-          <el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="请输入新密码" />
+        <el-form-item label="New Password">
+          <el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="Please enter a new password" />
         </el-form-item>
-        <el-form-item label="确认新密码">
-          <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" />
+        <el-form-item label="Confirm New Password">
+          <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="Please re-enter the new password" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showPasswordDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleChangePassword">确定</el-button>
+        <el-button @click="showPasswordDialog = false">Cancel</el-button>
+        <el-button type="primary" @click="handleChangePassword">Confirm</el-button>
       </template>
     </el-dialog>
 
     <el-container class="app-workspace">
       <el-header class="app-header">
         <div>
-          <div class="header-title">质量运营总览</div>
-          <div class="header-subtitle">以更清晰的层级快速洞察测试推进、缺陷状态与模型表现</div>
+          <div class="header-title">Quality Operations Overview</div>
+          <div class="header-subtitle">Get clear insight into test progress, defect status, and model performance</div>
         </div>
         <div class="auth-area">
           <div class="user-pill">
-            <span class="dot" :class="userRole === 'viewer' ? 'dot-gray' : 'dot-cyan'"></span>
+            <span class="dot" :class="canEditTest ? 'dot-cyan' : 'dot-gray'"></span>
             <div>
-              <div class="user-name">{{ userName || '访客模式' }}</div>
-              <div class="user-role">{{ getRoleLabel(userRole) }}</div>
+              <div class="user-name">{{ userName || 'Guest Mode' }}</div>
+              <div class="user-role">{{ getRoleLabel(userRole) }} / {{ canEditTest ? 'Can Edit Tests' : 'Read Only' }}</div>
             </div>
           </div>
           <div class="auth-actions">
             <el-button
-              v-if="userRole === 'viewer'"
+              v-if="!isLoggedIn"
               size="small"
               class="auth-btn auth-btn--main"
               @click="showLoginDialog = true"
             >
-              登录
+              Login
             </el-button>
             <template v-else>
-              <el-button size="small" class="auth-btn" @click="showPasswordDialog = true">修改密码</el-button>
-              <el-button size="small" class="auth-btn" @click="handleLogout">退出</el-button>
+              <el-button size="small" class="auth-btn" @click="showPasswordDialog = true">Change Password</el-button>
+              <el-button size="small" class="auth-btn" @click="handleLogout">Logout</el-button>
             </template>
           </div>
         </div>
@@ -121,10 +130,20 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { Document, Warning, DataAnalysis } from '@element-plus/icons-vue'
-import { userRole, userName, login, logout, changePassword, getUsers } from './stores/auth'
+import { Document, Warning, DataAnalysis, UserFilled } from '@element-plus/icons-vue'
+import voiceAiLogo from './assets/voiceai-logo.svg'
+import {
+  userRole,
+  userName,
+  canEditTest,
+  currentUsername,
+  login,
+  logout,
+  changePassword,
+  refreshCurrentUser
+} from './stores/auth'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
@@ -138,51 +157,56 @@ const activeMenu = computed(() => {
   if (p.startsWith('/test-progress')) return '/test-progress'
   if (p.startsWith('/bugs')) return '/bugs'
   if (p.startsWith('/kpi')) return '/kpi'
+  if (p.startsWith('/personnel')) return '/personnel'
+  if (p.startsWith('/work-tasks')) return '/work-tasks'
   return p
 })
 
+const isLoggedIn = computed(() => Boolean(currentUsername.value))
+
 const getRoleLabel = (role) => {
-  const map = { manager: '管理员', viewer: '查看者' }
+  const map = { manager: 'Manager', viewer: 'Viewer' }
   return map[role] || role
 }
 
-const handleLogin = () => {
-  const ok = login(loginForm.value.username, loginForm.value.password)
+const handleLogin = async () => {
+  const ok = await login(loginForm.value.username, loginForm.value.password)
   if (ok) {
     showLoginDialog.value = false
     loginForm.value = { username: 'manager', password: '123456' }
-    ElMessage.success('登录成功')
+    ElMessage.success('Login successful')
   } else {
-    ElMessage.error('用户名或密码错误')
+    ElMessage.error('Invalid username or password')
   }
 }
 
-const handleChangePassword = () => {
+const handleChangePassword = async () => {
   const { oldPassword, newPassword, confirmPassword } = passwordForm.value
   if (!newPassword || newPassword.length < 6) {
-    ElMessage.warning('新密码至少6位')
+    ElMessage.warning('New password must be at least 6 characters')
     return
   }
   if (newPassword !== confirmPassword) {
-    ElMessage.warning('两次输入的新密码不一致')
+    ElMessage.warning('The two new passwords do not match')
     return
   }
-  const users = getUsers()
-  const key = localStorage.getItem('auth_username') || ''
-  const currentPwd = users[key]?.password ?? '123456'
-  if (oldPassword !== currentPwd) {
-    ElMessage.error('当前密码错误')
-    return
+  try {
+    await changePassword(oldPassword, newPassword)
+    showPasswordDialog.value = false
+    passwordForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
+    ElMessage.success('Password changed successfully')
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.detail || 'Failed to change password')
   }
-  changePassword(newPassword)
-  showPasswordDialog.value = false
-  passwordForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
-  ElMessage.success('密码修改成功')
 }
 
 const handleLogout = () => {
   logout()
 }
+
+onMounted(() => {
+  refreshCurrentUser()
+})
 </script>
 
 <style>
@@ -202,17 +226,20 @@ const handleLogout = () => {
 .app-sidebar {
   flex: 0 0 248px;
   padding: 18px;
-  border-right: 1px solid rgba(148, 163, 184, 0.08);
+  border-right: none;
   background: rgba(2, 8, 23, 0.34);
   backdrop-filter: blur(14px);
+  overflow: hidden;
 }
 
 .sidebar-panel {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 22px;
   height: 100%;
-  min-height: calc(100vh - 36px);
+  min-height: 100%;
+  width: 100%;
   padding: 18px;
   border: 1px solid rgba(148, 163, 184, 0.14);
   border-radius: 28px;
@@ -220,14 +247,35 @@ const handleLogout = () => {
   box-shadow: 0 24px 60px rgba(2, 8, 23, 0.32);
 }
 
+.sidebar-panel > * {
+  width: 100%;
+}
+
 .sidebar-brand {
   display: flex;
-  gap: 14px;
+  flex-direction: column;
+  gap: 10px;
   align-items: center;
+  text-align: center;
   padding: 14px;
   border: 1px solid rgba(148, 163, 184, 0.14);
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.04);
+}
+
+.brand-logo {
+  display: block;
+  width: 100%;
+  max-width: 188px;
+  height: auto;
+  margin: 0 auto;
+  filter: drop-shadow(0 8px 24px rgba(30, 128, 189, 0.26));
+}
+
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .sidebar-section-title {
@@ -236,45 +284,40 @@ const handleLogout = () => {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.18em;
+  text-align: left;
   text-transform: uppercase;
 }
 
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #22d3ee, #818cf8);
-  color: #fff;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-}
-
 .brand-title {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 700;
-  color: #f8fafc;
+  color: #d8f3ff;
+  letter-spacing: 0.03em;
 }
 
 .brand-subtitle {
   margin-top: 4px;
-  color: rgba(226, 232, 240, 0.68);
+  color: rgba(186, 228, 249, 0.75);
   font-size: 12px;
   line-height: 1.5;
 }
 
 .sidebar-menu {
   flex: 1;
-  border-right: none;
+  border-right: none !important;
   background: transparent;
   overflow: hidden;
+}
+
+.sidebar-menu.el-menu {
+  border-right: none !important;
 }
 
 .sidebar-menu .el-menu-item {
   position: relative;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 12px;
   height: 52px;
   margin-bottom: 10px;
@@ -332,7 +375,8 @@ const handleLogout = () => {
 }
 
 .sidebar-pill {
-  width: fit-content;
+  width: 100%;
+  justify-content: center;
 }
 
 .sidebar-mini-card {
@@ -340,6 +384,7 @@ const handleLogout = () => {
   border-radius: 20px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03));
   border: 1px solid rgba(148, 163, 184, 0.1);
+  text-align: center;
 }
 
 .sidebar-mini-card__label {

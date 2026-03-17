@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 
-# 使用SQLite数据库（可以后续改为PostgreSQL）
+# Use SQLite by default. This can be switched to PostgreSQL later.
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test_management.db")
 
 engine = create_engine(

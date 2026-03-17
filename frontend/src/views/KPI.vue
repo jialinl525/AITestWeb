@@ -3,12 +3,12 @@
     <section class="page-hero">
       <div class="page-hero__content">
         <div class="page-hero__eyebrow">Model Performance</div>
-        <h2 class="page-hero__title">KPI 智能分析看板</h2>
-        <p class="page-hero__desc">以更现代的可视化方式比较模型表现，快速识别领先模型、关键波动和不同指标间的平衡关系。</p>
+        <h2 class="page-hero__title">KPI Smart Analytics Dashboard</h2>
+        <p class="page-hero__desc">Compare model performance through a modern visualization surface to spot leading models, key changes, and trade-offs across metrics.</p>
       </div>
       <div class="page-hero__actions">
-        <div class="glass-pill">当前范围：同分类全部模型</div>
-        <div class="glass-pill">横向对比维度：{{ getMetricName(scatterXMetric) }} / {{ getMetricName(scatterYMetric) }}</div>
+        <div class="glass-pill">Current Scope: all models in the selected category</div>
+        <div class="glass-pill">Comparison Axes: {{ getMetricName(scatterXMetric) }} / {{ getMetricName(scatterYMetric) }}</div>
       </div>
     </section>
 
@@ -16,8 +16,8 @@
       <div class="category-focus">
         <div class="category-focus__left">
           <div class="category-focus__eyebrow">Model Category</div>
-          <h3 class="category-focus__title">模型类型筛选</h3>
-          <p class="category-focus__desc">当前类型：<strong>{{ modelCategory }}</strong>。图表仅对比该类型下的全部模型。</p>
+          <h3 class="category-focus__title">Model Category Filter</h3>
+          <p class="category-focus__desc">Current category: <strong>{{ modelCategory }}</strong>. The charts compare all models within this category only.</p>
         </div>
       </div>
 
@@ -35,7 +35,7 @@
         >
           <div class="category-description-item__header">
             <span>{{ key }}</span>
-            <el-tag v-if="key === modelCategory" size="small" type="success">当前</el-tag>
+            <el-tag v-if="key === modelCategory" size="small" type="success">Current</el-tag>
           </div>
           <p>{{ info }}</p>
         </article>
@@ -46,44 +46,44 @@
       <article class="metric-card model-info-card accent-blue">
         <div class="model-info-card__top">
           <div>
-            <div class="metric-card__label">模型信息</div>
+            <div class="metric-card__label">Model Information</div>
             <div class="metric-card__value metric-card__value--small">{{ selectedModelInfo.name }}</div>
-            <div class="metric-card__meta">点击天梯图中的模型后，这里的信息会同步更新</div>
+            <div class="metric-card__meta">Click a model in the ladder chart to sync the information shown here.</div>
           </div>
-          <el-button type="primary" @click="openCompareDialog">模型对比</el-button>
+          <el-button type="primary" @click="openCompareDialog">Compare Models</el-button>
         </div>
 
         <div class="model-info-grid">
           <div class="model-info-item">
-            <span class="model-info-item__label">模型分类</span>
+            <span class="model-info-item__label">Model Category</span>
             <span class="model-info-item__value">{{ modelCategory }}</span>
           </div>
           <div class="model-info-item">
-            <span class="model-info-item__label">当前指标</span>
+            <span class="model-info-item__label">Current Metric</span>
             <span class="model-info-item__value">{{ getMetricName(ladderMetric) }}</span>
           </div>
           <div class="model-info-item model-info-item--full">
-            <span class="model-info-item__label">具体描述</span>
+            <span class="model-info-item__label">Description</span>
             <span class="model-info-item__value model-info-item__value--multiline">{{ selectedModelInfo.description }}</span>
           </div>
           <div class="model-info-item">
-            <span class="model-info-item__label">来源</span>
+            <span class="model-info-item__label">Source</span>
             <span class="model-info-item__value">{{ selectedModelInfo.source }}</span>
           </div>
           <div class="model-info-item">
-            <span class="model-info-item__label">模型大小</span>
+            <span class="model-info-item__label">Model Size</span>
             <span class="model-info-item__value">{{ selectedModelInfo.modelSize }}</span>
           </div>
           <div class="model-info-item">
-            <span class="model-info-item__label">功耗</span>
+            <span class="model-info-item__label">Power Consumption</span>
             <span class="model-info-item__value">{{ formatMetricValue(selectedModelInfo.metrics.power_consumption) }}</span>
           </div>
           <div class="model-info-item">
-            <span class="model-info-item__label">延迟</span>
+            <span class="model-info-item__label">Latency</span>
             <span class="model-info-item__value">{{ formatMetricValue(selectedModelInfo.metrics.latency) }}</span>
           </div>
           <div class="model-info-item">
-            <span class="model-info-item__label">准确率</span>
+            <span class="model-info-item__label">Accuracy</span>
             <span class="model-info-item__value">{{ formatMetricValue(selectedModelInfo.metrics.accuracy_overall) }}</span>
           </div>
         </div>
@@ -94,10 +94,10 @@
       <template #header>
         <div class="section-title">
           <div class="section-title__main">
-            <h3>模型性能天梯图</h3>
-            <span class="section-title__meta">同分类模型在单一核心指标下的纵向排名</span>
+            <h3>Model Performance Ladder</h3>
+            <span class="section-title__meta">Vertical ranking of models in the same category under one core metric.</span>
           </div>
-          <div class="metric-tag-group" role="tablist" aria-label="天梯图指标选择">
+          <div class="metric-tag-group" role="tablist" aria-label="Ladder metric selector">
             <button
               v-for="item in LADDER_METRIC_OPTIONS"
               :key="item.value"
@@ -126,11 +126,11 @@
       <template #header>
         <div class="section-title">
           <div class="section-title__main">
-            <h3>模型性能坐标图</h3>
-            <span class="section-title__meta">观察同分类模型在两个核心指标之间的平衡关系与分布</span>
+            <h3>Model Performance Scatter Plot</h3>
+            <span class="section-title__meta">Observe the trade-offs and distribution between two core metrics for models in the same category.</span>
           </div>
           <div class="scatter-selector-wrap">
-            <div class="metric-tag-group" role="group" aria-label="坐标图指标选择">
+            <div class="metric-tag-group" role="group" aria-label="Scatter plot metric selector">
               <button
                 v-for="item in SCATTER_METRIC_OPTIONS"
                 :key="item.value"
@@ -142,7 +142,7 @@
                 {{ item.label }}
               </button>
             </div>
-            <span class="selector-hint">默认 2 项；勾选第 3 项时自动取消最早勾选的 1 项</span>
+            <span class="selector-hint">Two metrics are selected by default; choosing a third removes the earliest selected metric.</span>
           </div>
         </div>
       </template>
@@ -154,20 +154,20 @@
       />
     </el-card>
 
-    <el-dialog v-model="showCompareDialog" title="模型对比" width="920px">
+    <el-dialog v-model="showCompareDialog" title="Model Comparison" width="920px">
       <div class="compare-toolbar">
-        <el-select v-model="compareModelA" placeholder="选择模型 A" style="width: 240px">
+        <el-select v-model="compareModelA" placeholder="Select Model A" style="width: 240px">
           <el-option v-for="name in availableModelNames" :key="`a-${name}`" :label="name" :value="name" />
         </el-select>
-        <el-select v-model="compareModelB" placeholder="选择模型 B" style="width: 240px">
+        <el-select v-model="compareModelB" placeholder="Select Model B" style="width: 240px">
           <el-option v-for="name in availableModelNames" :key="`b-${name}`" :label="name" :value="name" />
         </el-select>
       </div>
 
-      <el-table :data="compareRows" stripe empty-text="请选择两个不同模型进行对比">
-        <el-table-column prop="label" label="参数" width="220" />
-        <el-table-column prop="modelA" :label="compareModelA || '模型 A'" min-width="220" />
-        <el-table-column prop="modelB" :label="compareModelB || '模型 B'" min-width="220" />
+      <el-table :data="compareRows" stripe empty-text="Select two different models to compare">
+        <el-table-column prop="label" label="Parameter" width="220" />
+        <el-table-column prop="modelA" :label="compareModelA || 'Model A'" min-width="220" />
+        <el-table-column prop="modelB" :label="compareModelB || 'Model B'" min-width="220" />
       </el-table>
     </el-dialog>
   </div>
@@ -180,55 +180,55 @@ import { getKPIMetrics, getLadderChartData, getScatterChartData } from '../api/k
 const SCATTER_PALETTE = ['#22d3ee', '#60a5fa', '#a78bfa', '#f472b6', '#fb7185', '#f59e0b', '#34d399', '#facc15', '#38bdf8', '#818cf8']
 
 const MODEL_CATEGORY_INFO = {
-  ASR: 'Automatic Speech Recognition。关注语音转文本场景下的识别准确率、实时性与资源消耗。',
-  TTS: 'Text To Speech。关注合成语音自然度、时延与功耗表现，适合语音播报类业务。',
-  Translation: '文本翻译模型。关注多语言翻译准确率、端到端延迟与部署资源成本。',
-  'VoicecallTranslation Solution': '通话实时翻译方案。关注通话场景中的实时性、稳定性和综合翻译质量。'
+  ASR: 'Automatic Speech Recognition. Focuses on recognition accuracy, real-time performance, and resource usage for speech-to-text scenarios.',
+  TTS: 'Text To Speech. Focuses on naturalness, latency, and power efficiency for spoken output scenarios.',
+  Translation: 'Text translation models. Focus on multilingual translation accuracy, end-to-end latency, and deployment cost.',
+  'VoicecallTranslation Solution': 'Real-time voice call translation solutions. Focus on latency, stability, and overall translation quality in call scenarios.'
 }
 
 const MODEL_META_INFO = {
   'Model-A': {
-    description: '面向通用语音识别优化的轻量化模型，强调实时转写与端侧部署能力。',
+    description: 'A lightweight model optimized for general speech recognition, with emphasis on real-time transcription and edge deployment.',
     source: 'Internal Benchmark Set A',
     modelSize: '1.2B'
   },
   'Model-B': {
-    description: '面向语音合成的标准基线模型，兼顾音色稳定性与时延表现。',
+    description: 'A standard baseline model for speech synthesis that balances voice stability and latency.',
     source: 'Internal TTS Baseline',
     modelSize: '980M'
   },
   'Model-C': {
-    description: '多语言翻译模型，强调中英西班牙语三语互译的准确率与吞吐。',
+    description: 'A multilingual translation model focused on accuracy and throughput across Chinese, English, and Spanish.',
     source: 'Translation Eval Pack',
     modelSize: '1.6B'
   },
   'Model-D': {
-    description: '实时通话翻译方案模型，针对语音流式处理和链路稳定性做过优化。',
+    description: 'A real-time call translation model optimized for streaming speech processing and pipeline stability.',
     source: 'Voicecall Solution Suite',
     modelSize: '2.1B'
   },
   'Model-E': {
-    description: 'ASR 增强模型，重点优化复杂噪声场景下的识别鲁棒性。',
+    description: 'An enhanced ASR model focused on recognition robustness in complex noisy environments.',
     source: 'ASR Robustness Set',
     modelSize: '1.4B'
   },
   'Model-F': {
-    description: '新一代多语言翻译模型，强化长句语义保持与跨领域术语一致性。',
+    description: 'A next-generation multilingual translation model focused on long-sentence semantics and cross-domain terminology consistency.',
     source: 'Global Translation Benchmark v2',
     modelSize: '1.9B'
   }
 }
 
 const LADDER_METRIC_OPTIONS = [
-  { label: '功耗', value: 'power_consumption' },
-  { label: '延迟', value: 'latency' },
-  { label: '准确率', value: 'accuracy_overall' }
+  { label: 'Power Consumption', value: 'power_consumption' },
+  { label: 'Latency', value: 'latency' },
+  { label: 'Accuracy', value: 'accuracy_overall' }
 ]
 
 const SCATTER_METRIC_OPTIONS = [
-  { label: '功耗', value: 'power_consumption' },
-  { label: '延迟', value: 'latency' },
-  { label: '准确率', value: 'accuracy_overall' }
+  { label: 'Power Consumption', value: 'power_consumption' },
+  { label: 'Latency', value: 'latency' },
+  { label: 'Accuracy', value: 'accuracy_overall' }
 ]
 
 const getModelColor = (modelName, index) => {
@@ -322,9 +322,9 @@ const selectedModelInfo = computed(() => {
   const name = selectedModelName.value || ladderSummary.value.topModel || '--'
   const dynamicMeta = modelMetaByName.value[name] || {}
   const staticMeta = MODEL_META_INFO[name] || {
-    description: '请在 MODEL_META_INFO 中补充该模型的具体描述。',
-    source: '待补充',
-    modelSize: '待补充'
+    description: 'Add a detailed description for this model in MODEL_META_INFO.',
+    source: 'TBD',
+    modelSize: 'TBD'
   }
 
   return {
@@ -344,22 +344,22 @@ const compareRows = computed(() => {
   const modelBInfo = buildModelInfo(compareModelB.value)
 
   return [
-    { label: '模型分类', modelA: modelCategory.value, modelB: modelCategory.value },
-    { label: '具体描述', modelA: modelAInfo.description, modelB: modelBInfo.description },
-    { label: '来源', modelA: modelAInfo.source, modelB: modelBInfo.source },
-    { label: '模型大小', modelA: modelAInfo.modelSize, modelB: modelBInfo.modelSize },
-    { label: '功耗', modelA: formatMetricValue(modelAInfo.metrics.power_consumption), modelB: formatMetricValue(modelBInfo.metrics.power_consumption) },
-    { label: '延迟', modelA: formatMetricValue(modelAInfo.metrics.latency), modelB: formatMetricValue(modelBInfo.metrics.latency) },
-    { label: '准确率', modelA: formatMetricValue(modelAInfo.metrics.accuracy_overall), modelB: formatMetricValue(modelBInfo.metrics.accuracy_overall) },
-    { label: '准确率-英语', modelA: formatMetricValue(modelAInfo.metrics.accuracy_en), modelB: formatMetricValue(modelBInfo.metrics.accuracy_en) },
-    { label: '准确率-中文', modelA: formatMetricValue(modelAInfo.metrics.accuracy_zh), modelB: formatMetricValue(modelBInfo.metrics.accuracy_zh) },
-    { label: '准确率-西班牙语', modelA: formatMetricValue(modelAInfo.metrics.accuracy_es), modelB: formatMetricValue(modelBInfo.metrics.accuracy_es) }
+    { label: 'Model Category', modelA: modelCategory.value, modelB: modelCategory.value },
+    { label: 'Description', modelA: modelAInfo.description, modelB: modelBInfo.description },
+    { label: 'Source', modelA: modelAInfo.source, modelB: modelBInfo.source },
+    { label: 'Model Size', modelA: modelAInfo.modelSize, modelB: modelBInfo.modelSize },
+    { label: 'Power Consumption', modelA: formatMetricValue(modelAInfo.metrics.power_consumption), modelB: formatMetricValue(modelBInfo.metrics.power_consumption) },
+    { label: 'Latency', modelA: formatMetricValue(modelAInfo.metrics.latency), modelB: formatMetricValue(modelBInfo.metrics.latency) },
+    { label: 'Accuracy', modelA: formatMetricValue(modelAInfo.metrics.accuracy_overall), modelB: formatMetricValue(modelBInfo.metrics.accuracy_overall) },
+    { label: 'Accuracy - English', modelA: formatMetricValue(modelAInfo.metrics.accuracy_en), modelB: formatMetricValue(modelBInfo.metrics.accuracy_en) },
+    { label: 'Accuracy - Chinese', modelA: formatMetricValue(modelAInfo.metrics.accuracy_zh), modelB: formatMetricValue(modelBInfo.metrics.accuracy_zh) },
+    { label: 'Accuracy - Spanish', modelA: formatMetricValue(modelAInfo.metrics.accuracy_es), modelB: formatMetricValue(modelBInfo.metrics.accuracy_es) }
   ]
 })
 
 const ladderChartOption = ref({
   title: {
-    text: '模型性能排名',
+    text: 'Model Performance Ranking',
     left: 'center',
     textStyle: {
       color: '#f8fafc',
@@ -382,7 +382,7 @@ const ladderChartOption = ref({
   },
   xAxis: {
     type: 'value',
-    name: '指标值',
+    name: 'Metric Value',
     scale: true,
     axisLabel: { color: 'rgba(226, 232, 240, 0.72)' },
     nameTextStyle: { color: 'rgba(226, 232, 240, 0.72)' },
@@ -391,13 +391,13 @@ const ladderChartOption = ref({
   yAxis: {
     type: 'category',
     data: [],
-    name: '模型名称',
+    name: 'Model Name',
     axisLabel: { color: 'rgba(226, 232, 240, 0.72)' },
     nameTextStyle: { color: 'rgba(226, 232, 240, 0.72)' }
   },
   series: [
     {
-      name: '性能指标',
+      name: 'Performance Metric',
       type: 'bar',
       data: [],
       barWidth: 14,
@@ -426,7 +426,7 @@ const ladderChartOption = ref({
 
 const scatterChartOption = ref({
   title: {
-    text: '模型性能对比',
+    text: 'Model Performance Comparison',
     left: 'center',
     textStyle: {
       color: '#f8fafc',
@@ -437,7 +437,7 @@ const scatterChartOption = ref({
   tooltip: {
     trigger: 'item',
     formatter: (params) => {
-      return `${params.data.modelName}<br/>${getMetricName(scatterXMetric.value)}：${params.data.value[0]}<br/>${getMetricName(scatterYMetric.value)}：${params.data.value[1]}`
+      return `${params.data.modelName}<br/>${getMetricName(scatterXMetric.value)}: ${params.data.value[0]}<br/>${getMetricName(scatterYMetric.value)}: ${params.data.value[1]}`
     }
   },
   grid: {
@@ -449,7 +449,7 @@ const scatterChartOption = ref({
   },
   xAxis: {
     type: 'value',
-    name: '功耗',
+    name: 'Power Consumption',
     scale: true,
     axisLabel: { color: 'rgba(226, 232, 240, 0.72)' },
     nameTextStyle: { color: 'rgba(226, 232, 240, 0.72)' },
@@ -457,7 +457,7 @@ const scatterChartOption = ref({
   },
   yAxis: {
     type: 'value',
-    name: '延迟',
+    name: 'Latency',
     scale: true,
     axisLabel: { color: 'rgba(226, 232, 240, 0.72)' },
     nameTextStyle: { color: 'rgba(226, 232, 240, 0.72)' },
@@ -465,7 +465,7 @@ const scatterChartOption = ref({
   },
   series: [
     {
-      name: '模型性能',
+      name: 'Model Performance',
       type: 'scatter',
       data: [],
       symbolSize: 18,
@@ -512,9 +512,9 @@ const ladderSummary = computed(() => {
 const buildModelInfo = (name) => {
   const dynamicMeta = modelMetaByName.value[name] || {}
   const staticMeta = MODEL_META_INFO[name] || {
-    description: '请在 MODEL_META_INFO 中补充该模型的具体描述。',
-    source: '待补充',
-    modelSize: '待补充'
+    description: 'Add a detailed description for this model in MODEL_META_INFO.',
+    source: 'TBD',
+    modelSize: 'TBD'
   }
 
   const meta = {
@@ -543,7 +543,7 @@ const loadMetricDetails = async () => {
       compareModelB.value = names.find(name => name !== compareModelA.value) || ''
     }
   } catch (error) {
-    console.error('加载模型详情失败', error)
+    console.error('Failed to load model details', error)
   }
 }
 
@@ -572,7 +572,7 @@ const loadLadderData = async () => {
     ladderChartOption.value = {
       ...ladderChartOption.value,
       title: {
-        text: `${getMetricName(data.metric_name)}排名`,
+        text: `${getMetricName(data.metric_name)} Ranking`,
         left: 'center'
       },
       xAxis: {
@@ -598,7 +598,7 @@ const loadLadderData = async () => {
       selectedModelName.value = names[0]
     }
   } catch (error) {
-    console.error('加载天梯图数据失败', error)
+    console.error('Failed to load ladder chart data', error)
   } finally {
     ladderLoading.value = false
   }
@@ -657,7 +657,7 @@ const loadScatterData = async () => {
       ]
     }
   } catch (error) {
-    console.error('加载散点图数据失败', error)
+    console.error('Failed to load scatter chart data', error)
   } finally {
     scatterLoading.value = false
   }
@@ -689,7 +689,7 @@ const toggleScatterMetric = (metric) => {
   const selected = [...scatterMetricSelection.value]
   selected.push(metric)
 
-  // 队列策略：最多保留 2 个，勾选第 3 个时移除最早选择的
+  // Queue strategy: keep at most two metrics, and remove the oldest when a third is selected.
   while (selected.length > 2) {
     selected.shift()
   }
@@ -723,12 +723,12 @@ const formatMetricValue = (value) => {
 
 const getMetricName = (metric) => {
   const map = {
-    power_consumption: '功耗',
-    latency: '延迟',
-    accuracy_overall: '准确率',
-    accuracy_en: '准确率-英语',
-    accuracy_zh: '准确率-中文',
-    accuracy_es: '准确率-西班牙语'
+    power_consumption: 'Power Consumption',
+    latency: 'Latency',
+    accuracy_overall: 'Accuracy',
+    accuracy_en: 'Accuracy - English',
+    accuracy_zh: 'Accuracy - Chinese',
+    accuracy_es: 'Accuracy - Spanish'
   }
   return map[metric] || metric
 }

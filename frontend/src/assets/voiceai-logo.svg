@@ -1,0 +1,22 @@
+<svg width="320" height="84" viewBox="0 0 320 84" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="voiceaiTitle voiceaiDesc">
+  <title id="voiceaiTitle">VoiceAI wordmark</title>
+  <desc id="voiceaiDesc">Minimal text-only VoiceAI logo in a light blue technology style.</desc>
+
+  <defs>
+    <linearGradient id="voiceAiWordmarkGradient" x1="18" y1="18" x2="268" y2="72" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D6F4FF"/>
+      <stop offset="0.54" stop-color="#9EE8FF"/>
+      <stop offset="1" stop-color="#4DBFFF"/>
+    </linearGradient>
+    <filter id="voiceAiSoftGlow" x="0" y="0" width="320" height="84" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="2.4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <text x="50%" y="58" text-anchor="middle" fill="#7AD9FF" fill-opacity="0.32" font-family="Segoe UI, Arial, sans-serif" font-size="52" font-weight="700" letter-spacing="1.2" filter="url(#voiceAiSoftGlow)">VoiceAI</text>
+  <text x="50%" y="58" text-anchor="middle" fill="url(#voiceAiWordmarkGradient)" font-family="Segoe UI, Arial, sans-serif" font-size="52" font-weight="700" letter-spacing="1.2">VoiceAI</text>
+</svg>

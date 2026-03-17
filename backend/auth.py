@@ -1,26 +1,81 @@
 """
-简单权限管理：通过 X-User-Role 请求头识别用户角色
-manager: 可创建/修改测试进度和Bug
-viewer: 只读
+Permission management with support for both user roles and permission groups.
+
+- If the request header includes X-User-Name, permissions are validated against the database user.
+- If no username is provided, fall back to the legacy X-User-Role behavior.
 """
+from typing import Optional, Dict, Any
+
 from fastapi import HTTPException, Header, Depends
-from typing import Optional
+from sqlalchemy.orm import Session, joinedload
+
+from database import get_db
+import models
 
 VALID_ROLES = {"manager", "viewer"}
 
 
-def get_user_role(x_user_role: Optional[str] = Header(default="viewer", alias="X-User-Role")) -> str:
-    """从请求头获取用户角色，默认为 viewer"""
-    role = (x_user_role or "viewer").lower()
-    if role not in VALID_ROLES:
-        role = "viewer"
-    return role
+def _normalize_role(role: Optional[str]) -> str:
+    normalized = (role or "viewer").lower()
+    return normalized if normalized in VALID_ROLES else "viewer"
 
 
-def require_manager(role: str = Depends(get_user_role)):
-    """需要 manager 权限"""
-    if role != "manager":
-        raise HTTPException(status_code=403, detail="需要 manager 权限")
-    return role
+def user_can_edit_test(user: models.User) -> bool:
+    if (user.role or "").lower() == "manager":
+        return True
+    for membership in user.memberships:
+        if membership.group and membership.group.can_edit_test:
+            return True
+    return False
+
+
+def get_request_identity(
+    x_user_name: Optional[str] = Header(default=None, alias="X-User-Name"),
+    x_user_role: Optional[str] = Header(default="viewer", alias="X-User-Role"),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    fallback_role = _normalize_role(x_user_role)
+    username = (x_user_name or "").strip().lower()
+
+    if not username:
+        return {
+            "username": "",
+            "role": fallback_role,
+            "can_edit_test": fallback_role == "manager",
+            "user": None,
+        }
+
+    user = (
+        db.query(models.User)
+        .options(joinedload(models.User.memberships).joinedload(models.UserGroupMembership.group))
+        .filter(models.User.username == username, models.User.is_active.is_(True))
+        .first()
+    )
+    if not user:
+        return {
+            "username": username,
+            "role": "viewer",
+            "can_edit_test": False,
+            "user": None,
+        }
+
+    can_edit = user_can_edit_test(user)
+    role = "manager" if can_edit else _normalize_role(user.role)
+    return {
+        "username": user.username,
+        "role": role,
+        "can_edit_test": can_edit,
+        "user": user,
+    }
+
+
+def get_user_role(identity: Dict[str, Any] = Depends(get_request_identity)) -> str:
+    return identity["role"]
+
+
+def require_manager(identity: Dict[str, Any] = Depends(get_request_identity)) -> Dict[str, Any]:
+    if not identity.get("can_edit_test"):
+        raise HTTPException(status_code=403, detail="Manager permission required")
+    return identity
 
 

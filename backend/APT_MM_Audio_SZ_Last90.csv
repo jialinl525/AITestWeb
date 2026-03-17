@@ -1,0 +1,184 @@
+CR Number,Title,Severity,CR Type,CR Status,Created By,CR Assignee,Created On,Parent CR,Software Image Integration Build
+4383477,[OPPO][SM6450][case#08262581] https://review-android.quicinc.com/c/platform/vendor/qcom/opensource/arpal-lx/+/5737068/29/Pal.cpp is incorrect,Medium,Bug,InProgress,mincyao,nbandi,12/16/2025 9:14:05 AM,NA,NA
+4384489,[FR115315][Life Logger][Phase 0] Device is overheating severely when processing file with long duration,High,Bug,Closed,jialinl,yongfeiz,12/17/2025 4:44:17 AM,NA,NA
+4384489,[FR115315][Life Logger][Phase 0] Device is overheating severely when processing file with long duration,High,Bug,Closed,jialinl,yongfeiz,12/17/2025 4:44:17 AM,NA,LA.QSSI.17.0-20000-qssi.1-3
+4384612,The source code for the VoiceAssistant app release on Glymur is partially missing.,Medium,Bug,InProgress,yaqih,jinzhang,12/17/2025 6:13:03 AM,NA,NA
+4384612,The source code for the VoiceAssistant app release on Glymur is partially missing.,Medium,Bug,InProgress,yaqih,jinzhang,12/17/2025 6:13:03 AM,NA,APSS.WP_GL.1.0-06022-SC8480XAAACQLWAA-1
+4385445,[FR115315][Life Logger][Phase 0] File base test with 3hours audio file will get stuck in the processing 100%,Medium,Bug,InProgress,haiyxiao,yongfeiz,12/17/2025 2:46:06 PM,NA,NA
+4385445,[FR115315][Life Logger][Phase 0] File base test with 3hours audio file will get stuck in the processing 100%,Medium,Bug,InProgress,haiyxiao,yongfeiz,12/17/2025 2:46:06 PM,NA,LA.QSSI.17.0-20000-qssi.1-3
+4385944,"[FR115315][Life Logger][Phase 0] Filebase plays a 3-hour long file, with lost initial audio and noise interference",Medium,Bug,Closed,mincyao,ruocxu,12/18/2025 5:02:39 AM,NA,LA.QSSI.17.0-20400-qssi.1-1
+4385953,[FR115315][Life Logger][Phase 0][UI design]The timestamp displayed on the UI is accurate to seconds,Medium,Bug,Closed,mincyao,qihexu,12/18/2025 5:05:37 AM,NA,LA.QSSI.17.0-20400-qssi.1-1
+4385969,[FR115315][Life Logger][Phase 0] the timeline insight should always show the last session by default when we get into the insight 100%,Medium,Bug,Closed,mincyao,qihexu,12/18/2025 5:10:18 AM,NA,LA.QSSI.17.0-20400-qssi.1-1
+4385975,"[FR115315][Life Logger][Phase 0] ""sample test"" display in UI （70%）",Medium,Bug,Closed,mincyao,qihexu,12/18/2025 5:12:34 AM,NA,LA.QSSI.17.0-20400-qssi.1-1
+4385993,[FR115315][Life Logger][Phase 0] The life logger function cannot be restored after kill 'com. qualcomm. qti. voiceai. Speech' 50%,Medium,Bug,Open,mincyao,ruocxu,12/18/2025 5:19:28 AM,NA,NA
+4385999,[FR115315][Life Logger][Phase 0] SDB has low accuracy with Short 30-40 seconds audio file.,Medium,Bug,Open,mincyao,huiwa,12/18/2025 5:22:10 AM,NA,NA
+4386009,[FR115315][Kaanapali] Live recording sometimes cannot generate sessions （1/7） or the content is incomplete（6/7）,Medium,Bug,Closed,mincyao,ruocxu,12/18/2025 5:24:20 AM,NA,LA.QSSI.17.0-20400-qssi.1-1
+4386118,[FR115315][Life Logger][Phase 0] The pcmdump file has additional spikes at the beginning using file mode(100%),Medium,Bug,Closed,jialinl,ruocxu,12/18/2025 6:19:40 AM,NA,LA.QSSI.17.0-20400-qssi.1-1
+4386359,[FR115315][Life Logger][Phase 0] The processing is much slower when turn off screen,Low,Bug,Closed,jialinl,yongfeiz,12/18/2025 8:34:53 AM,NA,LA.QSSI.17.0-20000-qssi.1-3
+4386363,[FR115315][Life Logger][Phase 0] The display colors of two adjacent conversations are too close,Low,Bug,Closed,jialinl,qihexu,12/18/2025 8:36:52 AM,NA,LA.QSSI.17.0-20400-qssi.1-1
+4387209,[FR115315][Life Logger][Phase 0] The transcription result is saved in JSON but not displayed on the UI （50%）,Medium,Bug,InProgress,haiyxiao,qihexu,12/19/2025 1:05:46 AM,NA,NA
+4387209,[FR115315][Life Logger][Phase 0] The transcription result is saved in JSON but not displayed on the UI （50%）,Medium,Bug,InProgress,haiyxiao,qihexu,12/19/2025 1:05:46 AM,NA,LA.QSSI.17.0-20400-qssi.1-1
+4387210,[FR115315][Life Logger][Phase 0] There are Tombstones when enable/disable life logger button stress test (3/300),Medium,Bug,Open,haiyxiao,ruocxu,12/19/2025 1:07:22 AM,NA,NA
+4387246,[QPM_Release][Glymur][Whisper]Whisper app would get crash if choose filebase transcription before last file transcription finished(100%),Medium,Bug,InProgress,jialinl,dunhye,12/19/2025 2:21:33 AM,NA,NA
+4387558,[ASUS][Glymur]FR115907:Voice AI sample app log with timestamp,NA,Requirement,InProgress,yaqih,dunhye,12/19/2025 6:47:42 AM,NA,NA
+4387577,FR111092:ASR supports ARM64X on ARM device with Windows,NA,Requirement,InProgress,yaqih,dunhye,12/19/2025 6:58:17 AM,NA,NA
+4387700,"QNN based DNN-VAD to replace eAI one. Developing (cc:12/26,L0:01/09,L2/L4:1/28, QPM release:01/30)",NA,Requirement,InProgress,yaqih,dunhye,12/19/2025 8:36:43 AM,NA,NA
+4387712,[Kaanapali]Music playback shows distortion in 1531 log,Medium,Bug,Duplicate,mincyao,ritushar,12/19/2025 8:41:42 AM,4372142,NA
+4387757,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]No sound on RX translation tts voice when using usbc headset(100%),High,Bug,InProgress,jialinl,kunleiz,12/19/2025 9:08:50 AM,NA,NA
+4387757,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]No sound on RX translation tts voice when using usbc headset(100%),High,Bug,InProgress,jialinl,kunleiz,12/19/2025 9:08:50 AM,NA,AUDIO_HANDSET.LA.11.0-12300-pakala.1-1
+4387757,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]No sound on RX translation tts voice when using usbc headset(100%),High,Bug,InProgress,jialinl,kunleiz,12/19/2025 9:08:50 AM,NA,AUDIO_HANDSET.LA.12.0-04300-kaanapali.1.PERF-1
+4387757,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]No sound on RX translation tts voice when using usbc headset(100%),High,Bug,InProgress,jialinl,kunleiz,12/19/2025 9:08:50 AM,NA,AUDIO_IOT.LNX.1.0-02100-kaanapali.1-1
+4389937,Melo TTS SDK for Quectel audio length info mismatch with real audio length,Medium,Bug,InProgress,haiyxiao,feisun,12/23/2025 4:43:48 AM,NA,NA
+4390407,[FR115315][Life Logger][Phase 0] SDZ KPI results higher than pyannote results (DER=10.05>8.39 ),Medium,Bug,Closed,haiyxiao,yongfeiz,12/23/2025 9:22:31 AM,NA,LA.QSSI.17.0-20400-qssi.1-1
+4392007,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Tx translation did not work using bluetooth headsets(100%),High,Bug,InProgress,jialinl,kunleiz,12/25/2025 8:17:08 AM,NA,NA
+4392007,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Tx translation did not work using bluetooth headsets(100%),High,Bug,InProgress,jialinl,kunleiz,12/25/2025 8:17:08 AM,NA,AUDIO_HANDSET.LA.11.0-12800-pakala.1-1
+4392706,[FR115315][Life Logger][Phase 0.2]The process would not stop if choose a silence wav,Medium,Bug,Closed,jialinl,yongfeiz,12/26/2025 11:38:27 AM,NA,LA.QSSI.17.0-20400-qssi.1-1
+4393491,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]No sound on RX path if switch usbc headphone from handset(100%),Medium,Bug,InProgress,jialinl,shikmath,12/29/2025 9:10:32 AM,NA,NA
+4393491,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]No sound on RX path if switch usbc headphone from handset(100%),Medium,Bug,InProgress,jialinl,shikmath,12/29/2025 9:10:32 AM,NA,AUDIO_HANDSET.LA.11.0-12800-pakala.1-1
+4395896,[FR115315][Life Logger][Phase 0.2] Session Hangover input box is obscured by keyboard,Medium,Bug,Closed,haiyxiao,ruocxu,1/5/2026 2:22:20 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4395931,[FR115315][Life Logger][Phase 0.2]The timestamp is wrong after convert,Medium,Bug,Closed,jialinl,yongfeiz,1/5/2026 3:23:55 AM,NA,LA.QSSI.17.0-20400-qssi.1-1
+4396091,[FR115920][QCM8550][TTS]The TTS app interface does not display a debug button,Medium,Bug,InProgress,yaqih,feisun,1/5/2026 6:08:18 AM,NA,NA
+4396268,[FR115315]Life Logger: Phase 0 Deliverables - UI part,NA,Requirement,InProgress,mincyao,qihexu,1/5/2026 7:38:12 AM,NA,NA
+4396310,[FR115315][Life Logger][Phase 0.2] provider native heap memory leak,Medium,Bug,Closed,haiyxiao,qihexu,1/5/2026 8:06:12 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4396343,[FR115315][Life Logger][Phase 0.2]Low recognition rate on owner UV,Medium,Bug,Closed,jialinl,junjiez,1/5/2026 8:35:02 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4396349,[FR115315][Life Logger][Phase 0.2]Life logger function did not work after stability test one night（once),Medium,Bug,Closed,jialinl,zhijsun,1/5/2026 8:37:34 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4396440,[FR115315][Life Logger][Phase 0.2]App UI did not display the new event after processed,High,Bug,Closed,jialinl,qihexu,1/5/2026 9:14:29 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4396627,[FR115315][Life Logger][Phase 0.2] life logger native heap memory leak,Medium,Bug,Closed,haiyxiao,ruocxu,1/5/2026 10:48:51 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4397085,[OPPO | case#08273086 | SM8845]​[QACT tool]possible mem leak for QACT tool,Medium,Bug,Closed,yaqih,nsimon,1/6/2026 1:42:00 AM,NA,QACT.WIN.8.3-00222-QACT-1
+4397127,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]RX translation Volume is too large in the usbc headset and cannot be lowered,High,Bug,InProgress,jialinl,shikmath,1/6/2026 2:34:45 AM,NA,NA
+4397127,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]RX translation Volume is too large in the usbc headset and cannot be lowered,High,Bug,InProgress,jialinl,shikmath,1/6/2026 2:34:45 AM,NA,AUDIO_HANDSET.LA.11.0-12900-pakala.1-1
+4397129,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Device would get crash when triggering SSR during voice call translation (1/3),Medium,Bug,Analysis,jialinl,vaisgupt,1/6/2026 2:36:44 AM,NA,NA
+4397133,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]No sound on RX translation path using bluetooth headsets(100%),High,Bug,InProgress,jialinl,kunleiz,1/6/2026 2:41:23 AM,NA,NA
+4397133,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]No sound on RX translation path using bluetooth headsets(100%),High,Bug,InProgress,jialinl,kunleiz,1/6/2026 2:41:23 AM,NA,AUDIO_HANDSET.LA.11.0-12800-pakala.1-1
+4397133,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]No sound on RX translation path using bluetooth headsets(100%),High,Bug,InProgress,jialinl,kunleiz,1/6/2026 2:41:23 AM,NA,AUDIO_HANDSET.LA.12.0-05100-hawi.1.PERF-1
+4397133,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]No sound on RX translation path using bluetooth headsets(100%),High,Bug,InProgress,jialinl,kunleiz,1/6/2026 2:41:23 AM,NA,AUDIO_IOT.LNX.1.0-02500-kaanapali.1-1
+4397223, [FR115315][Life Logger][Phase 0.2] QSS file based sdz result is not same with test bin result,Medium,Bug,Closed,haiyxiao,yongfeiz,1/6/2026 3:22:03 AM,NA,LA.QSSI.17.0-20400-qssi.1-1
+4397748,[FR115315][Life Logger][Phase 0.2]Life logger app got crash during switch turn on/off stability test,Medium,Bug,Closed,jialinl,ruocxu,1/6/2026 7:52:43 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4397750,"[FR115315][Life Logger][Phase 0] When the LLE JSON file is missing, the UI does not display the original transcript.",Medium,Bug,Closed,mincyao,ruocxu,1/6/2026 7:53:37 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4397754,[FR115315][Life Logger][Phase 0.2]Life logger app could not get ASR result after enable function (Once),High,Bug,Closed,jialinl,ruocxu,1/6/2026 7:54:44 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4397757,"[FR115315][Life Logger][Phase 0] There is no ASR result output, after enable QAIOR Service",Medium,Bug,Analysis,mincyao,vipuverm,1/6/2026 7:56:21 AM,NA,NA
+4399934,[FR115315][Life Logger][Phase 0.2]Lifelogger apk will automatically exit after disabling live recording(1/10)),Medium,Bug,Closed,mincyao,qihexu,1/8/2026 4:30:21 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4400203,"[FR115315][Life Logger][Phase 0.2]switch to the enrollment UI, a white flashing screen will appear after clear ""wakeup services"" app's data",Medium,Bug,Closed,mincyao,junjiez,1/8/2026 6:50:52 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4401265, [QPM][ASR][2.4.0.0][LE] Correct QNN version info to 2.40 in sample app readme file,Medium,Bug,Duplicate,haiyxiao,dunhye,1/9/2026 3:08:21 AM,4351052,NA
+4401632,"[FR115315][Life Logger][Phase 0.2]The actual enrollment listening is too short, and it switches to the next sentence before each sentence is finished",Medium,Bug,Closed,mincyao,junjiez,1/9/2026 7:11:42 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4402914,[FR115315][Life Logger][Phase 0.2]No text output when using the retry/recall recording button to speak (3/20),Medium,Bug,Closed,mincyao,qihexu,1/12/2026 3:21:29 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4402922,[FR115315][Life Logger][Phase 0.2]Ower filter doesn't work,Medium,Bug,Closed,mincyao,qihexu,1/12/2026 3:29:15 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4403467,[FR115315][Life Logger][Phase 0.2]Life logger app could not get asr result during life logger recording stability test,High,Bug,Closed,jialinl,ruocxu,1/12/2026 8:40:23 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4403536,[FR115315][Life Logger][Phase 0.2] Replace the id when multi-ids are recognized as owner,Medium,Bug,Closed,jialinl,yongfeiz,1/12/2026 9:10:40 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4403652,[FR105833][Glymur][HP]​​The audio captured on Glymur is sped-up,Medium,Bug,CannotDuplicate,yaqih,tapadeep,1/12/2026 9:53:43 AM,NA,NA
+4403769,[FR104867][Kaanapali][VoiceCallTranslation][MDF]The translation box will not automatically scroll to show the latest content,Medium,Bug,InProgress,jialinl,feisun,1/12/2026 10:32:35 AM,NA,NA
+4403769,[FR104867][Kaanapali][VoiceCallTranslation][MDF]The translation box will not automatically scroll to show the latest content,Medium,Bug,InProgress,jialinl,feisun,1/12/2026 10:32:35 AM,NA,LA.QISI.16.0-15800-qssi.1-1
+4403769,[FR104867][Kaanapali][VoiceCallTranslation][MDF]The translation box will not automatically scroll to show the latest content,Medium,Bug,InProgress,jialinl,feisun,1/12/2026 10:32:35 AM,NA,LA.QSSI.16.0-39300-qssi.1-1
+4403769,[FR104867][Kaanapali][VoiceCallTranslation][MDF]The translation box will not automatically scroll to show the latest content,Medium,Bug,InProgress,jialinl,feisun,1/12/2026 10:32:35 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4403769,[FR104867][Kaanapali][VoiceCallTranslation][MDF]The translation box will not automatically scroll to show the latest content,Medium,Bug,InProgress,jialinl,feisun,1/12/2026 10:32:35 AM,NA,LA.QXSI.16.0-21900-qssi.1-1
+4404577,[FR115315][Life Logger][Phase 0.2]Coversation Filter color will not recover when all filters are canceled,Medium,Bug,Closed,mincyao,qihexu,1/13/2026 3:26:51 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4404611,"[FR115315][Life Logger][Phase 0.2]UI display exception after right swipe from the ""timeline insight"" page to ""logger assistant""",Medium,Bug,Closed,mincyao,qihexu,1/13/2026 4:09:00 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4404673,[FR115315][Life Logger][Phase 0.2]App would never stop using mic and not process wav if disable life logger function before voicecall ended,Medium,Bug,Closed,jialinl,ruocxu,1/13/2026 5:06:09 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4404702,[FR115315][Life Logger][Phase 0.2]The ASR function of Recall/Retrieve did not work after life logger enabled,Medium,Bug,Closed,jialinl,qihexu,1/13/2026 5:24:36 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4404708,[FR115315][Life Logger][Phase 0.2]Device got crash(ADSP) when using batch mode(Once),High,Bug,Withdrawn,jialinl,vipuverm,1/13/2026 5:27:47 AM,NA,NA
+4404882,[FR115315][Life Logger][Phase 0.2]  Extra white square in bottom-left of Timeline Insight,Medium,Bug,Closed,haiyxiao,qihexu,1/13/2026 6:24:14 AM,NA,LA.QSSI.17.0-21002-qssi.1-142
+4405280,[FR115315][Life Logger][Phase 0.2] Switching between different dates in the Timeline Insights page is too slow,Medium,Bug,Closed,haiyxiao,qihexu,1/13/2026 9:46:38 AM,NA,LA.QSSI.17.0-20900-qssi.1-1
+4405305,FR115920 Supports immediate synthesis termination and query state API in MeloTTS SDK C++ layer,NA,Requirement,InProgress,yaqih,feisun,1/13/2026 9:56:32 AM,NA,NA
+4405978,[FR115315][Life Logger][P0.2][Beta2] The WAV file header was not skipped during file enrollment,Medium,Bug,Closed,yaqih,junjiez,1/14/2026 1:43:05 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4407325,[FR115315][Life Logger][Phase 0.2]Life logger app memory leak when a large number of batch mode processing,Medium,Bug,Closed,jialinl,ruocxu,1/15/2026 1:53:59 AM,NA,LA.QSSI.17.0-20700-qssi.1-1
+4407347,[FR105833][Glymur][HP]Model Generation Failure After Repeated Enrollment/Deletion Cycles in Wake-up Stability Test,Medium,Bug,Analysis,yaqih,haozh,1/15/2026 2:21:33 AM,NA,NA
+4407421,[FR115315][Life Logger][Phase 0.2]Owner filter not effective after using conversation filter,Medium,Bug,Closed,mincyao,zhijsun,1/15/2026 4:46:49 AM,NA,LA.QSSI.17.0-20900-qssi.1-1
+4407423,[FR115315][Life Logger][Phase0.2][Beta3][Kaanapali] Timeline mark not updated on the next day when conversation session is over midnight,Medium,Bug,Closed,yaqih,qihexu,1/15/2026 4:52:38 AM,NA,LA.QSSI.17.0-20900-qssi.1-1
+4407561,[FR115315][Life Logger][P0.2][Beta2] Life Logger Java leak when loop enter-exit timeline,Medium,Bug,Closed,haiyxiao,qihexu,1/15/2026 8:42:41 AM,NA,LA.QSSI.17.0-20900-qssi.1-1
+4408037,[FR103071][Kaanapali][SDZ]The output asr content is repetitive even only play speech once under dynamic mode,High,Bug,Analysis,jialinl,pbarman,1/16/2026 2:38:13 AM,NA,NA
+4408041,[FR104867][Kaanapali][VoiceCallTranslation][MDF]Floating window could not pop out if make call first then enable translation,Low,Bug,InProgress,jialinl,feisun,1/16/2026 2:43:38 AM,NA,NA
+4408041,[FR104867][Kaanapali][VoiceCallTranslation][MDF]Floating window could not pop out if make call first then enable translation,Low,Bug,InProgress,jialinl,feisun,1/16/2026 2:43:38 AM,NA,LA.QISI.16.0-17200-qssi.1-1
+4408041,[FR104867][Kaanapali][VoiceCallTranslation][MDF]Floating window could not pop out if make call first then enable translation,Low,Bug,InProgress,jialinl,feisun,1/16/2026 2:43:38 AM,NA,LA.QSSI.16.0-40200-qssi.1-1
+4408041,[FR104867][Kaanapali][VoiceCallTranslation][MDF]Floating window could not pop out if make call first then enable translation,Low,Bug,InProgress,jialinl,feisun,1/16/2026 2:43:38 AM,NA,LA.QXSI.16.0-22700-qssi.1-1
+4409525,[FR115315][Life Logger][P0.2][Beta3] Unified enrollment ended too quickly,Medium,Bug,InProgress,haiyxiao,junjiez,1/19/2026 2:22:21 AM,NA,NA
+4409525,[FR115315][Life Logger][P0.2][Beta3] Unified enrollment ended too quickly,Medium,Bug,InProgress,haiyxiao,junjiez,1/19/2026 2:22:21 AM,NA,LA.QSSI.17.0-21300-qssi.1-1
+4409550,"[OPPO][SM6450][case#08315532]Trigger crash and ssr through property If AGM merges into AHAL, access to sys node is not allowed, so makign crash and ssr trigger through property.",Medium,Bug,InProgress,mincyao,lchaluva,1/19/2026 3:02:34 AM,NA,NA
+4409883,[FR105833][Glymur][HP]​​Wake-Up Delay from 100ms -> 500ms,Medium,Bug,Withdrawn,yaqih,samyu,1/19/2026 7:01:16 AM,NA,NA
+4410015,[FR115315][Life Logger][Phase 0.2]wakeup service stopping ，after repeat enrollment (1/10),Medium,Bug,Closed,mincyao,junjiez,1/19/2026 8:14:37 AM,NA,LA.QSSI.17.0-21300-qssi.1-1
+4410017,[QPM_Release][QNN2.4.0][Whisper]QNN version info is incorrect in readme（beta1),Medium,Bug,InProgress,jialinl,dunhye,1/19/2026 8:15:56 AM,NA,NA
+4410022,"[QPM_Release][QNN2.4.0][Whisper]Missing ""data"" folder in .\libs\npu\rpc_libraries\assets (beta1)",Medium,Bug,InProgress,jialinl,dunhye,1/19/2026 8:17:56 AM,NA,NA
+4410025,[QPM_Release][QNN2.4.0][Whisper]Missing QNN file info of Glymer Device in readme of WOS version (beta1),Medium,Bug,InProgress,jialinl,dunhye,1/19/2026 8:19:37 AM,NA,NA
+4410756,[FR115315][Life Logger][Phase 0.2] life logger native heap memory leak when repeatedly entering and exiting the timeline,Medium,Bug,Closed,haiyxiao,qihexu,1/20/2026 2:35:14 AM,NA,LA.QSSI.17.0-21300-qssi.1-1
+4411229,[FR115315][Life Logger][Phase0.2][Beta3][Kaanapali] QAIOR LLE Topic Mismatch,Medium,Bug,Analysis,haiyxiao,vipuverm,1/20/2026 7:14:21 AM,NA,NA
+4411249,[FR115315][Life Logger][Phase 0.2]The first training stopped too quickly after Wakeup service clear the data,Medium,Bug,Closed,mincyao,junjiez,1/20/2026 7:25:22 AM,NA,LA.QSSI.17.0-21300-qssi.1-1
+4412663,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]New CDSP crash during translation stability test (1/30),High,Bug,InProgress,jialinl,wjiang,1/21/2026 6:57:36 AM,NA,NA
+4412663,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]New CDSP crash during translation stability test (1/30),High,Bug,InProgress,jialinl,wjiang,1/21/2026 6:57:36 AM,NA,ADSP.VT.5.4.5-00160-ALDABRA-1
+4412663,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]New CDSP crash during translation stability test (1/30),High,Bug,InProgress,jialinl,wjiang,1/21/2026 6:57:36 AM,NA,CDSP.HT.3.2-00838-KAANAPALI-1
+4412663,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]New CDSP crash during translation stability test (1/30),High,Bug,InProgress,jialinl,wjiang,1/21/2026 6:57:36 AM,NA,LPAIDSP.HT.1.2-01034-KAANAPALI-1
+4412663,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]New CDSP crash during translation stability test (1/30),High,Bug,InProgress,jialinl,wjiang,1/21/2026 6:57:36 AM,NA,LPAIDSP.HT.1.4-00705.2-ASPEN-1
+4412663,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]New CDSP crash during translation stability test (1/30),High,Bug,InProgress,jialinl,wjiang,1/21/2026 6:57:36 AM,NA,LPAIDSP.HT.1.5-00476-BALSAM-1
+4412663,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]New CDSP crash during translation stability test (1/30),High,Bug,InProgress,jialinl,wjiang,1/21/2026 6:57:36 AM,NA,LPAIDSP.HT.1.5.1-00109-BALSAM-1
+4412663,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]New CDSP crash during translation stability test (1/30),High,Bug,InProgress,jialinl,wjiang,1/21/2026 6:57:36 AM,NA,LPAIDSP.HT.1.5.c1-00238-BALSAM-1
+4412663,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]New CDSP crash during translation stability test (1/30),High,Bug,InProgress,jialinl,wjiang,1/21/2026 6:57:36 AM,NA,MPSS.KI.1.0-02043.6-HAWI_CORE_TEST-1
+4413727,[FR115315][Life Logger][P0.2][Beta3] Wakeup service native memory leak during unified enrollment,Medium,Bug,InProgress,haiyxiao,junjiez,1/22/2026 1:38:17 AM,NA,NA
+4413727,[FR115315][Life Logger][P0.2][Beta3] Wakeup service native memory leak during unified enrollment,Medium,Bug,InProgress,haiyxiao,junjiez,1/22/2026 1:38:17 AM,NA,LA.QSSI.17.0-21800-qssi.1-1
+4413763,[FR115315][Life Logger][P0.2][Beta2] Inaccurate Owner tagging during multi-person conversations,Medium,Bug,Closed,yaqih,yongfeiz,1/22/2026 2:40:16 AM,NA,LA.QSSI.17.0-21300-qssi.1-1
+4416051,[FR111092][QPM2.5.0][WOS]Missing generation steps for ARM64X app package,Medium,Bug,InProgress,jialinl,feisun,1/23/2026 8:25:55 AM,NA,NA
+4416052,[FR111092][QPM2.5.0][WOS]Whisper model initialization failed on ARM64X app,Medium,Bug,InProgress,jialinl,feisun,1/23/2026 8:27:30 AM,NA,NA
+4416057,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Device got crash during translation stability test (1/180),High,Bug,InProgress,jialinl,wjiang,1/23/2026 8:29:48 AM,NA,NA
+4416057,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Device got crash during translation stability test (1/180),High,Bug,InProgress,jialinl,wjiang,1/23/2026 8:29:48 AM,NA,AUDIOREACH_SPF.SDK.0.0-00140-AR_SDK-1
+4416057,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Device got crash during translation stability test (1/180),High,Bug,InProgress,jialinl,wjiang,1/23/2026 8:29:48 AM,NA,CDSP.HT.3.6-00322-HAWI-1
+4416057,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Device got crash during translation stability test (1/180),High,Bug,InProgress,jialinl,wjiang,1/23/2026 8:29:48 AM,NA,LPAIDSP.HT.1.6-00455-HAWI-1
+4416057,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Device got crash during translation stability test (1/180),High,Bug,InProgress,jialinl,wjiang,1/23/2026 8:29:48 AM,NA,MPSS.JO.4.0-00090-SHIKRA_NM_TEST-1
+4416068,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Translation would lost a lot of content during long speech either TX/RX,High,Bug,InProgress,jialinl,wjiang,1/23/2026 8:38:48 AM,NA,NA
+4416068,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Translation would lost a lot of content during long speech either TX/RX,High,Bug,InProgress,jialinl,wjiang,1/23/2026 8:38:48 AM,NA,ADSP.VT.5.4.5-00160-ALDABRA-1
+4416068,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Translation would lost a lot of content during long speech either TX/RX,High,Bug,InProgress,jialinl,wjiang,1/23/2026 8:38:48 AM,NA,AUDIOREACH_SPF.SDK.0.0-00127-AR_SDK-1
+4416068,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Translation would lost a lot of content during long speech either TX/RX,High,Bug,InProgress,jialinl,wjiang,1/23/2026 8:38:48 AM,NA,CDSP.HT.3.2-00864-KAANAPALI-1
+4416068,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Translation would lost a lot of content during long speech either TX/RX,High,Bug,InProgress,jialinl,wjiang,1/23/2026 8:38:48 AM,NA,CDSP.HT.3.6-00295.1-HAWI-1
+4416068,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Translation would lost a lot of content during long speech either TX/RX,High,Bug,InProgress,jialinl,wjiang,1/23/2026 8:38:48 AM,NA,LPAIDSP.HT.1.2-01071-KAANAPALI-1
+4416068,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Translation would lost a lot of content during long speech either TX/RX,High,Bug,InProgress,jialinl,wjiang,1/23/2026 8:38:48 AM,NA,LPAIDSP.HT.1.2.c1-00450-PAKALA-2
+4416068,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Translation would lost a lot of content during long speech either TX/RX,High,Bug,InProgress,jialinl,wjiang,1/23/2026 8:38:48 AM,NA,LPAIDSP.HT.1.5.1-00135-BALSAM-1
+4416068,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Translation would lost a lot of content during long speech either TX/RX,High,Bug,InProgress,jialinl,wjiang,1/23/2026 8:38:48 AM,NA,LPAIDSP.HT.1.5.c1-00238-BALSAM-1
+4416068,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Translation would lost a lot of content during long speech either TX/RX,High,Bug,InProgress,jialinl,wjiang,1/23/2026 8:38:48 AM,NA,LPAIDSP.HT.1.6-00408-HAWI-1
+4416068,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Translation would lost a lot of content during long speech either TX/RX,High,Bug,InProgress,jialinl,wjiang,1/23/2026 8:38:48 AM,NA,MPSS.JO.4.0-00080-SHIKRA_CORE_TEST-1
+4416068,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]Translation would lost a lot of content during long speech either TX/RX,High,Bug,InProgress,jialinl,wjiang,1/23/2026 8:38:48 AM,NA,MPSS.KI.1.0-02057-HAWI_GENDTF_TEST-1
+4417368,"[FR115315][Life Logger][Phase0.2][Beta3][Kaanapali] Life Logger Assistant showing ""Only support query in English"" error during English query",Medium,Bug,Closed,mincyao,qihexu,1/26/2026 8:19:09 AM,NA,LA.QSSI.17.0-21800-qssi.1-1
+4419649,"[FR115315][Life Logger][Phase 0.2]voice command in life logger assistant, AI will not autoplayback the response (1/10)",Medium,Bug,Open,mincyao,yongfeiz,1/28/2026 5:16:19 AM,NA,NA
+4421091,[FR200254][VoiceAI part]Android 17: SDK version update in QC apps,NA,Requirement,Closed,yaqih,yongfeiz,1/29/2026 3:15:39 AM,NA,NA
+4421091,[FR200254][VoiceAI part]Android 17: SDK version update in QC apps,NA,Requirement,Closed,yaqih,yongfeiz,1/29/2026 3:15:39 AM,NA,LA.QSSI.17.0-22200-qssi.1-1
+4424444,[FR115315][Life Logger][Phase 0.2]ASR no output after live recording (60%),Medium,Bug,Closed,mincyao,yongfeiz,2/2/2026 3:22:31 AM,NA,LA.QSSI.17.0-22200-qssi.1-1
+4425251,FR111081:VoiceAI Unified Enrollment for speaker profiles,NA,Requirement,InProgress,mincyao,zhijsun,2/2/2026 9:46:46 AM,NA,NA
+4426509,"[FR115920][QCM8550][TTS][LE]TTS audio truncated: Input length is 4000 characters, but output only contains the first ~1000 characters",Medium,Bug,InProgress,yaqih,feisun,2/3/2026 6:51:16 AM,NA,NA
+4427686,[FR115315][Life Logger][Phase 0.2] stuck in file processing after voip call ended (Once),High,Bug,Closed,jialinl,yongfeiz,2/4/2026 2:19:04 AM,NA,LA.QSSI.17.0-23000-qssi.1-1
+4427688,[FR111092][QPM2.5.0][WOS]Whisper X64 app could not start recording after recording 60 times ,High,Bug,InProgress,jialinl,feisun,2/4/2026 2:21:20 AM,NA,NA
+4429205,[FR115315][Life Logger][Phase 0.2] Life logger recording lost the RX voice during video call of Wechat,Medium,Bug,Closed,jialinl,ruocxu,2/5/2026 3:03:47 AM,NA,LA.QSSI.17.0-23000-qssi.1-1
+4429769,[FR111092][QPM2.5.0][WOS]Whisper ARM64 app only got the 30s contents even if the speech over 30s,High,Bug,InProgress,jialinl,feisun,2/5/2026 8:08:42 AM,NA,NA
+4429797, [QPM][ASR][2.5.0.0][LE] Correct VAD model destination path in sample app readme file ,Low,Bug,Open,haiyxiao,dunhye,2/5/2026 8:31:20 AM,NA,NA
+4432839,[FR115315][Life Logger][P0.2][Beta4] Timeline will not update when processing large audio clip,Medium,Bug,Closed,haiyxiao,qihexu,2/9/2026 8:29:27 AM,NA,LA.QSSI.17.0-23000-qssi.1-1
+4432843,[FR115315][Life Logger][P0.2][Beta4] Timeline ANR when processing large audio clip,Medium,Bug,Closed,haiyxiao,qihexu,2/9/2026 8:30:56 AM,NA,LA.QSSI.17.0-23000-qssi.1-1
+4433123,"[FR115315][Life Logger][Phase 0.3][UI]""Limit Conversation Length"" UI display change to "" Set max process interval""",Medium,Bug,Closed,mincyao,ruocxu,2/9/2026 10:27:53 AM,NA,LA.QSSI.17.0-23000-qssi.1-1
+4433135, [FR115315][Life Logger][Phase 0.3]  UI Reminder for unsupported audio formats,Medium,Bug,Closed,mincyao,ruocxu,2/9/2026 10:30:57 AM,NA,LA.QSSI.17.0-23000-qssi.1-1
+4433940,[QACT8.3][Regression] FNN model path can't be edit in QACT 8.3.8.9,Medium,Bug,Closed,jialinl,jmungara,2/10/2026 2:39:22 AM,NA,QACT.WIN.8.3-00241-QACT-1
+4433974,[FR113020][Molokai][VoipCallTranslation]The TX mute function will be disabled after audioserver restart(50%),Medium,Bug,InProgress,jialinl,shikmath,2/10/2026 3:23:39 AM,NA,NA
+4433974,[FR113020][Molokai][VoipCallTranslation]The TX mute function will be disabled after audioserver restart(50%),Medium,Bug,InProgress,jialinl,shikmath,2/10/2026 3:23:39 AM,NA,LA.VENDOR.16.2.3-25116-DIVAR.1.CONSOLIDATED-1
+4434519,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]The beginning of Chinese sentence would be missing at ASR stage during voice call translation,Medium,Bug,InProgress,jialinl,wjiang,2/10/2026 8:33:51 AM,NA,NA
+4434519,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]The beginning of Chinese sentence would be missing at ASR stage during voice call translation,Medium,Bug,InProgress,jialinl,wjiang,2/10/2026 8:33:51 AM,NA,ADSP.VT.5.4.5-00173-ALDABRA-1
+4434519,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]The beginning of Chinese sentence would be missing at ASR stage during voice call translation,Medium,Bug,InProgress,jialinl,wjiang,2/10/2026 8:33:51 AM,NA,AUDIOREACH_SPF.SDK.0.0-00140-AR_SDK-1
+4434519,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]The beginning of Chinese sentence would be missing at ASR stage during voice call translation,Medium,Bug,InProgress,jialinl,wjiang,2/10/2026 8:33:51 AM,NA,CDSP.HT.3.2-00864-KAANAPALI-1
+4434519,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]The beginning of Chinese sentence would be missing at ASR stage during voice call translation,Medium,Bug,InProgress,jialinl,wjiang,2/10/2026 8:33:51 AM,NA,CDSP.HT.3.6-00322-HAWI-1
+4434519,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]The beginning of Chinese sentence would be missing at ASR stage during voice call translation,Medium,Bug,InProgress,jialinl,wjiang,2/10/2026 8:33:51 AM,NA,LPAIDSP.HT.1.2-01096-KAANAPALI-1
+4434519,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]The beginning of Chinese sentence would be missing at ASR stage during voice call translation,Medium,Bug,InProgress,jialinl,wjiang,2/10/2026 8:33:51 AM,NA,LPAIDSP.HT.1.5.1-00144.4-BALSAM-1
+4434519,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]The beginning of Chinese sentence would be missing at ASR stage during voice call translation,Medium,Bug,InProgress,jialinl,wjiang,2/10/2026 8:33:51 AM,NA,LPAIDSP.HT.1.6-00455-HAWI-1
+4434519,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]The beginning of Chinese sentence would be missing at ASR stage during voice call translation,Medium,Bug,InProgress,jialinl,wjiang,2/10/2026 8:33:51 AM,NA,MPSS.JO.4.0-00090-SHIKRA_NM_TEST-1
+4434519,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]The beginning of Chinese sentence would be missing at ASR stage during voice call translation,Medium,Bug,InProgress,jialinl,wjiang,2/10/2026 8:33:51 AM,NA,MPSS.KI.1.0-02100.12-HAWI_GENVP_TEST-1
+4434670,[FR115920][QCM8550][TTS][LE] Update code to be compatible with LE host,Medium,Bug,InProgress,haiyxiao,feisun,2/10/2026 9:38:55 AM,NA,NA
+4435627,[FR115315][Life Logger][P0.3][Beta2] Add LifeLogger to the Voice UI domain,Medium,Bug,InProgress,yaqih,ruocxu,2/11/2026 4:14:44 AM,NA,NA
+4435627,[FR115315][Life Logger][P0.3][Beta2] Add LifeLogger to the Voice UI domain,Medium,Bug,InProgress,yaqih,ruocxu,2/11/2026 4:14:44 AM,NA,LA.QSSI.17.0-24700-qssi.1-1
+4437577,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]RX Translation failed even the ASR function have got the content,High,Bug,InProgress,jialinl,wjiang,2/12/2026 7:03:15 AM,NA,NA
+4437577,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]RX Translation failed even the ASR function have got the content,High,Bug,InProgress,jialinl,wjiang,2/12/2026 7:03:15 AM,NA,AUDIOREACH_SPF.SDK.0.0-00140-AR_SDK-1
+4437577,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]RX Translation failed even the ASR function have got the content,High,Bug,InProgress,jialinl,wjiang,2/12/2026 7:03:15 AM,NA,CDSP.HT.3.6-00322-HAWI-1
+4437577,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]RX Translation failed even the ASR function have got the content,High,Bug,InProgress,jialinl,wjiang,2/12/2026 7:03:15 AM,NA,LPAIDSP.HT.1.6-00455-HAWI-1
+4437577,[FR104867-L4][Kaanapali][VoiceCallTranslation][MDF]RX Translation failed even the ASR function have got the content,High,Bug,InProgress,jialinl,wjiang,2/12/2026 7:03:15 AM,NA,MPSS.JO.4.0-00090-SHIKRA_NM_TEST-1
+4439430, [FR104867-L4][Kaanapali][VoiceCallTranslation][MDF] No EC on RX translation path with speaker mode,Medium,Bug,InProgress,jialinl,shikmath,2/13/2026 9:27:12 AM,NA,NA
+4451684,[FR102465][Kannapali][Zipformer]Zipformer v2.0.6 ASR model is failing on meta 1121,High,Bug,Duplicate,jialinl,pbarman,2/26/2026 7:17:20 AM,4272135,NA
+4451756,[FR105833][Glymur][HP] Barge-in Max = 46.5% is high during KPI testing,Medium,Bug,InProgress,haiyxiao,klnu,2/26/2026 8:10:44 AM,NA,NA
+4459429,[FR115315][Life Logger][Phase 0.2 Beta4]Life logger app got crash during switch turn on/off stability test,Medium,Bug,Analysis,jialinl,ruocxu,3/5/2026 3:07:34 AM,NA,NA
+4459786,[FR113896][GameAI][SDK] whisperLog.txt Chinese garbled text,Medium,Bug,Open,haiyxiao,dunhye,3/5/2026 6:27:31 AM,NA,NA
+4459993,[FR115315][Life Logger][Phase 0.4]No ASR content display in UI in live recording mode,Medium,Bug,InProgress,mincyao,qihexu,3/5/2026 7:55:33 AM,NA,NA
+4460008,[FR115315][Life Logger][Phase 0.3]The RX recording pcm is clipped during voip call,Medium,Bug,Analysis,jialinl,shikmath,3/5/2026 8:05:25 AM,NA,NA
+4461487,FR109404:Speakerdiarizationdetect device owner,NA,Requirement,InProgress,jialinl,haozh,3/6/2026 8:38:15 AM,NA,NA
+4464564,[QPM_Release_ASR][notebook]Zipformer model notebook doesn't contain net_config.json,Medium,Bug,InProgress,mincyao,jianzz,3/10/2026 6:25:56 AM,NA,NA
+4464565,[FR113896][Whipser][X64Windows]Whisper X64 app could not start recording after recording 60 times,Medium,Bug,Open,jialinl,dunhye,3/10/2026 6:25:57 AM,NA,NA
+4464580,[FR113896][Whipser][X64Windows]Whisper x64 app only got the 30s contents even if the speech over 30s,Medium,Bug,Open,jialinl,dunhye,3/10/2026 6:30:13 AM,NA,NA
+4465887,FR110977:Sound model library updates for enrollment quality check and bad mic detection,NA,Requirement,InProgress,yaqih,feisun,3/11/2026 3:21:25 AM,NA,NA
+4466239, FR110975:Stage II UV enhancement with on-device background incremental learning,NA,Requirement,Open,haiyxiao,jinzhang,3/11/2026 6:37:25 AM,NA,NA

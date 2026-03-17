@@ -1,0 +1,102 @@
+/* Global button style management: shared base + 5 variants. */
+
+:root {
+  --btn-radius: 12px;
+  --btn-font-weight: 700;
+  --btn-transition: 0.2s ease;
+
+  --btn1-bg: linear-gradient(135deg, #c9f7ff, #9ae6ff);
+  --btn1-text: #0f172a;
+  --btn1-border: rgba(12, 74, 110, 0.35);
+
+  --btn2-bg: linear-gradient(135deg, #38bdf8, #818cf8);
+  --btn2-text: #f8fafc;
+  --btn2-border: transparent;
+
+  --btn3-bg: rgba(15, 23, 42, 0.62);
+  --btn3-text: #e2e8f0;
+  --btn3-border: rgba(148, 163, 184, 0.32);
+
+  --btn4-bg: linear-gradient(135deg, #fcd34d, #fb923c);
+  --btn4-text: #3f2a00;
+  --btn4-border: rgba(217, 119, 6, 0.34);
+
+  --btn5-bg: linear-gradient(135deg, #fb7185, #f43f5e);
+  --btn5-text: #fff1f2;
+  --btn5-border: transparent;
+}
+
+.el-button {
+  border-radius: var(--btn-radius);
+  font-weight: var(--btn-font-weight);
+  transition: transform var(--btn-transition), box-shadow var(--btn-transition), opacity var(--btn-transition);
+}
+
+.el-button:hover {
+  transform: translateY(-1px);
+}
+
+.el-button:active {
+  transform: translateY(0);
+}
+
+/* Keep all default buttons unified when no custom class is specified. */
+.el-button--default {
+  background: var(--btn3-bg);
+  color: var(--btn3-text);
+  border-color: var(--btn3-border);
+}
+
+.el-button--primary {
+  background: var(--btn2-bg);
+  color: var(--btn2-text);
+  border-color: var(--btn2-border);
+}
+
+.el-button--danger {
+  background: var(--btn5-bg);
+  color: var(--btn5-text);
+  border-color: var(--btn5-border);
+}
+
+/* Five reusable button variants. */
+.el-button.btn-style-1,
+.btn-style-1.el-button {
+  background: var(--btn1-bg);
+  color: var(--btn1-text);
+  border-color: var(--btn1-border);
+}
+
+.el-button.btn-style-2,
+.btn-style-2.el-button {
+  background: var(--btn2-bg);
+  color: var(--btn2-text);
+  border-color: var(--btn2-border);
+}
+
+.el-button.btn-style-3,
+.btn-style-3.el-button {
+  background: var(--btn3-bg);
+  color: var(--btn3-text);
+  border-color: var(--btn3-border);
+}
+
+.el-button.btn-style-4,
+.btn-style-4.el-button {
+  background: var(--btn4-bg);
+  color: var(--btn4-text);
+  border-color: var(--btn4-border);
+}
+
+.el-button.btn-style-5,
+.btn-style-5.el-button {
+  background: var(--btn5-bg);
+  color: var(--btn5-text);
+  border-color: var(--btn5-border);
+}
+
+.el-button.is-disabled,
+.el-button.is-disabled:hover {
+  transform: none;
+  opacity: 0.5;
+}

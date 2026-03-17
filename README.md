@@ -21,6 +21,11 @@
    - 坐标图（散点图）：对比不同模型的多个指标
    - 支持多种指标选择（准确率、精确率、召回率、F1分数等）
 
+4. **人员与权限管理**
+   - 用户与权限组管理
+   - 支持将用户加入 `manager-group` 获得测试编辑权限
+   - 联动测试进度的“测试负责人”，查看每个人任务数与时间占用
+
 ## 技术栈
 
 ### 后端
@@ -95,6 +100,8 @@ python init_db.py
 python migrate_db.py
 ```
 
+> 新增人员管理功能后，建议先执行一次 `python migrate_db.py`，以创建用户/权限组相关表并补充 `estimated_hours` 字段。
+
 5. 启动服务：
 ```bash
 uvicorn main:app --reload --port 8000
@@ -149,6 +156,43 @@ npm run dev
 1. 在"KPI表现"页面，可以查看两个图表：
    - **天梯图**：选择指标和时间范围，查看模型性能排名
    - **坐标图**：选择X轴和Y轴指标，对比不同模型的性能
+
+### 人员管理与权限分组
+
+1. 在"人员管理"页面中可新增用户、编辑用户并分配权限组。
+2. 默认存在 `manager-group`，加入该组后可编辑测试进度与Bug。
+3. 在"测试进度"页面创建/编辑任务时，测试负责人可从人员列表中直接选择。
+4. 人员管理页面会自动汇总每个人关联任务与预计工时占用（多人任务按成员均摊工时）。
+
+默认管理员账号：
+
+- 用户名：`manager`
+- 密码：`123456`
+
+#### 一键将用户加入 manager-group
+
+可使用脚本：`backend/add_user_to_manager_group.py`
+
+1. 仅把已存在用户加入 manager-group：
+
+```bash
+cd backend
+python add_user_to_manager_group.py alice
+```
+
+2. 若用户不存在，自动创建并加入 manager-group：
+
+```bash
+cd backend
+python add_user_to_manager_group.py bob --create-if-missing --display-name "Bob" --password 123456
+```
+
+3. 若用户已存在但禁用，执行加入组并自动启用：
+
+```bash
+cd backend
+python add_user_to_manager_group.py charlie --activate
+```
 
 ### KPI 数据手动导入（宽表：一行一个模型）
 

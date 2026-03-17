@@ -1,81 +1,92 @@
+import axios from 'axios'
 import { ref } from 'vue'
 
 const ROLE_KEY = 'user_role'
 const USER_KEY = 'user_name'
-const USERS_KEY = 'auth_users'
-const DEFAULT_PASSWORD = '123456'
+const USERNAME_KEY = 'auth_username'
+const CAN_EDIT_KEY = 'can_edit_test'
+const GROUPS_KEY = 'auth_groups'
 
-// 默认用户：manager/123456
-const defaultUsers = {
-  manager: { password: DEFAULT_PASSWORD, role: 'manager', name: '管理员' }
+export const userRole = ref(localStorage.getItem(ROLE_KEY) || 'viewer')
+export const userName = ref(localStorage.getItem(USER_KEY) || '')
+export const currentUsername = ref(localStorage.getItem(USERNAME_KEY) || '')
+export const canEditTest = ref(localStorage.getItem(CAN_EDIT_KEY) === '1')
+export const userGroups = ref([])
+
+try {
+  const raw = localStorage.getItem(GROUPS_KEY)
+  userGroups.value = raw ? JSON.parse(raw) : []
+} catch {
+  userGroups.value = []
 }
 
-export function getUsers() {
-  try {
-    const s = localStorage.getItem(USERS_KEY)
-    return s ? { ...defaultUsers, ...JSON.parse(s) } : { ...defaultUsers }
-  } catch {
-    return { ...defaultUsers }
+function applySession(data) {
+  const role = (data?.role || 'viewer').toLowerCase()
+  const isEditable = Boolean(data?.can_edit_test || role === 'manager')
+  const username = (data?.username || '').trim().toLowerCase()
+
+  userRole.value = role
+  userName.value = data?.display_name || username || ''
+  currentUsername.value = username
+  canEditTest.value = isEditable
+  userGroups.value = data?.groups || []
+
+  localStorage.setItem(ROLE_KEY, userRole.value)
+  localStorage.setItem(USER_KEY, userName.value)
+  localStorage.setItem(USERNAME_KEY, currentUsername.value)
+  localStorage.setItem(CAN_EDIT_KEY, canEditTest.value ? '1' : '0')
+  localStorage.setItem(GROUPS_KEY, JSON.stringify(userGroups.value))
+}
+
+function authHeaders() {
+  return {
+    'X-User-Name': currentUsername.value,
+    'X-User-Role': userRole.value
   }
 }
 
-function saveUsers(users) {
-  const custom = {}
-  for (const [k, v] of Object.entries(users)) {
-    if (v.password !== defaultUsers[k]?.password || v.role !== defaultUsers[k]?.role) {
-      custom[k] = v
-    }
-  }
-  localStorage.setItem(USERS_KEY, JSON.stringify(custom))
-}
-
-const stored = localStorage.getItem(ROLE_KEY) || 'viewer'
-const storedName = localStorage.getItem(USER_KEY) || ''
-
-export const userRole = ref(stored)
-export const userName = ref(storedName)
-export const currentUsername = ref(localStorage.getItem('auth_username') || '')
-
-export function setRole(role) {
-  if (['manager', 'viewer'].includes(role)) {
-    userRole.value = role
-    localStorage.setItem(ROLE_KEY, role)
-  }
-}
-
-export function login(username, password) {
-  const users = getUsers()
-  const key = (username || '').toLowerCase().trim()
+export async function login(username, password) {
+  const key = (username || '').trim().toLowerCase()
   if (!key) return false
-  const user = users[key]
-  const pwd = user?.password ?? (key === 'manager' ? DEFAULT_PASSWORD : null)
-  if (!pwd || password !== pwd) {
+
+  try {
+    const response = await axios.post('/api/personnel/login', {
+      username: key,
+      password
+    })
+    applySession(response.data)
+    return true
+  } catch {
     return false
   }
-  const r = user?.role || (key === 'manager' ? 'manager' : null)
-  if (r && r === 'manager') {
-    userRole.value = r
-    userName.value = user?.name || '管理员'
-    currentUsername.value = key
-    localStorage.setItem(ROLE_KEY, r)
-    localStorage.setItem(USER_KEY, userName.value)
-    localStorage.setItem('auth_username', key)
-    return true
-  }
-  return false
 }
 
-export function changePassword(newPassword) {
+export async function refreshCurrentUser() {
   if (!currentUsername.value) return false
-  const users = getUsers()
-  const key = currentUsername.value
-  if (!users[key]) {
-    users[key] = { password: DEFAULT_PASSWORD, role: userRole.value, name: userName.value }
+  try {
+    const response = await axios.get('/api/personnel/me', {
+      headers: authHeaders()
+    })
+    applySession(response.data)
+    return true
+  } catch {
+    logout()
+    return false
   }
-  users[key].password = newPassword
-  users[key].name = userName.value
-  users[key].role = userRole.value
-  saveUsers(users)
+}
+
+export async function changePassword(oldPassword, newPassword) {
+  if (!currentUsername.value) return false
+  await axios.post(
+    '/api/personnel/change-password',
+    {
+      old_password: oldPassword,
+      new_password: newPassword
+    },
+    {
+      headers: authHeaders()
+    }
+  )
   return true
 }
 
@@ -83,23 +94,28 @@ export function logout() {
   userRole.value = 'viewer'
   userName.value = ''
   currentUsername.value = ''
+  canEditTest.value = false
+  userGroups.value = []
+
   localStorage.setItem(ROLE_KEY, 'viewer')
   localStorage.removeItem(USER_KEY)
-  localStorage.removeItem('auth_username')
+  localStorage.removeItem(USERNAME_KEY)
+  localStorage.setItem(CAN_EDIT_KEY, '0')
+  localStorage.removeItem(GROUPS_KEY)
 }
 
 export function canCreateOrEditTest() {
-  return userRole.value === 'manager'
+  return canEditTest.value
 }
 
 export function canCreateBug() {
-  return userRole.value === 'manager'
+  return canEditTest.value
 }
 
 export function canEditBug() {
-  return userRole.value === 'manager'
+  return canEditTest.value
 }
 
 export function canDeleteBug() {
-  return userRole.value === 'manager'
+  return canEditTest.value
 }

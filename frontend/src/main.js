@@ -4,6 +4,7 @@ import router from './router'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import './styles/theme.css'
+import './styles/buttons.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
@@ -16,7 +17,7 @@ import {
   GridComponent
 } from 'echarts/components'
 
-// 注册ECharts组件
+// Register ECharts components.
 use([
   CanvasRenderer,
   BarChart,
@@ -30,10 +31,10 @@ use([
 
 const app = createApp(App)
 
-// 注册VChart组件
+// Register the VChart component.
 app.component('v-chart', VChart)
 
-// 注册Element Plus图标
+// Register Element Plus icons.
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)
 }

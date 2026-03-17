@@ -1,86 +1,516 @@
-from fastapi import APIRouter, Depends, HTTPException
+import csv
+import os
+from datetime import datetime
+from typing import Dict, List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from sqlalchemy import Integer, cast, func
 from sqlalchemy.orm import Session
-from typing import List
-import schemas, models
-from database import get_db
+
+import models
+import schemas
 from auth import require_manager
+from database import get_db
 
 router = APIRouter()
+
+CSV_HEADER_CR_NUMBER = "CR Number"
+CSV_HEADER_TITLE = "Title"
+CSV_HEADER_SEVERITY = "Severity"
+CSV_HEADER_TYPE = "CR Type"
+CSV_HEADER_STATUS = "CR Status"
+CSV_HEADER_CREATED_BY = "Created By"
+CSV_HEADER_ASSIGNEE = "CR Assignee"
+CSV_HEADER_CREATED_ON = "Created On"
+CSV_HEADER_PARENT = "Parent CR"
+CSV_HEADER_BUILD = "Software Image Integration Build"
+
+BACKEND_DIR = os.path.dirname(os.path.dirname(__file__))
+WORKSPACE_DIR = os.path.dirname(BACKEND_DIR)
+DEFAULT_BUG_CSV_PATH = os.path.join(BACKEND_DIR, "APT_MM_Audio_SZ_Last90.csv")
+
+
+def _normalize_severity(raw: Optional[str]) -> str:
+    text = (raw or "").strip().lower()
+    if "critical" in text:
+        return "critical"
+    if "high" in text:
+        return "high"
+    if "low" in text:
+        return "low"
+    return "medium"
+
+
+def _normalize_status(raw: Optional[str]) -> str:
+    text = (raw or "").strip().lower().replace(" ", "").replace("_", "").replace("-", "")
+    if text in {"inprogress", "build", "closed", "duplicate", "fixed", "resolved", "verified", "cannotduplicate"}:
+        return "fixed"
+    if text in {"open", "analysis"}:
+        return "analysis"
+    if text == "other":
+        return "other"
+    return "other"
+
+
+def _sanitize_status(raw: Optional[str]) -> str:
+    value = (raw or "").strip()
+    return value or "other"
+
+
+def _parse_cr_created_on(raw: Optional[str]) -> Optional[datetime]:
+    text = (raw or "").strip()
+    if not text:
+        return None
+
+    formats = [
+        "%m/%d/%Y %I:%M:%S %p",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S",
+    ]
+    for fmt in formats:
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        return None
+
+
+def _resolve_csv_path(file_path: Optional[str]) -> str:
+    if not file_path:
+        if os.path.isfile(DEFAULT_BUG_CSV_PATH):
+            return DEFAULT_BUG_CSV_PATH
+        raise HTTPException(status_code=404, detail="Default CSV file not found")
+
+    normalized = file_path.strip().strip('"').strip("'")
+    candidates = []
+    if os.path.isabs(normalized):
+        candidates.append(normalized)
+    else:
+        candidates.extend(
+            [
+                normalized,
+                os.path.join(WORKSPACE_DIR, normalized),
+                os.path.join(BACKEND_DIR, normalized),
+                os.path.join(BACKEND_DIR, os.path.basename(normalized)),
+            ]
+        )
+
+    for candidate in candidates:
+        if os.path.isfile(candidate):
+            return candidate
+
+    raise HTTPException(status_code=404, detail="CSV file not found")
+
+
+def _find_test_by_title_fr(db: Session, title: Optional[str]) -> Optional[models.TestProgress]:
+    title_text = (title or "").strip()
+    if not title_text:
+        return None
+
+    candidates = (
+        db.query(models.TestProgress)
+        .filter(models.TestProgress.fr_number.isnot(None), models.TestProgress.fr_number != "")
+        .all()
+    )
+
+    title_lower = title_text.lower()
+    ordered = sorted(candidates, key=lambda row: len((row.fr_number or "").strip()), reverse=True)
+    for row in ordered:
+        fr = (row.fr_number or "").strip()
+        if fr and fr.lower() in title_lower:
+            return row
+    return None
+
+
+def _validate_test_link(db: Session, test_progress_id: Optional[int]) -> None:
+    if test_progress_id is None:
+        return
+    found = db.query(models.TestProgress.id).filter(models.TestProgress.id == test_progress_id).first()
+    if not found:
+        raise HTTPException(status_code=400, detail="Linked test task not found")
+
+
+def _validate_work_task_link(db: Session, work_task_id: Optional[int]) -> None:
+    if work_task_id is None:
+        return
+    found = db.query(models.WorkTask.id).filter(models.WorkTask.id == work_task_id).first()
+    if not found:
+        raise HTTPException(status_code=400, detail="Linked work task not found")
+
+
+def _apply_auto_test_link(db: Session, payload: Dict, existing: Optional[models.Bug] = None) -> None:
+    if payload.get("test_progress_id") is not None:
+        return
+    if existing and existing.test_progress_id is not None:
+        return
+
+    matched = _find_test_by_title_fr(db, payload.get("title"))
+    if matched:
+        payload["test_progress_id"] = matched.id
+
+
+def _serialize_bug(row: models.Bug) -> Dict:
+    test_task = row.test_progress
+    work_task = row.work_task
+    return {
+        "id": row.id,
+        "title": row.title,
+        "severity": row.severity,
+        "status": row.status,
+        "created_by": row.created_by,
+        "cr_assignee": row.assigned_to,
+        "cr_created_on": row.cr_created_on,
+        "software_image_integration_build": row.software_image_integration_build,
+        "test_progress_id": row.test_progress_id,
+        "work_task_id": row.work_task_id,
+        "external_cr_number": row.external_cr_number,
+        "test_task_name": test_task.test_name if test_task else None,
+        "test_fr_number": test_task.fr_number if test_task else None,
+        "work_task_key": work_task.task_key if work_task else None,
+        "work_task_name": work_task.task_name if work_task else None,
+        "created_at": row.created_at,
+        "updated_at": row.updated_at,
+    }
+
+
+def _apply_bug_order(query):
+    # Sort by CR number descending first, then by id descending for stable ordering.
+    return query.order_by(cast(func.coalesce(models.Bug.external_cr_number, "0"), Integer).desc(), models.Bug.id.desc())
+
+
+def _apply_bug_filters(query, status: Optional[str] = None, severity: Optional[str] = None, created_by: Optional[str] = None):
+    if status:
+        normalized_status = status.strip()
+        if normalized_status:
+            query = query.filter(func.lower(func.trim(models.Bug.status)) == normalized_status.lower())
+    if severity:
+        query = query.filter(models.Bug.severity == severity)
+    if created_by:
+        normalized_created_by = created_by.strip()
+        if normalized_created_by:
+            query = query.filter(func.lower(func.trim(models.Bug.created_by)) == normalized_created_by.lower())
+    return query
+
+
+@router.get("/import/csv/fields")
+def get_bug_csv_fields(file_path: Optional[str] = None):
+    """Extract available CSV fields for bug import."""
+    csv_path = _resolve_csv_path(file_path)
+
+    with open(csv_path, "r", encoding="utf-8-sig", newline="") as fp:
+        reader = csv.DictReader(fp)
+        fields = reader.fieldnames or []
+        sample = next(reader, None) or {}
+
+    return {
+        "file_path": csv_path,
+        "fields": fields,
+        "sample": sample,
+    }
+
+
+@router.get("/filters/options")
+def get_bug_filter_options(db: Session = Depends(get_db)):
+    """Return distinct filter options for bug list page."""
+    rows = db.query(models.Bug.created_by, models.Bug.status).all()
+    created_by_values = sorted(
+        {
+            (value or "").strip()
+            for (value, _) in rows
+            if (value or "").strip()
+        },
+        key=lambda item: item.lower(),
+    )
+    status_values = sorted(
+        {
+            (status_value or "").strip()
+            for (_, status_value) in rows
+            if (status_value or "").strip()
+        },
+        key=lambda item: item.lower(),
+    )
+    return {
+        "created_by": created_by_values,
+        "status": status_values,
+    }
+
+
+def _upsert_bug_from_csv_row(db: Session, row: Dict) -> str:
+    title = (row.get(CSV_HEADER_TITLE) or "").strip()
+    if not title:
+        return "skipped"
+
+    cr_type = (row.get(CSV_HEADER_TYPE) or "").strip().lower()
+    if cr_type and cr_type != "bug":
+        return "skipped"
+
+    cr_number = (row.get(CSV_HEADER_CR_NUMBER) or "").strip()
+    build_value = (row.get(CSV_HEADER_BUILD) or "").strip()
+    normalized_build = build_value if build_value else "NA"
+    bug_data = {
+        "title": title,
+        "severity": _normalize_severity(row.get(CSV_HEADER_SEVERITY)),
+        "status": _sanitize_status(row.get(CSV_HEADER_STATUS)),
+        "created_by": (row.get(CSV_HEADER_CREATED_BY) or "").strip() or "",
+        "assigned_to": (row.get(CSV_HEADER_ASSIGNEE) or "").strip() or None,
+        "cr_created_on": _parse_cr_created_on(row.get(CSV_HEADER_CREATED_ON)),
+        "software_image_integration_build": normalized_build,
+        "test_progress_id": None,
+        "work_task_id": None,
+        "external_cr_number": cr_number or None,
+    }
+
+    _apply_auto_test_link(db, bug_data)
+
+    existing = None
+    if cr_number:
+        # CR Number is the unique import key: same CR should update only.
+        existing = db.query(models.Bug).filter(models.Bug.external_cr_number == cr_number).first()
+
+    if existing:
+        existing.title = bug_data["title"]
+        existing.severity = bug_data["severity"]
+        existing.status = bug_data["status"]
+
+        if bug_data["created_by"]:
+            existing.created_by = bug_data["created_by"]
+        if bug_data["assigned_to"]:
+            existing.assigned_to = bug_data["assigned_to"]
+        if bug_data["cr_created_on"] is not None:
+            existing.cr_created_on = bug_data["cr_created_on"]
+
+        incoming_build = bug_data["software_image_integration_build"]
+        existing_build = (existing.software_image_integration_build or "").strip()
+        if incoming_build and incoming_build != "NA":
+            existing.software_image_integration_build = incoming_build
+        elif not existing_build:
+            existing.software_image_integration_build = incoming_build
+
+        if existing.test_progress_id is None and bug_data["test_progress_id"] is not None:
+            existing.test_progress_id = bug_data["test_progress_id"]
+        if existing.work_task_id is None and bug_data["work_task_id"] is not None:
+            existing.work_task_id = bug_data["work_task_id"]
+        if not existing.external_cr_number and bug_data["external_cr_number"]:
+            existing.external_cr_number = bug_data["external_cr_number"]
+
+        return "updated"
+
+    db.add(models.Bug(**bug_data))
+    return "imported"
+
+
+def _import_bugs_from_reader(reader: csv.DictReader, db: Session, limit: int = 0) -> Dict[str, int]:
+    imported = 0
+    updated = 0
+    skipped = 0
+
+    for row in reader:
+        if limit > 0 and (imported + updated) >= limit:
+            break
+
+        result = _upsert_bug_from_csv_row(db, row)
+        if result == "imported":
+            imported += 1
+        elif result == "updated":
+            updated += 1
+        else:
+            skipped += 1
+
+    return {
+        "imported": imported,
+        "updated": updated,
+        "skipped": skipped,
+    }
+
+
+@router.post("/import/csv")
+def import_bugs_from_csv(
+    payload: schemas.BugCsvImportRequest,
+    db: Session = Depends(get_db),
+    _: Dict = Depends(require_manager),
+):
+    """Import bugs from CSV and auto-link to test task by FR keyword in title when possible."""
+    csv_path = _resolve_csv_path(payload.file_path)
+
+    with open(csv_path, "r", encoding="utf-8-sig", newline="") as fp:
+        reader = csv.DictReader(fp)
+        stats = _import_bugs_from_reader(reader, db, payload.limit)
+
+    db.commit()
+
+    return {
+        "file_path": csv_path,
+        "imported": stats["imported"],
+        "updated": stats["updated"],
+        "skipped": stats["skipped"],
+    }
+
+
+@router.post("/import/csv/upload")
+async def import_bugs_from_csv_upload(
+    file: UploadFile = File(...),
+    limit: int = 0,
+    db: Session = Depends(get_db),
+    _: Dict = Depends(require_manager),
+):
+    """Import bugs from uploaded CSV file."""
+    filename = (file.filename or "").strip()
+    if not filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Only CSV file is supported")
+
+    raw_bytes = await file.read()
+    if not raw_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded CSV file is empty")
+
+    try:
+        text = raw_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=400, detail="CSV encoding must be UTF-8") from exc
+
+    reader = csv.DictReader(text.splitlines())
+    stats = _import_bugs_from_reader(reader, db, limit)
+    db.commit()
+
+    return {
+        "file_name": filename,
+        "imported": stats["imported"],
+        "updated": stats["updated"],
+        "skipped": stats["skipped"],
+    }
+
+
+@router.get("/query")
+def query_bugs(
+    status: str = None,
+    severity: str = None,
+    created_by: str = None,
+    test_id: Optional[int] = None,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+):
+    """Query bugs with filters, CR-number-desc ordering, and pagination metadata."""
+    base_query = db.query(models.Bug)
+    base_query = _apply_bug_filters(base_query, status=status, severity=severity, created_by=created_by)
+    if test_id is not None:
+        base_query = base_query.filter(models.Bug.test_progress_id == test_id)
+
+    total = base_query.count()
+    rows = _apply_bug_order(base_query).offset(skip).limit(limit).all()
+
+    return {
+        "items": [_serialize_bug(row) for row in rows],
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+    }
 
 @router.get("/", response_model=List[schemas.Bug])
 def get_bugs_list(
     status: str = None,
     severity: str = None,
+    created_by: str = None,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db)
 ):
-    """获取Bug列表，支持按状态和严重程度筛选"""
+    """Get the bug list, with optional status and severity filters."""
     query = db.query(models.Bug)
-    
-    if status:
-        query = query.filter(models.Bug.status == status)
-    if severity:
-        query = query.filter(models.Bug.severity == severity)
-    
-    bugs = query.offset(skip).limit(limit).all()
-    return bugs
+    query = _apply_bug_filters(query, status=status, severity=severity, created_by=created_by)
+    bugs = _apply_bug_order(query).offset(skip).limit(limit).all()
+    return [_serialize_bug(row) for row in bugs]
 
 @router.get("/{bug_id}", response_model=schemas.Bug)
 def get_bug(bug_id: int, db: Session = Depends(get_db)):
-    """获取单个Bug详情"""
+    """Get a single bug record."""
     bug = db.query(models.Bug).filter(models.Bug.id == bug_id).first()
     if not bug:
-        raise HTTPException(status_code=404, detail="Bug未找到")
-    return bug
+        raise HTTPException(status_code=404, detail="Bug not found")
+    return _serialize_bug(bug)
 
 @router.post("/", response_model=schemas.Bug)
 def create_bug(bug: schemas.BugCreate, db: Session = Depends(get_db), _=Depends(require_manager)):
-    """创建新的Bug（需 manager 权限）"""
-    db_bug = models.Bug(**bug.model_dump())
+    """Create a new bug. Manager permission is required."""
+    payload = bug.model_dump()
+    payload["status"] = _sanitize_status(payload.get("status"))
+    payload["assigned_to"] = (payload.pop("cr_assignee", None) or "").strip() or None
+    payload["cr_created_on"] = _parse_cr_created_on(payload.pop("cr_created_on", None))
+    payload["created_by"] = (payload.get("created_by") or "").strip()
+    payload["software_image_integration_build"] = (payload.get("software_image_integration_build") or "").strip()
+    _validate_test_link(db, payload.get("test_progress_id"))
+    _validate_work_task_link(db, payload.get("work_task_id"))
+    _apply_auto_test_link(db, payload)
+
+    db_bug = models.Bug(**payload)
     db.add(db_bug)
     db.commit()
     db.refresh(db_bug)
-    return db_bug
+    return _serialize_bug(db_bug)
 
 @router.put("/{bug_id}", response_model=schemas.Bug)
 def update_bug(bug_id: int, bug: schemas.BugBase, db: Session = Depends(get_db), _=Depends(require_manager)):
-    """更新Bug信息（需 manager 权限）"""
+    """Update an existing bug. Manager permission is required."""
     db_bug = db.query(models.Bug).filter(models.Bug.id == bug_id).first()
     if not db_bug:
-        raise HTTPException(status_code=404, detail="Bug未找到")
+        raise HTTPException(status_code=404, detail="Bug not found")
     
-    for key, value in bug.model_dump().items():
+    payload = bug.model_dump()
+    payload["status"] = _sanitize_status(payload.get("status"))
+    payload["assigned_to"] = (payload.pop("cr_assignee", None) or "").strip() or None
+    payload["cr_created_on"] = _parse_cr_created_on(payload.pop("cr_created_on", None))
+    payload["created_by"] = (payload.get("created_by") or "").strip()
+    payload["software_image_integration_build"] = (payload.get("software_image_integration_build") or "").strip()
+    _validate_test_link(db, payload.get("test_progress_id"))
+    _validate_work_task_link(db, payload.get("work_task_id"))
+    _apply_auto_test_link(db, payload, db_bug)
+
+    for key, value in payload.items():
         setattr(db_bug, key, value)
     
     db.commit()
     db.refresh(db_bug)
-    return db_bug
+    return _serialize_bug(db_bug)
 
 @router.delete("/{bug_id}")
 def delete_bug(bug_id: int, db: Session = Depends(get_db), _=Depends(require_manager)):
-    """删除Bug（需 manager 权限）"""
+    """Delete a bug. Manager permission is required."""
     db_bug = db.query(models.Bug).filter(models.Bug.id == bug_id).first()
     if not db_bug:
-        raise HTTPException(status_code=404, detail="Bug未找到")
+        raise HTTPException(status_code=404, detail="Bug not found")
     
     db.delete(db_bug)
     db.commit()
-    return {"message": "Bug已删除"}
+    return {"message": "Bug deleted"}
 
 @router.get("/test/{test_id}", response_model=List[schemas.Bug])
 def get_bugs_by_test(test_id: int, db: Session = Depends(get_db)):
-    """获取指定测试的Bug列表"""
-    bugs = db.query(models.Bug).filter(models.Bug.test_progress_id == test_id).all()
-    return bugs
+    """Get bugs linked to a specific test."""
+    bugs = _apply_bug_order(
+        db.query(models.Bug).filter(models.Bug.test_progress_id == test_id)
+    ).all()
+    return [_serialize_bug(row) for row in bugs]
 
 @router.get("/stats/summary")
 def get_bug_stats(db: Session = Depends(get_db)):
-    """获取Bug统计信息"""
+    """Get bug summary statistics."""
     total_bugs = db.query(models.Bug).count()
-    open_bugs = db.query(models.Bug).filter(models.Bug.status == "open").count()
-    in_progress_bugs = db.query(models.Bug).filter(models.Bug.status == "in_progress").count()
-    resolved_bugs = db.query(models.Bug).filter(models.Bug.status == "resolved").count()
+    status_rows = (
+        db.query(models.Bug.status, func.count(models.Bug.id))
+        .group_by(models.Bug.status)
+        .all()
+    )
+    status_summary = {
+        "fixed": 0,
+        "analysis": 0,
+        "other": 0,
+    }
+    for raw_status, count in status_rows:
+        bucket = _normalize_status(raw_status)
+        status_summary[bucket] += count
     
     critical_bugs = db.query(models.Bug).filter(models.Bug.severity == "critical").count()
     high_bugs = db.query(models.Bug).filter(models.Bug.severity == "high").count()
@@ -90,9 +520,9 @@ def get_bug_stats(db: Session = Depends(get_db)):
     return {
         "total": total_bugs,
         "by_status": {
-            "open": open_bugs,
-            "in_progress": in_progress_bugs,
-            "resolved": resolved_bugs
+            "fixed": status_summary["fixed"],
+            "analysis": status_summary["analysis"],
+            "other": status_summary["other"],
         },
         "by_severity": {
             "critical": critical_bugs,

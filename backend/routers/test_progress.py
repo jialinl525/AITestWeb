@@ -1,15 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+from datetime import date
 from database import get_db
-from auth import get_user_role, require_manager
+from auth import require_manager
 import schemas, models
 
 router = APIRouter()
 
 
 def _calc_totals_and_progress(data: dict) -> tuple:
-    """从 L0/L2/L4 阶段计算总计和进度"""
+    """Calculate totals and progress from the L0/L2/L4 stages."""
+    data["estimated_hours"] = round(max(0.0, float(data.get("estimated_hours", 0) or 0)), 2)
+
     def normalize_stage(stage: str):
         total = max(0, int(data.get(f"{stage}_total_cases", 0) or 0))
         passed = max(0, int(data.get(f"{stage}_passed_cases", 0) or 0))
@@ -34,32 +37,52 @@ def _calc_totals_and_progress(data: dict) -> tuple:
     return total, passed, max(0, failed), progress
 
 
+def _apply_lifecycle_dates(data: dict, existing: Optional[models.TestProgress] = None) -> None:
+    """Maintain independent lifecycle dates for start/completion without deriving from timestamps."""
+    status = data.get("status")
+    today = date.today()
+
+    current_start = existing.start_date if existing else None
+    current_completion = existing.completion_date if existing else None
+
+    start_date = data.get("start_date", current_start)
+    completion_date = data.get("completion_date", current_completion)
+
+    if status in {"running", "completed"} and not start_date:
+        start_date = today
+    if status == "completed" and not completion_date:
+        completion_date = today
+
+    data["start_date"] = start_date
+    data["completion_date"] = completion_date
+
+
 @router.get("/", response_model=List[schemas.TestProgress])
 def get_test_progress_list(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """获取测试进度列表"""
+    """Get the test progress list."""
     progress_list = db.query(models.TestProgress).offset(skip).limit(limit).all()
     return progress_list
 
 @router.get("/model/{model_name}", response_model=List[schemas.TestProgress])
 def get_test_progress_by_model(model_name: str, db: Session = Depends(get_db)):
-    """根据模型名称获取测试进度"""
+    """Get test progress records by model name."""
     progress_list = db.query(models.TestProgress).filter(models.TestProgress.model_name == model_name).all()
     return progress_list
 
 @router.get("/{test_id}", response_model=schemas.TestProgress)
 def get_test_progress(test_id: int, db: Session = Depends(get_db)):
-    """获取单个测试进度"""
+    """Get a single test progress record."""
     test_progress = db.query(models.TestProgress).filter(models.TestProgress.id == test_id).first()
     if not test_progress:
-        raise HTTPException(status_code=404, detail="测试进度未找到")
+        raise HTTPException(status_code=404, detail="Test progress not found")
     return test_progress
 
 @router.get("/{test_id}/detail", response_model=schemas.TestProgressDetail)
 def get_test_progress_detail(test_id: int, db: Session = Depends(get_db)):
-    """获取测试任务详情（含关联Bug列表）"""
+    """Get test task details, including linked bugs."""
     test_progress = db.query(models.TestProgress).filter(models.TestProgress.id == test_id).first()
     if not test_progress:
-        raise HTTPException(status_code=404, detail="测试进度未找到")
+        raise HTTPException(status_code=404, detail="Test progress not found")
     return test_progress
 
 @router.post("/", response_model=schemas.TestProgress)
@@ -68,8 +91,9 @@ def create_test_progress(
     db: Session = Depends(get_db),
     _: str = Depends(require_manager)
 ):
-    """创建新的测试进度（需 manager 权限）"""
+    """Create a new test progress record. Manager permission is required."""
     data = test_progress.model_dump()
+    _apply_lifecycle_dates(data)
     total, passed, failed, progress = _calc_totals_and_progress(data)
     data["total_cases"] = total
     data["passed_cases"] = passed
@@ -88,14 +112,16 @@ def update_test_progress(
     db: Session = Depends(get_db),
     _: str = Depends(require_manager)
 ):
-    """更新测试进度（需 manager 权限）"""
+    """Update a test progress record. Manager permission is required."""
     db_test_progress = db.query(models.TestProgress).filter(models.TestProgress.id == test_id).first()
     if not db_test_progress:
-        raise HTTPException(status_code=404, detail="测试进度未找到")
+        raise HTTPException(status_code=404, detail="Test progress not found")
     
-    for key, value in test_progress.model_dump().items():
-        setattr(db_test_progress, key, value)
     data = test_progress.model_dump()
+    _apply_lifecycle_dates(data, db_test_progress)
+
+    for key, value in data.items():
+        setattr(db_test_progress, key, value)
     total, passed, failed, progress = _calc_totals_and_progress(data)
     db_test_progress.total_cases = total
     db_test_progress.passed_cases = passed

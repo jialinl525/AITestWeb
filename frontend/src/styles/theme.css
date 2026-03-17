@@ -368,25 +368,11 @@ a {
   background: rgba(255, 255, 255, 0.02) !important;
 }
 
-.el-button {
-  border-radius: 12px;
-}
-
-.el-button--primary {
-  background: linear-gradient(135deg, #38bdf8, #818cf8);
-  border: none;
-}
-
-.el-button--default {
-  border-color: rgba(148, 163, 184, 0.18);
-  background: rgba(255, 255, 255, 0.04);
-}
-
 .el-tag {
   border: none;
 }
 
-/* 下拉菜单（Select）在深色主题下的可读性修复 */
+/* Improve Select dropdown readability in the dark theme. */
 .el-popper.is-light .el-select-dropdown,
 .el-select__popper.el-popper.is-light,
 .el-select-dropdown {

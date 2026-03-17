@@ -3,6 +3,8 @@ import TestProgress from '../views/TestProgress.vue'
 import TestProgressDetail from '../views/TestProgressDetail.vue'
 import Bugs from '../views/Bugs.vue'
 import KPI from '../views/KPI.vue'
+import Personnel from '../views/Personnel.vue'
+import WorkTasks from '../views/WorkTasks.vue'
 
 const routes = [
   {
@@ -28,6 +30,16 @@ const routes = [
     path: '/kpi',
     name: 'KPI',
     component: KPI
+  },
+  {
+    path: '/personnel',
+    name: 'Personnel',
+    component: Personnel
+  },
+  {
+    path: '/work-tasks',
+    name: 'WorkTasks',
+    component: WorkTasks
   }
 ]
 

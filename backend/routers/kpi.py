@@ -15,10 +15,10 @@ def get_kpi_metrics(
     days: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
-    """获取KPI指标数据"""
+    """Get KPI metric data."""
     query = db.query(models.KPIMetric)
 
-    # 可选时间范围筛选（默认不过滤）
+    # Optional time range filter. By default, no time filter is applied.
     if days is not None:
         start_date = datetime.now() - timedelta(days=days)
         query = query.filter(models.KPIMetric.test_date >= start_date)
@@ -35,7 +35,7 @@ def get_kpi_metrics(
 
 @router.post("/metrics", response_model=schemas.KPIMetric)
 def create_kpi_metric(metric: schemas.KPIMetricCreate, db: Session = Depends(get_db)):
-    """创建新的KPI指标"""
+    """Create a new KPI metric."""
     db_metric = models.KPIMetric(**metric.model_dump())
     db.add(db_metric)
     db.commit()
@@ -44,7 +44,7 @@ def create_kpi_metric(metric: schemas.KPIMetricCreate, db: Session = Depends(get
 
 @router.get("/models/performance", response_model=List[schemas.ModelPerformance])
 def get_models_performance(days: Optional[int] = None, model_category: Optional[str] = None, db: Session = Depends(get_db)):
-    """获取各模型的性能数据，用于图表展示"""
+    """Get model performance data for chart rendering."""
     query = db.query(models.KPIMetric)
     if days is not None:
         start_date = datetime.now() - timedelta(days=days)
@@ -53,21 +53,21 @@ def get_models_performance(days: Optional[int] = None, model_category: Optional[
         query = query.filter(models.KPIMetric.model_category == model_category)
     metrics = query.all()
     
-    # 按模型分组，获取每个模型的最新指标值
+    # Group by model and keep the latest value for each metric.
     model_performance = {}
     for metric in metrics:
         if metric.model_name not in model_performance:
             model_performance[metric.model_name] = {}
-        # 如果已有该指标，保留最新的值
+        # If the metric already exists, keep the most recent value.
         if metric.metric_name not in model_performance[metric.model_name] or \
            metric.test_date > model_performance[metric.model_name].get('_date', datetime.min):
             model_performance[metric.model_name][metric.metric_name] = metric.metric_value
             model_performance[metric.model_name]['_date'] = metric.test_date
     
-    # 转换为响应格式
+    # Convert to response format.
     result = []
     for model_name, metrics_dict in model_performance.items():
-        metrics_dict.pop('_date', None)  # 移除临时日期字段
+        metrics_dict.pop('_date', None)  # Remove the temporary date field.
         result.append(schemas.ModelPerformance(
             model_name=model_name,
             metrics=metrics_dict
@@ -82,7 +82,7 @@ def get_ladder_chart_data(
     model_category: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """获取天梯图数据"""
+    """Get ladder chart data."""
     query = db.query(models.KPIMetric).filter(
         models.KPIMetric.metric_name == metric_name
     )
@@ -93,7 +93,7 @@ def get_ladder_chart_data(
         query = query.filter(models.KPIMetric.model_category == model_category)
     metrics = query.all()
     
-    # 按模型分组，获取最新值
+    # Group by model and keep the latest value.
     model_values = {}
     for metric in metrics:
         if metric.model_name not in model_values or \
@@ -103,7 +103,7 @@ def get_ladder_chart_data(
                 'date': metric.test_date
             }
     
-    # 按值排序
+    # Sort by metric value.
     sorted_models = sorted(
         model_values.items(),
         key=lambda x: x[1]['value'],
@@ -130,8 +130,8 @@ def get_scatter_chart_data(
     model_category: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """获取散点图（坐标图）数据"""
-    # 获取X和Y指标的数据
+    """Get scatter chart data."""
+    # Load data for the X and Y metrics.
     x_query = db.query(models.KPIMetric).filter(
         models.KPIMetric.metric_name == x_metric
     )
@@ -152,7 +152,7 @@ def get_scatter_chart_data(
         y_query = y_query.filter(models.KPIMetric.model_category == model_category)
     y_metrics = y_query.all()
     
-    # 分别按模型取 X/Y 指标的最新值，避免因时间比较导致某一维被覆盖/丢失
+    # Keep the latest X and Y values per model to avoid overwriting or losing one dimension.
     x_latest = {}
     for metric in x_metrics:
         current = x_latest.get(metric.model_name)
@@ -171,7 +171,7 @@ def get_scatter_chart_data(
                 'date': metric.test_date
             }
 
-    # 构建散点图数据：仅保留同时存在 X/Y 的模型
+    # Build scatter chart data, keeping only models that have both X and Y values.
     common_models = set(x_latest.keys()) & set(y_latest.keys())
     scatter_data = [
         {
