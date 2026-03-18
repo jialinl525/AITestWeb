@@ -5,11 +5,11 @@
         <div class="sidebar-brand">
           <img :src="voiceAiLogo" alt="VoiceAI logo" class="brand-logo" />
           <div class="brand-copy">
-            <div class="brand-subtitle">Test Management Dashboard</div>
+            <div class="brand-subtitle">{{ LT.brandSubtitle }}</div>
           </div>
         </div>
 
-        <div class="sidebar-section-title">Navigation</div>
+        <div class="sidebar-section-title">{{ LT.navigation }}</div>
         <el-menu
           :default-active="activeMenu"
           router
@@ -20,23 +20,23 @@
         >
           <el-menu-item index="/test-progress">
             <el-icon><Document /></el-icon>
-            <span>FR Progress</span>
+            <span>{{ LT.menu.testProgress }}</span>
           </el-menu-item>
           <el-menu-item index="/work-tasks">
             <el-icon><Document /></el-icon>
-            <span>Task</span>
+            <span>{{ LT.menu.workTasks }}</span>
           </el-menu-item>
           <el-menu-item index="/bugs">
             <el-icon><Warning /></el-icon>
-            <span>CR Tracking</span>
+            <span>{{ LT.menu.bugs }}</span>
           </el-menu-item>
           <el-menu-item index="/personnel">
             <el-icon><UserFilled /></el-icon>
-            <span>Personnel</span>
+            <span>{{ LT.menu.personnel }}</span>
           </el-menu-item>
           <el-menu-item index="/kpi">
             <el-icon><DataAnalysis /></el-icon>
-            <span>Model Ladder</span>
+            <span>{{ LT.menu.kpi }}</span>
           </el-menu-item>
 
 
@@ -45,64 +45,64 @@
         <div class="sidebar-footer">
           <div class="glass-pill sidebar-pill">
             <span class="dot dot-green"></span>
-            Current Role: {{ getRoleLabel(userRole) }} / {{ canEditTest ? 'Editable Test' : 'Read Only' }}
+            {{ LT.currentRole }}: {{ getRoleLabel(userRole) }} / {{ canEditTest ? LT.editableTest : LT.readOnly }}
           </div>
           <div class="sidebar-mini-card">
-            <div class="sidebar-mini-card__label">Workbench Status</div>
-            <div class="sidebar-mini-card__value">Online</div>
-            <p>Unified business view for test management, issue tracking, and model evaluation.</p>
+            <div class="sidebar-mini-card__label">{{ LT.workbenchStatus }}</div>
+            <div class="sidebar-mini-card__value">{{ LT.online }}</div>
+            <p>{{ DT.miniCard }}</p>
           </div>
         </div>
       </div>
     </el-aside>
 
     <!-- Login Dialog -->
-    <el-dialog v-model="showLoginDialog" title="Login" width="400px">
+    <el-dialog v-model="showLoginDialog" :title="BT.login" width="400px">
       <el-form :model="loginForm" label-width="80px">
-        <el-form-item label="Username">
-          <el-input v-model="loginForm.username" placeholder="manager (Admin)" />
+        <el-form-item :label="LT.form.username">
+          <el-input v-model="loginForm.username" :placeholder="DT.login.usernamePlaceholder" />
         </el-form-item>
-        <el-form-item label="Password">
-          <el-input v-model="loginForm.password" type="password" placeholder="Default 123456" show-password />
+        <el-form-item :label="LT.form.password">
+          <el-input v-model="loginForm.password" type="password" :placeholder="DT.login.passwordPlaceholder" show-password />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showLoginDialog = false">Cancel</el-button>
-        <el-button type="primary" @click="handleLogin">Login</el-button>
+        <el-button @click="showLoginDialog = false">{{ BTCommon.cancel }}</el-button>
+        <el-button type="primary" @click="handleLogin">{{ BT.login }}</el-button>
       </template>
     </el-dialog>
 
     <!-- Change Password Dialog -->
-    <el-dialog v-model="showPasswordDialog" title="Change Password" width="400px">
+    <el-dialog v-model="showPasswordDialog" :title="BT.changePassword" width="400px">
       <el-form :model="passwordForm" label-width="100px">
-        <el-form-item label="Current Password">
-          <el-input v-model="passwordForm.oldPassword" type="password" show-password placeholder="Please enter current password" />
+        <el-form-item :label="LT.form.currentPassword">
+          <el-input v-model="passwordForm.oldPassword" type="password" show-password :placeholder="DT.password.currentPlaceholder" />
         </el-form-item>
-        <el-form-item label="New Password">
-          <el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="Please enter a new password" />
+        <el-form-item :label="LT.form.newPassword">
+          <el-input v-model="passwordForm.newPassword" type="password" show-password :placeholder="DT.password.newPlaceholder" />
         </el-form-item>
-        <el-form-item label="Confirm New Password">
-          <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="Please re-enter the new password" />
+        <el-form-item :label="LT.form.confirmNewPassword">
+          <el-input v-model="passwordForm.confirmPassword" type="password" show-password :placeholder="DT.password.confirmPlaceholder" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showPasswordDialog = false">Cancel</el-button>
-        <el-button type="primary" @click="handleChangePassword">Confirm</el-button>
+        <el-button @click="showPasswordDialog = false">{{ BTCommon.cancel }}</el-button>
+        <el-button type="primary" @click="handleChangePassword">{{ BTCommon.confirm }}</el-button>
       </template>
     </el-dialog>
 
     <el-container class="app-workspace">
       <el-header class="app-header">
         <div>
-          <div class="header-title">Quality Operations Overview</div>
-          <div class="header-subtitle">Get clear insight into test progress, defect status, and model performance</div>
+          <div class="header-title">{{ LT.headerTitle }}</div>
+          <div class="header-subtitle">{{ LT.headerSubtitle }}</div>
         </div>
         <div class="auth-area">
           <div class="user-pill">
             <span class="dot" :class="canEditTest ? 'dot-cyan' : 'dot-gray'"></span>
             <div>
-              <div class="user-name">{{ userName || 'Guest Mode' }}</div>
-              <div class="user-role">{{ getRoleLabel(userRole) }} / {{ canEditTest ? 'Can Edit Tests' : 'Read Only' }}</div>
+              <div class="user-name">{{ userName || LT.guestMode }}</div>
+              <div class="user-role">{{ getRoleLabel(userRole) }} / {{ canEditTest ? LT.canEditTests : LT.readOnly }}</div>
             </div>
           </div>
           <div class="auth-actions">
@@ -112,11 +112,11 @@
               class="auth-btn auth-btn--main"
               @click="showLoginDialog = true"
             >
-              Login
+              {{ BT.login }}
             </el-button>
             <template v-else>
-              <el-button size="small" class="auth-btn" @click="showPasswordDialog = true">Change Password</el-button>
-              <el-button size="small" class="auth-btn" @click="handleLogout">Logout</el-button>
+              <el-button size="small" class="auth-btn" @click="showPasswordDialog = true">{{ BT.changePassword }}</el-button>
+              <el-button size="small" class="auth-btn" @click="handleLogout">{{ BT.logout }}</el-button>
             </template>
           </div>
         </div>
@@ -134,6 +134,9 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { Document, Warning, DataAnalysis, UserFilled } from '@element-plus/icons-vue'
 import voiceAiLogo from './assets/voiceai-logo.svg'
+import { LabelText } from './texts/LabelText'
+import { ButtonText } from './texts/ButtonText'
+import { DescriptionText } from './texts/DescriptionText'
 import {
   userRole,
   userName,
@@ -151,6 +154,10 @@ const showLoginDialog = ref(false)
 const showPasswordDialog = ref(false)
 const loginForm = ref({ username: 'manager', password: '123456' })
 const passwordForm = ref({ oldPassword: '', newPassword: '', confirmPassword: '' })
+const LT = LabelText.app
+const BT = ButtonText.app
+const BTCommon = ButtonText.common
+const DT = DescriptionText.app
 
 const activeMenu = computed(() => {
   const p = route.path
@@ -165,7 +172,7 @@ const activeMenu = computed(() => {
 const isLoggedIn = computed(() => Boolean(currentUsername.value))
 
 const getRoleLabel = (role) => {
-  const map = { manager: 'Manager', viewer: 'Viewer' }
+  const map = LT.roleMap
   return map[role] || role
 }
 
@@ -174,29 +181,29 @@ const handleLogin = async () => {
   if (ok) {
     showLoginDialog.value = false
     loginForm.value = { username: 'manager', password: '123456' }
-    ElMessage.success('Login successful')
+    ElMessage.success(DT.toast.loginSuccess)
   } else {
-    ElMessage.error('Invalid username or password')
+    ElMessage.error(DT.toast.loginFailed)
   }
 }
 
 const handleChangePassword = async () => {
   const { oldPassword, newPassword, confirmPassword } = passwordForm.value
   if (!newPassword || newPassword.length < 6) {
-    ElMessage.warning('New password must be at least 6 characters')
+    ElMessage.warning(DT.toast.newPasswordTooShort)
     return
   }
   if (newPassword !== confirmPassword) {
-    ElMessage.warning('The two new passwords do not match')
+    ElMessage.warning(DT.toast.newPasswordMismatch)
     return
   }
   try {
     await changePassword(oldPassword, newPassword)
     showPasswordDialog.value = false
     passwordForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' }
-    ElMessage.success('Password changed successfully')
+    ElMessage.success(DT.toast.passwordChangedSuccess)
   } catch (error) {
-    ElMessage.error(error?.response?.data?.detail || 'Failed to change password')
+    ElMessage.error(error?.response?.data?.detail || DT.toast.passwordChangedFailed)
   }
 }
 

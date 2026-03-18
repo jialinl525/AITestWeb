@@ -35,6 +35,9 @@ KPI_NEW_COLUMNS = [
     ("source", "TEXT DEFAULT ''"),
     ("model_size", "TEXT DEFAULT ''"),
     ("description", "TEXT DEFAULT ''"),
+    ("test_platform", "TEXT DEFAULT ''"),
+    ("test_version", "TEXT DEFAULT ''"),
+    ("test_condition", "TEXT DEFAULT ''"),
 ]
 
 BUG_NEW_COLUMNS = [
@@ -43,6 +46,7 @@ BUG_NEW_COLUMNS = [
     ("created_by", "TEXT DEFAULT ''"),
     ("cr_created_on", "DATETIME"),
     ("software_image_integration_build", "TEXT DEFAULT ''"),
+    ("available_images", "TEXT DEFAULT ''"),
 ]
 
 def migrate():
@@ -157,6 +161,7 @@ def migrate():
             end_date DATE,
             estimated_hours REAL DEFAULT 0,
             status TEXT DEFAULT 'Planned',
+            progress REAL DEFAULT 0,
             assignee_user_id INTEGER,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME,
@@ -176,6 +181,7 @@ def migrate():
         "task_detail": "TEXT DEFAULT ''",
         "estimated_hours": "REAL DEFAULT 0",
         "status": "TEXT DEFAULT 'Planned'",
+        "progress": "REAL DEFAULT 0",
         "task_type": "TEXT DEFAULT 'Other'",
     }
     for col_name, col_def in required_work_task_columns.items():
@@ -185,6 +191,20 @@ def migrate():
                 print(f"work_tasks column added: {col_name}")
             except sqlite3.OperationalError as e:
                 print(f"Failed to add work_tasks column {col_name}: {e}")
+
+    # Backfill progress based on status for old rows where progress is null/0.
+    cur.execute(
+        """
+        UPDATE work_tasks
+        SET progress = CASE
+            WHEN LOWER(TRIM(COALESCE(status, ''))) = 'completed' THEN 100
+            WHEN LOWER(TRIM(COALESCE(status, ''))) = 'in progress' THEN 50
+            WHEN LOWER(TRIM(COALESCE(status, ''))) = 'paused' THEN 20
+            ELSE 0
+        END
+        WHERE COALESCE(progress, 0) = 0
+        """
+    )
 
     cur.execute("PRAGMA table_info(task_owner_allocations)")
     allocation_columns = {row[1] for row in cur.fetchall()}

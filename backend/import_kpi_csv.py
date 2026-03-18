@@ -1,30 +1,30 @@
 """
-One-click KPI CSV import script.
+Category-specific KPI CSV import script.
 
 Usage:
-  python import_kpi_csv.py <csv_file_path> [--clear]
+  python import_kpi_csv.py <csv_file_path> --category <category> [--clear]
 
 Examples:
-    python import_kpi_csv.py .\\kpi_data.csv
-    python import_kpi_csv.py .\\kpi_data.csv --clear
+    python import_kpi_csv.py .\kpi_asr.csv --category ASR --clear
+    python import_kpi_csv.py .\kpi_translation.csv --category Translation
 
 Required CSV columns:
-    - model_category (required, ASR/TTS/Translation/VoicecallTranslation Solution)
-    - model_name     (required)
-    - source         (optional, model source)
-    - model_size     (optional, model size)
-    - description    (optional, model description)
-    - power_consumption (required, numeric)
-    - latency           (required, numeric)
-    - accuracy_en       (required, numeric)
-    - accuracy_zh       (required, numeric)
-    - accuracy_es       (required, numeric)
-    - accuracy_overall  (required, numeric)
-    - test_date         (optional, ISO format, for example 2026-03-14T10:30:00)
+    - model_name (required)
+    - metric columns (required by the category)
+
+Optional CSV columns:
+    - source
+    - model_size
+    - description
+    - test_platform
+    - test_version
+    - test_condition
+    - test_date (ISO format, for example 2026-03-14T10:30:00)
 
 Notes:
-    - The new format stores one model per row, with all KPI metrics for that model in the same row.
-    - This script does not support the legacy metric_name/metric_value long-table format.
+    - One CSV file should contain models for a single category only.
+    - Category is provided by command-line argument --category.
+    - Legacy alias compatibility is intentionally not supported.
 """
 
 from __future__ import annotations
@@ -33,38 +33,50 @@ import argparse
 import csv
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional
 
 from database import SessionLocal
 from init_db import init_db
 import models
 
-ALLOWED_METRICS = {
-    "power_consumption",   # Power consumption
-    "latency",             # Latency
-    "accuracy_en",         # Accuracy - English
-    "accuracy_zh",         # Accuracy - Chinese
-    "accuracy_es",         # Accuracy - Spanish
-    "accuracy_overall",    # Overall accuracy
+CATEGORY_METRIC_FIELDS: Dict[str, List[str]] = {
+    "ASR": [
+        "power_consumption",
+        "latency",
+        "accuracy_en",
+        "accuracy_cn",
+        "accuracy_es",
+        "accuracy_total",
+    ],
+    "TTS": [
+        "power_consumption",
+        "latency",
+        "accuracy_en",
+        "accuracy_cn",
+        "accuracy_es",
+        "accuracy_total",
+    ],
+    "Translation": [
+        "power_consumption",
+        "latency",
+        "accuracy_en_to_cn",
+        "accuracy_cn_to_en",
+        "accuracy_en_to_es",
+        "accuracy_es_to_en",
+        "accuracy_total",
+    ],
+    "VoiceCallTranslation Solution": [
+        "power_consumption",
+        "e2e_latency",
+        "accuracy_en_to_cn",
+        "accuracy_cn_to_en",
+        "accuracy_total",
+    ],
+    "LPI Recording": ["power_consumption"],
+    "Multi Model Detection": ["power_consumption", "latency", "wakeup_rate"],
 }
 
-ALLOWED_MODEL_CATEGORIES = {
-    "ASR",
-    "TTS",
-    "Translation",
-    "VoicecallTranslation Solution",
-}
-
-REQUIRED_COLUMNS = {
-    "model_category",
-    "model_name",
-    "power_consumption",
-    "latency",
-    "accuracy_en",
-    "accuracy_zh",
-    "accuracy_es",
-    "accuracy_overall",
-}
+BASE_REQUIRED_COLUMNS = {"model_name"}
 
 
 def parse_test_date(value: str) -> Optional[datetime]:
@@ -89,9 +101,15 @@ def parse_metric_value(value: str) -> float:
         raise ValueError(f"metric_value is not a valid number: {v}")
 
 
-def import_csv(csv_path: Path, clear_existing: bool = False) -> None:
+def import_csv(csv_path: Path, model_category: str, clear_existing: bool = False) -> None:
     if not csv_path.exists() or not csv_path.is_file():
         raise FileNotFoundError(f"CSV file does not exist: {csv_path}")
+
+    category = (model_category or "").strip()
+    if category not in CATEGORY_METRIC_FIELDS:
+        raise ValueError(
+            f"Unsupported model category: {model_category}. Allowed values: {sorted(CATEGORY_METRIC_FIELDS.keys())}"
+        )
 
     # Ensure the database schema exists.
     init_db()
@@ -112,37 +130,39 @@ def import_csv(csv_path: Path, clear_existing: bool = False) -> None:
                 raise ValueError("CSV header is missing")
 
             headers = {h.strip() for h in reader.fieldnames if h}
-            missing = REQUIRED_COLUMNS - headers
+            required_columns = BASE_REQUIRED_COLUMNS.union(set(CATEGORY_METRIC_FIELDS[category]))
+            missing = required_columns - headers
             if missing:
                 raise ValueError(f"CSV is missing required columns: {sorted(missing)}")
 
             for line_no, row in enumerate(reader, start=2):
                 try:
                     model_name = (row.get("model_name") or "").strip()
-                    model_category = (row.get("model_category") or "").strip()
+
                     source = (row.get("source") or "").strip()
                     model_size = (row.get("model_size") or "").strip()
                     description = (row.get("description") or "").strip()
+                    test_platform = (row.get("test_platform") or "").strip()
+                    test_version = (row.get("test_version") or "").strip()
+                    test_condition = (row.get("test_condition") or "").strip()
                     test_date = parse_test_date(row.get("test_date") or "")
 
-                    if not model_category:
-                        raise ValueError("model_category cannot be empty")
-                    if model_category not in ALLOWED_MODEL_CATEGORIES:
-                        raise ValueError(
-                            f"model_category is out of range: {model_category}. Allowed values: {sorted(ALLOWED_MODEL_CATEGORIES)}"
-                        )
                     if not model_name:
                         raise ValueError("model_name cannot be empty")
-                    # Split one model row into multiple KPI metric records.
-                    for metric_name in sorted(ALLOWED_METRICS):
+
+                    metric_names = CATEGORY_METRIC_FIELDS[category]
+                    for metric_name in metric_names:
                         metric_value = parse_metric_value(row.get(metric_name) or "")
 
                         obj = models.KPIMetric(
-                            model_category=model_category,
+                            model_category=category,
                             model_name=model_name,
                             source=source,
                             model_size=model_size,
                             description=description,
+                            test_platform=test_platform,
+                            test_version=test_version,
+                            test_condition=test_condition,
                             metric_name=metric_name,
                             metric_value=metric_value,
                         )
@@ -168,8 +188,14 @@ def import_csv(csv_path: Path, clear_existing: bool = False) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="One-click KPI CSV import")
+    parser = argparse.ArgumentParser(description="Category-specific KPI CSV import")
     parser.add_argument("csv_path", help="Path to the CSV file")
+    parser.add_argument(
+        "--category",
+        required=True,
+        choices=sorted(CATEGORY_METRIC_FIELDS.keys()),
+        help="Model category for this CSV file",
+    )
     parser.add_argument(
         "--clear",
         action="store_true",
@@ -177,7 +203,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    import_csv(Path(args.csv_path), clear_existing=args.clear)
+    import_csv(Path(args.csv_path), model_category=args.category, clear_existing=args.clear)
 
 
 if __name__ == "__main__":

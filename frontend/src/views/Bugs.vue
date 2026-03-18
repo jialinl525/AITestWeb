@@ -2,18 +2,18 @@
   <div class="page-shell bugs-container">
     <section class="page-hero">
       <div class="page-hero__content">
-        <div class="page-hero__eyebrow">Risk Tracking</div>
-        <h2 class="page-hero__title">Bug Risk Tracking Dashboard</h2>
-        <p class="page-hero__desc">Manage issue lifecycle by severity, status, and assignee to quickly identify high-risk defects and pending actions.</p>
+        <div class="page-hero__eyebrow">{{ LT.heroEyebrow }}</div>
+        <h2 class="page-hero__title">{{ LT.heroTitle }}</h2>
+        <p class="page-hero__desc">{{ DT.hero }}</p>
       </div>
       <div class="page-hero__actions">
-        <div v-if="route.query.testId" class="glass-pill">Current Test ID Filter: {{ route.query.testId }}</div>
-        <el-button v-if="route.query.testId" class="btn-style-3" @click="clearTestFilter">Back to All Bugs</el-button>
-        <el-button class="btn-style-1" :disabled="pagination.total === 0" @click="openExportDialog">Export Top N</el-button>
-        <el-button v-if="canCreateBug()" class="btn-style-4" :loading="importingCsv" @click="importCsvBugs">Import CSV Bugs</el-button>
-        <el-button v-if="canCreateBug()" class="btn-style-2" type="primary" @click="showCreateDialog = true">
+        <div v-if="route.query.testId" class="glass-pill">{{ LT.testFilterLabel }}: {{ route.query.testId }}</div>
+        <el-button v-if="route.query.testId" class="btn-style-3" @click="clearTestFilter">{{ BT.backToAll }}</el-button>
+        <el-button class="btn-style-1" :disabled="!pagination.total" @click="openExportDialog">{{ BT.exportTopN }}</el-button>
+        <el-button v-if="canCreateBug()" class="btn-style-4" :loading="importingCsv" @click="importCsvBugs">{{ BT.importCsv }}</el-button>
+        <el-button v-if="canCreateBug()" class="btn-style-2" type="primary" @click="openCreateBugDialog">
           <el-icon><Plus /></el-icon>
-          New Bug
+          {{ BT.newBug }}
         </el-button>
         <input
           ref="csvFileInput"
@@ -27,24 +27,24 @@
 
     <div class="metrics-grid">
       <article class="metric-card accent-blue">
-        <div class="metric-card__label">Total Bugs</div>
+        <div class="metric-card__label">{{ LT.metrics.total }}</div>
         <div class="metric-card__value">{{ bugStats.total || 0 }}</div>
-        <div class="metric-card__meta">Issue records across the full lifecycle</div>
+        <div class="metric-card__meta">{{ DT.metricsMeta.total }}</div>
       </article>
       <article class="metric-card accent-red">
-        <div class="metric-card__label">Analysis</div>
+        <div class="metric-card__label">{{ LT.metrics.analysis }}</div>
         <div class="metric-card__value">{{ bugStats.by_status?.analysis || 0 }}</div>
-        <div class="metric-card__meta">Open and analysis-state CRs</div>
+        <div class="metric-card__meta">{{ DT.metricsMeta.analysis }}</div>
       </article>
       <article class="metric-card accent-orange">
-        <div class="metric-card__label">Other</div>
+        <div class="metric-card__label">{{ LT.metrics.other }}</div>
         <div class="metric-card__value">{{ bugStats.by_status?.other || 0 }}</div>
-        <div class="metric-card__meta">CRs outside fixed/analysis rules</div>
+        <div class="metric-card__meta">{{ DT.metricsMeta.other }}</div>
       </article>
       <article class="metric-card accent-green">
-        <div class="metric-card__label">Fixed</div>
+        <div class="metric-card__label">{{ LT.metrics.fixed }}</div>
         <div class="metric-card__value">{{ bugStats.by_status?.fixed || 0 }}</div>
-        <div class="metric-card__meta">In Progress / Build / Closed / Duplicate</div>
+        <div class="metric-card__meta">{{ DT.metricsMeta.fixed }}</div>
       </article>
     </div>
 
@@ -52,15 +52,24 @@
       <template #header>
         <div class="section-title">
           <div class="section-title__main">
-            <h3>Filter and Search</h3>
-            <span class="section-title__meta">Focus on key issues by status and severity</span>
+            <h3>{{ LT.section.filterTitle }}</h3>
+            <span class="section-title__meta">{{ DT.sectionMeta.filter }}</span>
           </div>
         </div>
       </template>
 
       <el-form :inline="true" class="filter-form">
-        <el-form-item label="Status">
-          <el-select v-model="filters.status" class="filter-select" placeholder="All" clearable popper-class="bugs-filter-popper">
+        <el-form-item label="Verification">
+          <el-select v-model="filters.verification_zone" class="filter-select" style="width: 180px" popper-class="bugs-filter-popper">
+            <el-option label="All" value="all" />
+            <el-option label="Waiting Build" value="waiting_build" />
+            <el-option label="Pending Verification" value="pending_verification" />
+            <el-option label="Verified" value="verified" />
+            <el-option label="Discarded" value="discarded" />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="LT.filter.status">
+          <el-select v-model="filters.status" class="filter-select" :placeholder="DT.placeholders.all" clearable popper-class="bugs-filter-popper">
             <el-option
               v-for="status in statusOptions"
               :key="status"
@@ -69,11 +78,11 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="Created By">
+        <el-form-item :label="LT.filter.createdBy">
           <el-select
             v-model="filters.created_by"
             class="filter-select"
-            placeholder="All"
+            :placeholder="DT.placeholders.all"
             clearable
             filterable
             popper-class="bugs-filter-popper"
@@ -87,8 +96,7 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button class="btn-style-2" type="primary" @click="applyFilters">Filter</el-button>
-          <el-button class="btn-style-3" @click="resetFilters">Reset</el-button>
+          <el-button class="btn-style-3" @click="resetFilters">{{ BTCommon.reset }}</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -97,60 +105,25 @@
       <template #header>
         <div class="section-title">
           <div class="section-title__main">
-            <h3>Bug List</h3>
-            <span class="section-title__meta">{{ pagination.total }} records total, sorted by CR Number (DESC)</span>
+            <h3>{{ LT.section.listTitle }}</h3>
+            <span class="section-title__meta">{{ pagination.total }} {{ DT.sectionMeta.list }}</span>
           </div>
         </div>
       </template>
-      <el-table :data="bugsList" v-loading="loading" stripe :row-class-name="getTableRowClassName">
-        <el-table-column prop="external_cr_number" label="CR Number" width="160">
-          <template #default="{ row }">
-            <a
-              v-if="row.external_cr_number"
-              :href="getCrLink(row.external_cr_number)"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="cr-link"
-            >
-              {{ row.external_cr_number }}
-            </a>
-            <span v-else>-</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="title" label="Title" min-width="340">
-          <template #default="{ row }">
-            <el-tooltip
-              :content="row.title || ''"
-              placement="top-start"
-              effect="dark"
-              :show-after="120"
-            >
-              <div class="title-cell-ellipsis">{{ row.title || '-' }}</div>
-            </el-tooltip>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="Status" width="120">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">
-              {{ getStatusText(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_by" label="Created By" width="130" />
-        <el-table-column prop="cr_assignee" label="CR Assignee" width="130" />
-        <el-table-column prop="cr_created_on" label="Created On" width="180">
-          <template #default="{ row }">
-            {{ formatDate(row.cr_created_on) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="software_image_integration_build" label="Software Image Integration Build" min-width="260" show-overflow-tooltip />
-        <el-table-column label="Actions" width="150">
-          <template #default="{ row }">
-            <el-button v-if="canEditBug()" size="small" @click="editBug(row)">Edit</el-button>
-            <el-button v-if="canDeleteBug()" size="small" type="danger" @click="deleteBug(row.id)">Delete</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <BugTable
+        :bugs="bugsList"
+        :loading="loading"
+        :show-actions="canEditBug() || canDeleteBug()"
+        :show-verify-action="canEditBug()"
+        :editable="canEditBug()"
+        :deletable="canDeleteBug()"
+        :is-verifying="isVerifying"
+        :row-class-name="getTableRowClassName"
+        @verify="markBugVerified"
+        @edit="editBug"
+        @delete="deleteBug"
+      />
+
       <div class="bugs-list-footer">
         <el-pagination
           :current-page="pagination.page"
@@ -166,11 +139,20 @@
 
     <el-dialog
       v-model="showExportDialog"
-      title="Export Top N Bugs"
+      :title="LT.dialog.exportTopNTitle"
       width="420px"
     >
       <el-form label-width="120px">
-        <el-form-item label="Rows to export">
+        <el-form-item label="Export Area">
+          <el-select v-model="exportArea" style="width: 100%">
+            <el-option label="All" value="all" />
+            <el-option label="Waiting Build" value="waiting_build" />
+            <el-option label="Pending Verification" value="pending_verification" />
+            <el-option label="Verified" value="verified" />
+            <el-option label="Discarded" value="discarded" />
+          </el-select>
+        </el-form-item>
+        <el-form-item :label="LT.dialog.rowsToExport">
           <el-input-number
             v-model="exportTopN"
             :min="1"
@@ -181,23 +163,23 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button class="btn-style-3" @click="showExportDialog = false">Cancel</el-button>
-        <el-button class="btn-style-2" type="primary" :loading="exporting" @click="handleExportTopN">Export</el-button>
+        <el-button class="btn-style-3" @click="showExportDialog = false">{{ BTCommon.cancel }}</el-button>
+        <el-button class="btn-style-2" type="primary" :loading="exporting" @click="handleExportTopN">{{ BT.export }}</el-button>
       </template>
     </el-dialog>
 
     <!-- Create/Edit Dialog -->
     <el-dialog
       v-model="showCreateDialog"
-      :title="editingBug ? 'Edit Bug' : 'New Bug'"
+      :title="editingBug ? LT.dialog.editTitle : LT.dialog.newTitle"
       width="600px"
     >
       <el-form :model="bugForm" label-width="100px">
-        <el-form-item label="CR Number">
-          <el-input v-model="bugForm.external_cr_number" placeholder="Optional: from CSV CR Number" />
+        <el-form-item :label="LT.form.crNumber">
+          <el-input v-model="bugForm.external_cr_number" :placeholder="DT.placeholders.optionalCrNumber" />
         </el-form-item>
-        <el-form-item label="Test Task">
-          <el-select v-model="bugForm.test_progress_id" clearable filterable placeholder="Manual link if no FR keyword" style="width: 100%">
+        <el-form-item :label="LT.form.testTask">
+          <el-select v-model="bugForm.test_progress_id" clearable filterable :placeholder="DT.placeholders.noFrKeyword" style="width: 100%">
             <el-option
               v-for="item in testOptions"
               :key="item.id"
@@ -206,8 +188,8 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="WorkTask">
-          <el-select v-model="bugForm.work_task_id" clearable filterable placeholder="Optional manual link" style="width: 100%">
+        <el-form-item :label="LT.form.workTask">
+          <el-select v-model="bugForm.work_task_id" clearable filterable :placeholder="DT.placeholders.optionalManualLink" style="width: 100%">
             <el-option
               v-for="task in workTaskOptions"
               :key="task.id"
@@ -216,32 +198,49 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="Title">
+        <el-form-item :label="LT.form.title">
           <el-input v-model="bugForm.title" />
         </el-form-item>
-        <el-form-item label="Created By">
+        <el-form-item :label="LT.form.createdBy">
           <el-input v-model="bugForm.created_by" />
         </el-form-item>
-        <el-form-item label="CR Assignee">
+        <el-form-item :label="LT.form.crAssignee">
           <el-input v-model="bugForm.cr_assignee" />
         </el-form-item>
-        <el-form-item label="Created On">
-          <el-input v-model="bugForm.cr_created_on" placeholder="MM/DD/YYYY h:mm:ss AM" />
+        <el-form-item :label="LT.form.createdOn">
+          <el-input v-model="bugForm.cr_created_on" :placeholder="DT.placeholders.createdOnFormat" />
         </el-form-item>
-        <el-form-item label="Build">
-          <el-input v-model="bugForm.software_image_integration_build" placeholder="Software Image Integration Build" />
+        <el-form-item :label="LT.form.build">
+          <el-select
+            v-if="bugBuildOptions.length"
+            v-model="bugForm.software_image_integration_build"
+            clearable
+            filterable
+            placeholder="Select from available images"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="image in bugBuildOptions"
+              :key="image"
+              :label="image"
+              :value="image"
+            />
+          </el-select>
+          <el-input v-else v-model="bugForm.software_image_integration_build" :placeholder="DT.placeholders.softwareBuild" />
         </el-form-item>
-        <el-form-item label="Status">
+        <el-form-item :label="LT.form.status">
           <el-select v-model="bugForm.status">
-            <el-option label="Fixed" value="fixed" />
-            <el-option label="Analysis" value="analysis" />
-            <el-option label="Other" value="other" />
+            <el-option :label="LT.statusOptions.fixed" value="fixed" />
+            <el-option :label="LT.statusOptions.analysis" value="analysis" />
+            <el-option :label="LT.statusOptions.other" value="other" />
+            <el-option :label="LT.statusOptions.verified" value="verified" />
+            <el-option :label="LT.statusOptions.discarded" value="discarded" />
           </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button class="btn-style-3" @click="showCreateDialog = false">Cancel</el-button>
-        <el-button class="btn-style-2" type="primary" @click="saveBug">Save</el-button>
+        <el-button class="btn-style-3" @click="showCreateDialog = false">{{ BTCommon.cancel }}</el-button>
+        <el-button class="btn-style-2" type="primary" @click="saveBug">{{ BTCommon.save }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -252,6 +251,11 @@ import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import BugTable from '../components/bugs/BugTable.vue'
+import { LabelText } from '../texts/LabelText'
+import { ButtonText } from '../texts/ButtonText'
+import { DescriptionText } from '../texts/DescriptionText'
+import { getStatusBucket } from '../utils/bugDisplay'
 import {
   queryBugs,
   createBug,
@@ -267,6 +271,10 @@ import { canCreateBug, canEditBug, canDeleteBug } from '../stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const LT = LabelText.bugs
+const BT = ButtonText.bugs
+const BTCommon = ButtonText.common
+const DT = DescriptionText.bugs
 const loading = ref(false)
 const bugsList = ref([])
 const bugStats = ref({})
@@ -274,13 +282,16 @@ const showCreateDialog = ref(false)
 const editingBug = ref(null)
 const importingCsv = ref(false)
 const exporting = ref(false)
+const verifyingMap = ref({})
 const showExportDialog = ref(false)
 const exportTopN = ref(30)
+const exportArea = ref('all')
 const csvFileInput = ref(null)
 const testOptions = ref([])
 const workTaskOptions = ref([])
 const createdByOptions = ref([])
 const statusOptions = ref([])
+const bugBuildOptions = ref([])
 const pagination = ref({
   page: 1,
   pageSize: 30,
@@ -288,11 +299,12 @@ const pagination = ref({
 })
 
 const filters = ref({
+  verification_zone: 'waiting_build',
   status: null,
   created_by: null
 })
 
-const bugForm = ref({
+const createEmptyBugForm = () => ({
   test_progress_id: null,
   work_task_id: null,
   external_cr_number: '',
@@ -305,6 +317,33 @@ const bugForm = ref({
   status: 'other'
 })
 
+const bugForm = ref(createEmptyBugForm())
+
+const parseAvailableImages = (value = '') => {
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+const getBugBuildOptions = (bug) => {
+  const options = []
+  const seen = new Set()
+  const addOption = (value) => {
+    const text = String(value || '').trim()
+    const key = text.toLowerCase()
+    if (!text || seen.has(key)) {
+      return
+    }
+    seen.add(key)
+    options.push(text)
+  }
+
+  parseAvailableImages(bug?.available_images).forEach(addOption)
+  addOption(bug?.software_image_integration_build)
+  return options
+}
+
 const buildQueryParams = (override = {}) => {
   const page = override.page ?? pagination.value.page
   const pageSize = override.pageSize ?? pagination.value.pageSize
@@ -313,12 +352,16 @@ const buildQueryParams = (override = {}) => {
     limit: pageSize
   }
 
+  if (filters.value.verification_zone) params.verification_zone = filters.value.verification_zone
   if (filters.value.status) params.status = filters.value.status
   if (filters.value.created_by) params.created_by = filters.value.created_by
   if (route.query.testId) params.test_id = Number(route.query.testId)
 
   return params
 }
+
+const isVerifying = (row) => Boolean(verifyingMap.value?.[Number(row?.id)])
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const loadData = async () => {
   loading.value = true
@@ -331,24 +374,19 @@ const loadData = async () => {
     const stats = await getBugStats()
     bugStats.value = stats
   } catch (error) {
-    ElMessage.error('Failed to load data')
+    ElMessage.error(DT.toast.loadFailed)
   } finally {
     loading.value = false
   }
 }
 
-const applyFilters = async () => {
-  pagination.value.page = 1
-  await loadData()
-}
-
 const resetFilters = () => {
   filters.value = {
+    verification_zone: 'waiting_build',
     status: null,
     created_by: null
   }
   pagination.value.page = 1
-  loadData()
 }
 
 const handlePageSizeChange = (size) => {
@@ -379,10 +417,11 @@ const clearTestFilter = () => {
 
 const openExportDialog = () => {
   if (!pagination.value.total) {
-    ElMessage.warning('No data to export')
+    ElMessage.warning(DT.toast.noDataToExport)
     return
   }
-  exportTopN.value = Math.min(pagination.value.pageSize, pagination.value.total)
+  exportArea.value = filters.value.verification_zone || 'all'
+  exportTopN.value = Math.min(30, Math.max(1, pagination.value.total))
   showExportDialog.value = true
 }
 
@@ -394,7 +433,7 @@ const escapeCsvCell = (value) => {
   return text
 }
 
-const downloadCsv = (rows) => {
+const downloadCsv = (rows, areaKey) => {
   const headers = [
     'CR Number',
     'Title',
@@ -422,7 +461,7 @@ const downloadCsv = (rows) => {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `bugs_top_${rows.length}.csv`
+  link.download = `bugs_${areaKey}_top_${rows.length}.csv`
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
@@ -431,19 +470,60 @@ const downloadCsv = (rows) => {
 
 const handleExportTopN = async () => {
   const desired = Math.max(1, Number(exportTopN.value || 1))
-  const limit = Math.min(desired, pagination.value.total)
+  const limit = desired
 
   exporting.value = true
   try {
-    const data = await queryBugs({ ...buildQueryParams({ page: 1, pageSize: limit }), skip: 0, limit })
+    const data = await queryBugs({
+      ...buildQueryParams({ page: 1, pageSize: limit }),
+      skip: 0,
+      limit,
+      verification_zone: exportArea.value || 'all'
+    })
     const rows = data?.items || []
-    downloadCsv(rows)
+    downloadCsv(rows, exportArea.value || 'all')
     showExportDialog.value = false
-    ElMessage.success(`Exported top ${rows.length} records`)
+    ElMessage.success(`${DT.toast.exportSuccessPrefix} ${rows.length} ${DT.toast.exportSuccessSuffix}`)
   } catch (error) {
-    ElMessage.error(error?.response?.data?.detail || 'Failed to export data')
+    ElMessage.error(error?.response?.data?.detail || DT.toast.exportFailed)
   } finally {
     exporting.value = false
+  }
+}
+
+const toBugUpdatePayload = (row, patch = {}) => {
+  return {
+    test_progress_id: row.test_progress_id || null,
+    work_task_id: row.work_task_id || null,
+    external_cr_number: row.external_cr_number || '',
+    created_by: row.created_by || '',
+    cr_assignee: row.cr_assignee || '',
+    cr_created_on: row.cr_created_on || '',
+    software_image_integration_build: row.software_image_integration_build || '',
+    title: row.title || '',
+    severity: row.severity || 'medium',
+    status: row.status || 'other',
+    ...patch
+  }
+}
+
+const markBugVerified = async (row) => {
+  const bugId = Number(row?.id)
+  if (!bugId || isVerifying(row)) {
+    return
+  }
+
+  verifyingMap.value[bugId] = true
+  try {
+    await delay(1000)
+    await updateBug(row.id, toBugUpdatePayload(row, { status: 'verified' }))
+    ElMessage.success('Moved to Verified')
+    await loadFilterOptions()
+    await loadData()
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.detail || DT.toast.saveFailed)
+  } finally {
+    verifyingMap.value[bugId] = false
   }
 }
 
@@ -480,46 +560,13 @@ const handleCsvFileSelected = async (event) => {
     await loadFilterOptions()
     await loadData()
   } catch (error) {
-    ElMessage.error(error?.response?.data?.detail || 'Failed to import CSV bugs')
+    ElMessage.error(error?.response?.data?.detail || DT.toast.importFailed)
   } finally {
     importingCsv.value = false
     if (event?.target) {
       event.target.value = ''
     }
   }
-}
-
-const getCrLink = (crNumber) => {
-  return `https://orbit/CR/${encodeURIComponent(crNumber)}`
-}
-
-const getStatusBucket = (status) => {
-  const text = (status || '').trim().toLowerCase().replace(/\s|_|-/g, '')
-  if (['inprogress', 'build', 'closed', 'duplicate', 'fixed', 'resolved', 'verified', 'cannotduplicate'].includes(text)) {
-    return 'fixed'
-  }
-  if (['open', 'analysis'].includes(text)) {
-    return 'analysis'
-  }
-  return 'other'
-}
-
-const getStatusType = (status) => {
-  const map = {
-    fixed: 'success',
-    analysis: 'warning',
-    other: 'info'
-  }
-  return map[getStatusBucket(status)] || 'info'
-}
-
-const getStatusText = (status) => {
-  return status || 'Other'
-}
-
-const formatDate = (dateString) => {
-  if (!dateString) return ''
-  return new Date(dateString).toLocaleString('en-US')
 }
 
 const getTableRowClassName = ({ row }) => {
@@ -533,8 +580,16 @@ const getTableRowClassName = ({ row }) => {
   return ''
 }
 
+const openCreateBugDialog = () => {
+  editingBug.value = null
+  bugBuildOptions.value = []
+  bugForm.value = createEmptyBugForm()
+  showCreateDialog.value = true
+}
+
 const editBug = (bug) => {
   editingBug.value = bug
+  bugBuildOptions.value = getBugBuildOptions(bug)
   bugForm.value = {
     test_progress_id: bug.test_progress_id,
     work_task_id: bug.work_task_id || null,
@@ -554,46 +609,36 @@ const saveBug = async () => {
   try {
     if (editingBug.value) {
       await updateBug(editingBug.value.id, bugForm.value)
-      ElMessage.success('Updated successfully')
+      ElMessage.success(DT.toast.updateSuccess)
     } else {
       await createBug(bugForm.value)
-      ElMessage.success('Created successfully')
+      ElMessage.success(DT.toast.createSuccess)
     }
     showCreateDialog.value = false
     editingBug.value = null
-    bugForm.value = {
-      test_progress_id: null,
-      work_task_id: null,
-      external_cr_number: '',
-      created_by: '',
-      cr_assignee: '',
-      cr_created_on: '',
-      software_image_integration_build: '',
-      title: '',
-      severity: 'medium',
-      status: 'other'
-    }
+    bugBuildOptions.value = []
+    bugForm.value = createEmptyBugForm()
     await loadFilterOptions()
     loadData()
   } catch (error) {
-    ElMessage.error('Failed to save')
+    ElMessage.error(DT.toast.saveFailed)
   }
 }
 
 const deleteBug = async (id) => {
   try {
-    await ElMessageBox.confirm('Are you sure you want to delete this bug?', 'Confirm', {
-      confirmButtonText: 'Confirm',
-      cancelButtonText: 'Cancel',
+    await ElMessageBox.confirm(DT.toast.deleteConfirmContent, DT.toast.deleteConfirmTitle, {
+      confirmButtonText: BTCommon.confirm,
+      cancelButtonText: BTCommon.cancel,
       type: 'warning'
     })
     await deleteBugApi(id)
-    ElMessage.success('Deleted successfully')
+    ElMessage.success(DT.toast.deleteSuccess)
     await loadFilterOptions()
     loadData()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('Failed to delete')
+      ElMessage.error(DT.toast.deleteFailed)
     }
   }
 }
@@ -608,6 +653,14 @@ watch(() => route.query.testId, () => {
   pagination.value.page = 1
   loadData()
 })
+
+watch(
+  () => [filters.value.verification_zone, filters.value.status, filters.value.created_by],
+  () => {
+    pagination.value.page = 1
+    loadData()
+  }
+)
 </script>
 
 <style scoped>
@@ -623,16 +676,6 @@ watch(() => route.query.testId, () => {
   display: none;
 }
 
-.cr-link {
-  color: #7dd3fc;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.cr-link:hover {
-  text-decoration: underline;
-}
-
 .filter-select {
   min-width: 180px;
 }
@@ -643,18 +686,6 @@ watch(() => route.query.testId, () => {
 
 .bugs-container :deep(.stale-cr-row > td.el-table__cell) {
   background: rgba(239, 68, 68, 0.14) !important;
-}
-
-.bugs-list-footer {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 14px;
-}
-
-.title-cell-ellipsis {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 @media (max-width: 768px) {

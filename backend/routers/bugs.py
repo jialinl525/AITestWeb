@@ -1,4 +1,5 @@
 import csv
+import io
 import os
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -28,6 +29,9 @@ CSV_HEADER_BUILD = "Software Image Integration Build"
 BACKEND_DIR = os.path.dirname(os.path.dirname(__file__))
 WORKSPACE_DIR = os.path.dirname(BACKEND_DIR)
 DEFAULT_BUG_CSV_PATH = os.path.join(BACKEND_DIR, "APT_MM_Audio_SZ_Last90.csv")
+INVALID_IMAGE_TOKENS = {"", "na", "n/a", "-", "null", "none"}
+LOCKED_IMPORT_STATUS_TOKENS = {"verified", "discarded"}
+PENDING_CONFIRMATION_BUILD = "pending confirmation"
 
 
 def _normalize_severity(raw: Optional[str]) -> str:
@@ -64,6 +68,11 @@ def _parse_cr_created_on(raw: Optional[str]) -> Optional[datetime]:
 
     formats = [
         "%m/%d/%Y %I:%M:%S %p",
+        "%m/%d/%Y %I:%M %p",
+        "%m/%d/%Y %H:%M:%S",
+        "%m/%d/%Y %H:%M",
+        "%m/%d/%Y %I:%M:%S",
+        "%m/%d/%Y %I:%M",
         "%Y-%m-%d %H:%M:%S",
         "%Y-%m-%dT%H:%M:%S",
     ]
@@ -77,6 +86,128 @@ def _parse_cr_created_on(raw: Optional[str]) -> Optional[datetime]:
         return datetime.fromisoformat(text)
     except ValueError:
         return None
+
+
+def _normalize_token(raw: Optional[str]) -> str:
+    return (raw or "").strip().lower().replace(" ", "").replace("_", "").replace("-", "")
+
+
+def _is_valid_image_value(raw: Optional[str]) -> bool:
+    return _normalize_token(raw) not in INVALID_IMAGE_TOKENS and _normalize_token(raw) != _normalize_token(PENDING_CONFIRMATION_BUILD)
+
+
+def _split_available_images(raw: Optional[str]) -> List[str]:
+    result: List[str] = []
+    seen = set()
+    for item in (raw or "").split(","):
+        value = item.strip()
+        token = _normalize_token(value)
+        if not token or token in seen or not _is_valid_image_value(value):
+            continue
+        seen.add(token)
+        result.append(value)
+    return result
+
+
+def _merge_available_images(existing_available_images: Optional[str], existing_build: Optional[str], incoming_build: Optional[str]) -> List[str]:
+    merged: List[str] = []
+    seen = set()
+
+    def add_image(raw_value: Optional[str]):
+        value = (raw_value or "").strip()
+        token = _normalize_token(value)
+        if not token or token in seen or not _is_valid_image_value(value):
+            return
+        seen.add(token)
+        merged.append(value)
+
+    for image in _split_available_images(existing_available_images):
+        add_image(image)
+    add_image(existing_build)
+    for image in _split_available_images(incoming_build):
+        add_image(image)
+
+    return merged
+
+
+def _format_available_images(images: List[str]) -> str:
+    return ",".join(images)
+
+
+def _is_import_locked_status(raw_status: Optional[str]) -> bool:
+    return _normalize_token(raw_status) in LOCKED_IMPORT_STATUS_TOKENS
+
+
+def _get_import_image_value(row: Dict) -> str:
+    build_value = (row.get(CSV_HEADER_BUILD) or "").strip()
+    if _is_valid_image_value(build_value):
+        return build_value
+
+    return "NA"
+
+
+def _select_primary_bug_row(rows: List[models.Bug]) -> models.Bug:
+    if not rows:
+        raise ValueError("rows cannot be empty")
+
+    return sorted(
+        rows,
+        key=lambda row: (
+            0 if _is_import_locked_status(row.status) else 1,
+            0 if row.test_progress_id is not None else 1,
+            0 if row.work_task_id is not None else 1,
+            0 if row.cr_created_on is not None else 1,
+            row.id,
+        ),
+    )[0]
+
+
+def _merge_images_from_bug_rows(rows: List[models.Bug]) -> List[str]:
+    merged: List[str] = []
+    seen = set()
+
+    def add_image(raw_value: Optional[str]):
+        value = (raw_value or "").strip()
+        token = _normalize_token(value)
+        if not token or token in seen or not _is_valid_image_value(value):
+            return
+        seen.add(token)
+        merged.append(value)
+
+    for row in rows:
+        for image in _split_available_images(row.available_images):
+            add_image(image)
+        add_image(row.software_image_integration_build)
+
+    return merged
+
+
+def _consolidate_existing_bug_rows(db: Session, rows: List[models.Bug]) -> Optional[models.Bug]:
+    if not rows:
+        return None
+
+    primary = _select_primary_bug_row(rows)
+    duplicates = [row for row in rows if row.id != primary.id]
+    if not duplicates:
+        return primary
+
+    if not _is_import_locked_status(primary.status):
+        all_dates = [row.cr_created_on for row in rows if row.cr_created_on is not None]
+        if all_dates:
+            primary.cr_created_on = min(all_dates)
+
+        merged_images = _merge_images_from_bug_rows(rows)
+        primary.available_images = _format_available_images(merged_images)
+        if len(merged_images) > 1:
+            primary.software_image_integration_build = PENDING_CONFIRMATION_BUILD
+        elif len(merged_images) == 1:
+            primary.software_image_integration_build = merged_images[0]
+
+    for row in duplicates:
+        db.delete(row)
+
+    db.flush()
+    return primary
 
 
 def _resolve_csv_path(file_path: Optional[str]) -> str:
@@ -165,6 +296,7 @@ def _serialize_bug(row: models.Bug) -> Dict:
         "cr_assignee": row.assigned_to,
         "cr_created_on": row.cr_created_on,
         "software_image_integration_build": row.software_image_integration_build,
+        "available_images": row.available_images,
         "test_progress_id": row.test_progress_id,
         "work_task_id": row.work_task_id,
         "external_cr_number": row.external_cr_number,
@@ -194,6 +326,30 @@ def _apply_bug_filters(query, status: Optional[str] = None, severity: Optional[s
         if normalized_created_by:
             query = query.filter(func.lower(func.trim(models.Bug.created_by)) == normalized_created_by.lower())
     return query
+
+
+def _apply_verification_zone_filter(query, verification_zone: Optional[str] = None):
+    zone = (verification_zone or "all").strip().lower()
+    if zone in {"", "all"}:
+        return query
+
+    status_normalized = func.lower(func.trim(func.coalesce(models.Bug.status, "")))
+    build_normalized = func.lower(func.trim(func.coalesce(models.Bug.software_image_integration_build, "")))
+
+    is_verified = status_normalized == "verified"
+    is_discarded = status_normalized == "discarded"
+    has_valid_build = (~build_normalized.in_(["", "na", "n/a", "-", "null", "none"]))
+
+    if zone == "verified":
+        return query.filter(is_verified)
+    if zone in {"discarded", "abandoned"}:
+        return query.filter(is_discarded)
+    if zone in {"pending", "pending_verification"}:
+        return query.filter(~is_verified, ~is_discarded, has_valid_build)
+    if zone in {"waiting", "waiting_build"}:
+        return query.filter(~is_verified, ~is_discarded, ~has_valid_build)
+
+    raise HTTPException(status_code=400, detail="Invalid verification zone")
 
 
 @router.get("/import/csv/fields")
@@ -240,66 +396,64 @@ def get_bug_filter_options(db: Session = Depends(get_db)):
 
 
 def _upsert_bug_from_csv_row(db: Session, row: Dict) -> str:
-    title = (row.get(CSV_HEADER_TITLE) or "").strip()
-    if not title:
-        return "skipped"
-
     cr_type = (row.get(CSV_HEADER_TYPE) or "").strip().lower()
     if cr_type and cr_type != "bug":
         return "skipped"
 
+    title = (row.get(CSV_HEADER_TITLE) or "").strip()
     cr_number = (row.get(CSV_HEADER_CR_NUMBER) or "").strip()
-    build_value = (row.get(CSV_HEADER_BUILD) or "").strip()
-    normalized_build = build_value if build_value else "NA"
+    build_value = _get_import_image_value(row)
+    incoming_created_on = _parse_cr_created_on(row.get(CSV_HEADER_CREATED_ON))
+    incoming_images = _split_available_images(build_value)
+
+    existing_rows: List[models.Bug] = []
+    if cr_number:
+        existing_rows = db.query(models.Bug).filter(models.Bug.external_cr_number == cr_number).order_by(models.Bug.id.asc()).all()
+
+    existing = _consolidate_existing_bug_rows(db, existing_rows)
+
+    if not title and existing is None:
+        return "skipped"
+
     bug_data = {
         "title": title,
         "severity": _normalize_severity(row.get(CSV_HEADER_SEVERITY)),
         "status": _sanitize_status(row.get(CSV_HEADER_STATUS)),
         "created_by": (row.get(CSV_HEADER_CREATED_BY) or "").strip() or "",
         "assigned_to": (row.get(CSV_HEADER_ASSIGNEE) or "").strip() or None,
-        "cr_created_on": _parse_cr_created_on(row.get(CSV_HEADER_CREATED_ON)),
-        "software_image_integration_build": normalized_build,
+        "cr_created_on": incoming_created_on,
+        "software_image_integration_build": PENDING_CONFIRMATION_BUILD if len(incoming_images) > 1 else (incoming_images[0] if incoming_images else "NA"),
+        "available_images": _format_available_images(incoming_images),
         "test_progress_id": None,
         "work_task_id": None,
         "external_cr_number": cr_number or None,
     }
 
-    _apply_auto_test_link(db, bug_data)
-
-    existing = None
-    if cr_number:
-        # CR Number is the unique import key: same CR should update only.
-        existing = db.query(models.Bug).filter(models.Bug.external_cr_number == cr_number).first()
-
     if existing:
-        existing.title = bug_data["title"]
-        existing.severity = bug_data["severity"]
-        existing.status = bug_data["status"]
+        if _is_import_locked_status(existing.status):
+            return "skipped"
 
-        if bug_data["created_by"]:
-            existing.created_by = bug_data["created_by"]
-        if bug_data["assigned_to"]:
-            existing.assigned_to = bug_data["assigned_to"]
-        if bug_data["cr_created_on"] is not None:
-            existing.cr_created_on = bug_data["cr_created_on"]
+        if incoming_created_on is not None and (existing.cr_created_on is None or incoming_created_on < existing.cr_created_on):
+            existing.cr_created_on = incoming_created_on
 
-        incoming_build = bug_data["software_image_integration_build"]
-        existing_build = (existing.software_image_integration_build or "").strip()
-        if incoming_build and incoming_build != "NA":
-            existing.software_image_integration_build = incoming_build
-        elif not existing_build:
-            existing.software_image_integration_build = incoming_build
+        merged_images = _merge_available_images(
+            existing.available_images,
+            existing.software_image_integration_build,
+            build_value,
+        )
+        existing.available_images = _format_available_images(merged_images)
 
-        if existing.test_progress_id is None and bug_data["test_progress_id"] is not None:
-            existing.test_progress_id = bug_data["test_progress_id"]
-        if existing.work_task_id is None and bug_data["work_task_id"] is not None:
-            existing.work_task_id = bug_data["work_task_id"]
-        if not existing.external_cr_number and bug_data["external_cr_number"]:
-            existing.external_cr_number = bug_data["external_cr_number"]
+        if len(merged_images) > 1:
+            existing.software_image_integration_build = PENDING_CONFIRMATION_BUILD
+        elif len(merged_images) == 1 and _normalize_token(existing.software_image_integration_build) in INVALID_IMAGE_TOKENS.union({_normalize_token(PENDING_CONFIRMATION_BUILD)}):
+            existing.software_image_integration_build = merged_images[0]
 
         return "updated"
 
-    db.add(models.Bug(**bug_data))
+    _apply_auto_test_link(db, bug_data)
+    db_bug = models.Bug(**bug_data)
+    db.add(db_bug)
+    db.flush()
     return "imported"
 
 
@@ -371,7 +525,7 @@ async def import_bugs_from_csv_upload(
     except UnicodeDecodeError as exc:
         raise HTTPException(status_code=400, detail="CSV encoding must be UTF-8") from exc
 
-    reader = csv.DictReader(text.splitlines())
+    reader = csv.DictReader(io.StringIO(text))
     stats = _import_bugs_from_reader(reader, db, limit)
     db.commit()
 
@@ -388,6 +542,7 @@ def query_bugs(
     status: str = None,
     severity: str = None,
     created_by: str = None,
+    verification_zone: str = "all",
     test_id: Optional[int] = None,
     skip: int = 0,
     limit: int = 100,
@@ -396,6 +551,7 @@ def query_bugs(
     """Query bugs with filters, CR-number-desc ordering, and pagination metadata."""
     base_query = db.query(models.Bug)
     base_query = _apply_bug_filters(base_query, status=status, severity=severity, created_by=created_by)
+    base_query = _apply_verification_zone_filter(base_query, verification_zone=verification_zone)
     if test_id is not None:
         base_query = base_query.filter(models.Bug.test_progress_id == test_id)
 
@@ -414,6 +570,7 @@ def get_bugs_list(
     status: str = None,
     severity: str = None,
     created_by: str = None,
+    verification_zone: str = "all",
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db)
@@ -421,6 +578,7 @@ def get_bugs_list(
     """Get the bug list, with optional status and severity filters."""
     query = db.query(models.Bug)
     query = _apply_bug_filters(query, status=status, severity=severity, created_by=created_by)
+    query = _apply_verification_zone_filter(query, verification_zone=verification_zone)
     bugs = _apply_bug_order(query).offset(skip).limit(limit).all()
     return [_serialize_bug(row) for row in bugs]
 

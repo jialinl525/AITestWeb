@@ -57,6 +57,8 @@ def _ensure_compat_columns():
                 conn.execute(text("ALTER TABLE bugs ADD COLUMN cr_created_on DATETIME"))
             if "software_image_integration_build" not in columns:
                 conn.execute(text("ALTER TABLE bugs ADD COLUMN software_image_integration_build TEXT DEFAULT ''"))
+            if "available_images" not in columns:
+                conn.execute(text("ALTER TABLE bugs ADD COLUMN available_images TEXT DEFAULT ''"))
 
         if "work_tasks" in table_names:
             columns = {item["name"] for item in inspector.get_columns("work_tasks")}

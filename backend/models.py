@@ -57,11 +57,16 @@ class Bug(Base):
     assigned_to = Column(String)
     cr_created_on = Column(DateTime(timezone=True), nullable=True)
     software_image_integration_build = Column(String, default="")
+    available_images = Column(Text, default="")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     test_progress = relationship("TestProgress", back_populates="bugs")
     work_task = relationship("WorkTask")
+
+    @property
+    def cr_assignee(self):
+        return self.assigned_to
 
 class KPIMetric(Base):
     __tablename__ = "kpi_metrics"
@@ -72,6 +77,9 @@ class KPIMetric(Base):
     source = Column(String, default="")
     model_size = Column(String, default="")
     description = Column(Text, default="")
+    test_platform = Column(String, default="")
+    test_version = Column(String, default="")
+    test_condition = Column(Text, default="")
     metric_name = Column(String)  # accuracy, precision, recall, f1_score, latency
     metric_value = Column(Float)
     test_date = Column(DateTime(timezone=True), server_default=func.now())
@@ -148,6 +156,7 @@ class WorkTask(Base):
     end_date = Column(Date, nullable=True)
     estimated_hours = Column(Float, default=0.0)
     status = Column(String, index=True, default="Planned")
+    progress = Column(Float, default=0.0)
     assignee_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

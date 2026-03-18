@@ -1,0 +1,3 @@
+model_name,source,model_size,description,test_platform,test_version,test_condition,test_date,power_consumption,latency,wakeup_rate
+mmd_stack_v1,Internal,180MB,Multi model detection baseline,Windows,2026.03.17,lab,2026-03-17T14:10:00,1.22,118,96.5
+mmd_stack_v2,PartnerC,240MB,Multi model detection tuned,Windows,2026.03.17,office,2026-03-17T14:55:00,1.34,124,97.1

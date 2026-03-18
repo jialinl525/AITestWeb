@@ -2,13 +2,13 @@
   <div class="page-shell detail-container">
     <section class="page-hero detail-hero">
       <div class="page-hero__content">
-        <div class="page-hero__eyebrow">Task Detail</div>
-        <h2 class="page-hero__title">Test Task Details</h2>
-        <p class="page-hero__desc">Review one test task in depth, including feature notes, configuration, current status, progress breakdown, and linked defects for follow-up and handoff.</p>
+        <div class="page-hero__eyebrow">{{ LT.heroEyebrow }}</div>
+        <h2 class="page-hero__title">{{ LT.heroTitle }}</h2>
+        <p class="page-hero__desc">{{ DT.hero }}</p>
       </div>
       <div class="page-hero__actions">
-        <el-button @click="goBack">Back to List</el-button>
-        <el-button v-if="canEditBug()" type="primary" @click="goToBugs">Manage Bugs</el-button>
+        <el-button @click="goBack">{{ BT.backToList }}</el-button>
+        <el-button v-if="canEditBug()" type="primary" @click="goToBugs">{{ BT.manageBugs }}</el-button>
       </div>
     </section>
 
@@ -16,70 +16,69 @@
       <template v-if="testDetail">
         <div class="detail-header">
           <div>
-            <h2>{{ testDetail.test_name }}</h2>
-            <p class="detail-subtitle">{{ testDetail.model_name || 'No feature summary yet' }}</p>
-            <p class="detail-subtitle">FR Number: {{ testDetail.fr_number || '-' }}</p>
+            <h2>{{ testDetail.fr_number || '-' }}: {{ testDetail.test_name }}</h2>
+            <p class="detail-subtitle">{{ testDetail.model_name || LT.noFeatureSummary }}</p>
           </div>
           <div class="inline-stats">
             <div class="glass-pill">
-              <span>Status: </span>
+              <span>{{ LT.status }}: </span>
               <el-tag :type="getStatusType(testDetail.status)" size="small">
                 {{ getStatusText(testDetail.status) }}
               </el-tag>
             </div>
-            <div class="glass-pill">Created on {{ formatDate(testDetail.created_at) }}</div>
+            <div class="glass-pill">{{ LT.createdOn }} {{ formatDate(testDetail.created_at) }}</div>
           </div>
         </div>
 
         <div class="metrics-grid detail-metrics">
           <article class="metric-card accent-blue">
-            <div class="metric-card__label">Current Progress</div>
+            <div class="metric-card__label">{{ LT.metrics.currentProgress }}</div>
             <div class="metric-card__value">{{ testDetail.progress }}%</div>
-            <div class="metric-card__meta">Calculated automatically from passed cases</div>
+            <div class="metric-card__meta">{{ DT.metricsMeta.currentProgress }}</div>
           </article>
           <article class="metric-card accent-green">
-            <div class="metric-card__label">Passed / Total Cases</div>
+            <div class="metric-card__label">{{ LT.metrics.passedTotal }}</div>
             <div class="metric-card__value">{{ testDetail.passed_cases }}/{{ testDetail.total_cases }}</div>
-            <div class="metric-card__meta">Includes all L0 / L2 / L4 statistics</div>
+            <div class="metric-card__meta">{{ DT.metricsMeta.passedTotal }}</div>
           </article>
           <article class="metric-card accent-red">
-            <div class="metric-card__label">Linked Bugs</div>
+            <div class="metric-card__label">{{ LT.metrics.linkedBugs }}</div>
             <div class="metric-card__value">{{ testDetail.bugs?.length || 0 }}</div>
-            <div class="metric-card__meta">Issues currently linked to this test task</div>
+            <div class="metric-card__meta">{{ DT.metricsMeta.linkedBugs }}</div>
           </article>
           <article class="metric-card accent-purple">
-            <div class="metric-card__label">Estimated Manday</div>
+            <div class="metric-card__label">{{ LT.metrics.estimatedManday }}</div>
             <div class="metric-card__value metric-card__value--small">{{ Number(testDetail.estimated_hours || 0).toFixed(1) }} manday</div>
-            <div class="metric-card__meta">Shown on the detail page only</div>
+            <div class="metric-card__meta">{{ DT.metricsMeta.estimatedManday }}</div>
           </article>
         </div>
 
         <div class="detail-people" v-if="testDetail.test_owners || testDetail.developers">
-          <span class="people-item"><strong>FR Number: </strong>{{ testDetail.fr_number || '-' }}</span>
-          <span class="people-item"><strong>Testers: </strong>{{ testDetail.test_owners || '-' }}</span>
-          <span class="people-item"><strong>Developers: </strong>{{ testDetail.developers || '-' }}</span>
+          <span class="people-item"><strong>{{ LT.people.frNumber }}: </strong>{{ testDetail.fr_number || '-' }}</span>
+          <span class="people-item"><strong>{{ LT.people.testers }}: </strong>{{ testDetail.test_owners || '-' }}</span>
+          <span class="people-item"><strong>{{ LT.people.developers }}: </strong>{{ testDetail.developers || '-' }}</span>
         </div>
 
         <el-card class="section-card detail-inner-card">
           <template #header>
             <div class="section-title">
               <div class="section-title__main">
-                <h3>Feature and Configuration</h3>
-                <span class="section-title__meta">Capture task background, feature details, and configuration notes for tracking and handoff.</span>
+                <h3>{{ LT.section.featureConfig }}</h3>
+                <span class="section-title__meta">{{ DT.sectionMeta.featureConfig }}</span>
               </div>
             </div>
           </template>
           <el-descriptions :column="1" border class="detail-info">
-            <el-descriptions-item label="Feature Summary (FR Brief)">
+            <el-descriptions-item :label="LT.info.featureSummary">
               <div class="description-text">{{ testDetail.model_name || '-' }}</div>
             </el-descriptions-item>
-            <el-descriptions-item label="FR Number">
+            <el-descriptions-item :label="LT.info.frNumber">
               <div class="description-text">{{ testDetail.fr_number || '-' }}</div>
             </el-descriptions-item>
-            <el-descriptions-item label="Detailed Description">
+            <el-descriptions-item :label="LT.info.detailedDescription">
               <div class="description-text">{{ testDetail.description || '-' }}</div>
             </el-descriptions-item>
-            <el-descriptions-item label="Configuration Method">
+            <el-descriptions-item :label="LT.info.configMethod">
               <div class="description-text">{{ testDetail.config_method || '-' }}</div>
             </el-descriptions-item>
           </el-descriptions>
@@ -89,19 +88,19 @@
           <template #header>
             <div class="section-title">
               <div class="section-title__main">
-                <h3>Stage Statistics and Task Status</h3>
-                <span class="section-title__meta">Each stage is shown as Pass/Fail/Total, and untested cases are not counted as failures.</span>
+                <h3>{{ LT.section.stageStats }}</h3>
+                <span class="section-title__meta">{{ DT.sectionMeta.stageStats }}</span>
               </div>
             </div>
           </template>
           <el-descriptions :column="2" border class="detail-info">
-            <el-descriptions-item label="Status">{{ getStatusText(testDetail.status) }}</el-descriptions-item>
-            <el-descriptions-item label="Testers">{{ testDetail.test_owners || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="Developers">{{ testDetail.developers || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="Estimated Manday">{{ Number(testDetail.estimated_hours || 0).toFixed(1) }} manday</el-descriptions-item>
-            <el-descriptions-item label="Start Date">{{ getStartDate(testDetail) }}</el-descriptions-item>
-            <el-descriptions-item label="Completion Date">{{ getCompletionDate(testDetail) }}</el-descriptions-item>
-            <el-descriptions-item label="L0 (Pass/Fail/Total)">
+            <el-descriptions-item :label="LT.info.status">{{ getStatusText(testDetail.status) }}</el-descriptions-item>
+            <el-descriptions-item :label="LT.info.testers">{{ testDetail.test_owners || '-' }}</el-descriptions-item>
+            <el-descriptions-item :label="LT.info.developers">{{ testDetail.developers || '-' }}</el-descriptions-item>
+            <el-descriptions-item :label="LT.info.estimatedManday">{{ Number(testDetail.estimated_hours || 0).toFixed(1) }} manday</el-descriptions-item>
+            <el-descriptions-item :label="LT.info.startDate">{{ getStartDate(testDetail) }}</el-descriptions-item>
+            <el-descriptions-item :label="LT.info.completionDate">{{ getCompletionDate(testDetail) }}</el-descriptions-item>
+            <el-descriptions-item :label="LT.info.l0">
               <div class="case-stats">
                 <span class="pass-count">{{ testDetail.l0_passed_cases }}</span>
                 <span class="sep">/</span>
@@ -110,12 +109,12 @@
                 <span class="total-count">{{ testDetail.l0_total_cases }}</span>
               </div>
             </el-descriptions-item>
-            <el-descriptions-item label="L0 Due Date">
+            <el-descriptions-item :label="LT.info.l0DueDate">
               <span :class="`due-date-text due-date-text--${getStageDeadlineLevel(testDetail, 'l0')}`">
                 {{ formatDueDate(testDetail.l0_due_date) }}
               </span>
             </el-descriptions-item>
-            <el-descriptions-item label="L2 (Pass/Fail/Total)">
+            <el-descriptions-item :label="LT.info.l2">
               <div class="case-stats">
                 <span class="pass-count">{{ testDetail.l2_passed_cases }}</span>
                 <span class="sep">/</span>
@@ -124,12 +123,12 @@
                 <span class="total-count">{{ testDetail.l2_total_cases }}</span>
               </div>
             </el-descriptions-item>
-            <el-descriptions-item label="L2 Due Date">
+            <el-descriptions-item :label="LT.info.l2DueDate">
               <span :class="`due-date-text due-date-text--${getStageDeadlineLevel(testDetail, 'l2')}`">
                 {{ formatDueDate(testDetail.l2_due_date) }}
               </span>
             </el-descriptions-item>
-            <el-descriptions-item label="L4 (Pass/Fail/Total)">
+            <el-descriptions-item :label="LT.info.l4">
               <div class="case-stats">
                 <span class="pass-count">{{ testDetail.l4_passed_cases }}</span>
                 <span class="sep">/</span>
@@ -138,12 +137,12 @@
                 <span class="total-count">{{ testDetail.l4_total_cases }}</span>
               </div>
             </el-descriptions-item>
-            <el-descriptions-item label="L4 Due Date">
+            <el-descriptions-item :label="LT.info.l4DueDate">
               <span :class="`due-date-text due-date-text--${getStageDeadlineLevel(testDetail, 'l4')}`">
                 {{ formatDueDate(testDetail.l4_due_date) }}
               </span>
             </el-descriptions-item>
-            <el-descriptions-item label="Overall (Pass/Fail/Total)">
+            <el-descriptions-item :label="LT.info.overall">
               <div class="case-stats">
                 <span class="pass-count">{{ testDetail.passed_cases }}</span>
                 <span class="sep">/</span>
@@ -152,11 +151,11 @@
                 <span class="total-count">{{ testDetail.total_cases }}</span>
               </div>
             </el-descriptions-item>
-            <el-descriptions-item label="Progress">
+            <el-descriptions-item :label="LT.info.progress">
               <el-progress :percentage="testDetail.progress" :status="getProgressStatus(testDetail.status)" style="width: 200px" />
             </el-descriptions-item>
-            <el-descriptions-item label="Created At">{{ formatDate(testDetail.created_at) }}</el-descriptions-item>
-            <el-descriptions-item label="Updated At">{{ formatDate(testDetail.updated_at) || '-' }}</el-descriptions-item>
+            <el-descriptions-item :label="LT.info.createdAt">{{ formatDate(testDetail.created_at) }}</el-descriptions-item>
+            <el-descriptions-item :label="LT.info.updatedAt">{{ formatDate(testDetail.updated_at) || '-' }}</el-descriptions-item>
           </el-descriptions>
         </el-card>
 
@@ -164,48 +163,218 @@
           <template #header>
             <div class="section-title">
               <div class="section-title__main">
-                <h3>Linked Bugs ({{ testDetail.bugs?.length || 0 }})</h3>
-                <span class="section-title__meta">An overview of linked issues and their processing state.</span>
+                <h3>{{ LT.section.linkedBugs }} ({{ testDetail.bugs?.length || 0 }})</h3>
+                <span class="section-title__meta">{{ DT.sectionMeta.linkedBugs }}</span>
               </div>
             </div>
           </template>
-          <div class="bugs-section">
-            <el-table :data="testDetail.bugs || []" stripe empty-text="No linked bugs">
-              <el-table-column prop="external_cr_number" label="CR Number" width="130" />
-              <el-table-column prop="title" label="Title" min-width="280" show-overflow-tooltip />
-              <el-table-column prop="status" label="Status" width="120">
-                <template #default="{ row }">
-                  <el-tag :type="getBugStatusType(row.status)" size="small">
-                    {{ getBugStatusText(row.status) }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column prop="created_by" label="Created By" width="120" />
-              <el-table-column prop="cr_assignee" label="CR Assignee" width="130" />
-              <el-table-column prop="cr_created_on" label="Created On" width="180">
-                <template #default="{ row }">{{ formatDate(row.cr_created_on) || '-' }}</template>
-              </el-table-column>
-              <el-table-column prop="software_image_integration_build" label="Software Image Integration Build" min-width="250" show-overflow-tooltip />
-            </el-table>
+          <div class="bug-zone-stack">
+            <section class="bug-zone-item">
+              <div class="bug-zone-item__title">Pending Build ({{ pendingBuildBugs.length }})</div>
+              <BugTable
+                :bugs="pendingBuildBugs"
+                :empty-text="DT.tableEmptyBugs"
+                :show-actions="canEditBug() || canDeleteBug()"
+                :show-verify-action="canEditBug()"
+                :editable="canEditBug()"
+                :deletable="canDeleteBug()"
+                :is-verifying="isVerifying"
+                :row-class-name="getBugTableRowClassName"
+                @verify="markBugVerified"
+                @edit="editBug"
+                @delete="deleteBug"
+              />
+            </section>
+
+            <section class="bug-zone-item">
+              <div class="bug-zone-item__title">待验证 ({{ pendingVerificationBugs.length }})</div>
+              <BugTable
+                :bugs="pendingVerificationBugs"
+                :empty-text="DT.tableEmptyBugs"
+                :show-actions="canEditBug() || canDeleteBug()"
+                :show-verify-action="canEditBug()"
+                :editable="canEditBug()"
+                :deletable="canDeleteBug()"
+                :is-verifying="isVerifying"
+                :row-class-name="getBugTableRowClassName"
+                @verify="markBugVerified"
+                @edit="editBug"
+                @delete="deleteBug"
+              />
+            </section>
+
+            <section class="bug-zone-item">
+              <div class="bug-zone-item__title">已验证 ({{ verifiedBugs.length }})</div>
+              <BugTable
+                :bugs="verifiedBugs"
+                :empty-text="DT.tableEmptyBugs"
+                :show-actions="canEditBug() || canDeleteBug()"
+                :show-verify-action="canEditBug()"
+                :editable="canEditBug()"
+                :deletable="canDeleteBug()"
+                :is-verifying="isVerifying"
+                :row-class-name="getBugTableRowClassName"
+                @verify="markBugVerified"
+                @edit="editBug"
+                @delete="deleteBug"
+              />
+            </section>
           </div>
         </el-card>
+
+        <el-dialog
+          v-model="showBugDialog"
+          :title="LTBug.dialog.editTitle"
+          width="600px"
+        >
+          <el-form :model="bugForm" label-width="100px">
+            <el-form-item :label="LTBug.form.crNumber">
+              <el-input v-model="bugForm.external_cr_number" :placeholder="DTBug.placeholders.optionalCrNumber" />
+            </el-form-item>
+            <el-form-item :label="LTBug.form.testTask">
+              <el-select v-model="bugForm.test_progress_id" clearable filterable :placeholder="DTBug.placeholders.noFrKeyword" style="width: 100%">
+                <el-option
+                  v-for="item in testOptions"
+                  :key="item.id"
+                  :label="`${item.fr_number || 'No FR'} | ${item.test_name}`"
+                  :value="item.id"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item :label="LTBug.form.workTask">
+              <el-select v-model="bugForm.work_task_id" clearable filterable :placeholder="DTBug.placeholders.optionalManualLink" style="width: 100%">
+                <el-option
+                  v-for="task in workTaskOptions"
+                  :key="task.id"
+                  :label="`${task.task_key} | ${task.task_name}`"
+                  :value="task.id"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item :label="LTBug.form.title">
+              <el-input v-model="bugForm.title" />
+            </el-form-item>
+            <el-form-item :label="LTBug.form.createdBy">
+              <el-input v-model="bugForm.created_by" />
+            </el-form-item>
+            <el-form-item :label="LTBug.form.crAssignee">
+              <el-input v-model="bugForm.cr_assignee" />
+            </el-form-item>
+            <el-form-item :label="LTBug.form.createdOn">
+              <el-input v-model="bugForm.cr_created_on" :placeholder="DTBug.placeholders.createdOnFormat" />
+            </el-form-item>
+            <el-form-item :label="LTBug.form.build">
+              <el-select
+                v-if="bugBuildOptions.length"
+                v-model="bugForm.software_image_integration_build"
+                clearable
+                filterable
+                placeholder="Select from available images"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="image in bugBuildOptions"
+                  :key="image"
+                  :label="image"
+                  :value="image"
+                />
+              </el-select>
+              <el-input v-else v-model="bugForm.software_image_integration_build" :placeholder="DTBug.placeholders.softwareBuild" />
+            </el-form-item>
+            <el-form-item :label="LTBug.form.status">
+              <el-select v-model="bugForm.status">
+                <el-option :label="LTBug.statusOptions.fixed" value="fixed" />
+                <el-option :label="LTBug.statusOptions.analysis" value="analysis" />
+                <el-option :label="LTBug.statusOptions.other" value="other" />
+                <el-option :label="LTBug.statusOptions.verified" value="verified" />
+                <el-option :label="LTBug.statusOptions.discarded" value="discarded" />
+              </el-select>
+            </el-form-item>
+          </el-form>
+          <template #footer>
+            <el-button class="btn-style-3" @click="showBugDialog = false">{{ BTCommon.cancel }}</el-button>
+            <el-button class="btn-style-2" type="primary" @click="saveBug">{{ BTCommon.save }}</el-button>
+          </template>
+        </el-dialog>
       </template>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { getTestProgressDetail } from '../api/testProgress'
-import { canEditBug } from '../stores/auth'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import BugTable from '../components/bugs/BugTable.vue'
+import { getTestProgressDetail, getTestProgressList } from '../api/testProgress'
+import { updateBug, deleteBug as deleteBugApi } from '../api/bugs'
+import { getWorkTasks } from '../api/workTasks'
+import { canEditBug, canDeleteBug } from '../stores/auth'
+import { LabelText } from '../texts/LabelText'
+import { ButtonText } from '../texts/ButtonText'
+import { DescriptionText } from '../texts/DescriptionText'
+import { getStatusBucket, getVerificationZone } from '../utils/bugDisplay'
 
 const route = useRoute()
 const router = useRouter()
+const LT = LabelText.testDetail
+const LTBug = LabelText.bugs
+const BT = ButtonText.testDetail
+const BTCommon = ButtonText.common
+const DT = DescriptionText.testDetail
+const DTBug = DescriptionText.bugs
 const loading = ref(false)
 const testDetail = ref(null)
 const DAYS_TO_WARNING = 3
+const showBugDialog = ref(false)
+const editingBug = ref(null)
+const verifyingMap = ref({})
+const testOptions = ref([])
+const workTaskOptions = ref([])
+const bugBuildOptions = ref([])
+
+const bugForm = ref({
+  test_progress_id: null,
+  work_task_id: null,
+  external_cr_number: '',
+  created_by: '',
+  cr_assignee: '',
+  cr_created_on: '',
+  software_image_integration_build: '',
+  title: '',
+  severity: 'medium',
+  status: 'other'
+})
+
+const linkedBugs = computed(() => testDetail.value?.bugs || [])
+const pendingBuildBugs = computed(() => linkedBugs.value.filter((row) => getVerificationZone(row, { includeDiscardedZone: false }) === 'waiting_build'))
+const pendingVerificationBugs = computed(() => linkedBugs.value.filter((row) => getVerificationZone(row, { includeDiscardedZone: false }) === 'pending_verification'))
+const verifiedBugs = computed(() => linkedBugs.value.filter((row) => getVerificationZone(row, { includeDiscardedZone: false }) === 'verified'))
+
+const parseAvailableImages = (value = '') => {
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+const getBugBuildOptions = (bug) => {
+  const options = []
+  const seen = new Set()
+  const addOption = (value) => {
+    const text = String(value || '').trim()
+    const key = text.toLowerCase()
+    if (!text || seen.has(key)) {
+      return
+    }
+    seen.add(key)
+    options.push(text)
+  }
+
+  parseAvailableImages(bug?.available_images).forEach(addOption)
+  addOption(bug?.software_image_integration_build)
+  return options
+}
 
 const loadDetail = async () => {
   const id = route.params.id
@@ -214,7 +383,7 @@ const loadDetail = async () => {
   try {
     testDetail.value = await getTestProgressDetail(id)
   } catch (error) {
-    ElMessage.error('Failed to load details')
+    ElMessage.error(DT.toast.loadFailed)
   } finally {
     loading.value = false
   }
@@ -234,7 +403,7 @@ const getStatusType = (status) => {
 }
 
 const getStatusText = (status) => {
-  const map = { pending: 'Pending', running: 'Running', completed: 'Completed', failed: 'Failed' }
+  const map = LT.statusText
   return map[status] || status
 }
 
@@ -291,24 +460,115 @@ const getStageDeadlineLevel = (row, stage) => {
   return 'normal'
 }
 
-const getSeverityType = (severity) => {
-  const map = { critical: 'danger', high: 'warning', medium: 'info', low: '' }
-  return map[severity] || 'info'
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+const isVerifying = (row) => Boolean(verifyingMap.value?.[Number(row?.id)])
+
+const getBugTableRowClassName = ({ row }) => {
+  const created = row?.cr_created_on ? new Date(row.cr_created_on) : null
+  if (!created || Number.isNaN(created.getTime())) return ''
+  const now = new Date()
+  const diffDays = Math.floor((now.getTime() - created.getTime()) / 86400000)
+  if (diffDays > 14 && getStatusBucket(row.status) !== 'fixed') {
+    return 'stale-cr-row'
+  }
+  return ''
 }
 
-const getBugStatusType = (status) => {
-  const map = { fixed: 'success', analysis: 'warning', other: 'info' }
-  return map[status] || 'info'
+const loadReferenceOptions = async () => {
+  try {
+    const [tests, tasks] = await Promise.all([
+      getTestProgressList({ limit: 500 }),
+      getWorkTasks()
+    ])
+    testOptions.value = tests || []
+    workTaskOptions.value = tasks || []
+  } catch {
+    testOptions.value = []
+    workTaskOptions.value = []
+  }
 }
 
-const getSeverityText = (severity) => {
-  const map = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low' }
-  return map[severity] || severity
+const toBugUpdatePayload = (row, patch = {}) => {
+  return {
+    test_progress_id: row.test_progress_id || null,
+    work_task_id: row.work_task_id || null,
+    external_cr_number: row.external_cr_number || '',
+    created_by: row.created_by || '',
+    cr_assignee: row.cr_assignee || '',
+    cr_created_on: row.cr_created_on || '',
+    software_image_integration_build: row.software_image_integration_build || '',
+    title: row.title || '',
+    severity: row.severity || 'medium',
+    status: row.status || 'other',
+    ...patch
+  }
 }
 
-const getBugStatusText = (status) => {
-  const map = { fixed: 'Fixed', analysis: 'Analysis', other: 'Other' }
-  return map[status] || status
+const markBugVerified = async (row) => {
+  const bugId = Number(row?.id)
+  if (!bugId || isVerifying(row)) return
+
+  verifyingMap.value[bugId] = true
+  try {
+    await delay(1000)
+    await updateBug(bugId, toBugUpdatePayload(row, { status: 'verified' }))
+    ElMessage.success('Moved to Verified')
+    await loadDetail()
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.detail || DTBug.toast.saveFailed)
+  } finally {
+    verifyingMap.value[bugId] = false
+  }
+}
+
+const editBug = (bug) => {
+  editingBug.value = bug
+  bugBuildOptions.value = getBugBuildOptions(bug)
+  bugForm.value = {
+    test_progress_id: bug.test_progress_id,
+    work_task_id: bug.work_task_id || null,
+    external_cr_number: bug.external_cr_number || '',
+    created_by: bug.created_by || '',
+    cr_assignee: bug.cr_assignee || '',
+    cr_created_on: bug.cr_created_on || '',
+    software_image_integration_build: bug.software_image_integration_build || '',
+    title: bug.title || '',
+    severity: bug.severity || 'medium',
+    status: bug.status || 'other'
+  }
+  showBugDialog.value = true
+}
+
+const saveBug = async () => {
+  if (!editingBug.value?.id) return
+
+  try {
+    await updateBug(editingBug.value.id, bugForm.value)
+    ElMessage.success(DTBug.toast.updateSuccess)
+    showBugDialog.value = false
+    editingBug.value = null
+    bugBuildOptions.value = []
+    await loadDetail()
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.detail || DTBug.toast.saveFailed)
+  }
+}
+
+const deleteBug = async (id) => {
+  try {
+    await ElMessageBox.confirm(DTBug.toast.deleteConfirmContent, DTBug.toast.deleteConfirmTitle, {
+      confirmButtonText: BTCommon.confirm,
+      cancelButtonText: BTCommon.cancel,
+      type: 'warning'
+    })
+    await deleteBugApi(id)
+    ElMessage.success(DTBug.toast.deleteSuccess)
+    await loadDetail()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(error?.response?.data?.detail || DTBug.toast.deleteFailed)
+    }
+  }
 }
 
 const formatDate = (dateString) => {
@@ -331,218 +591,9 @@ const getCompletionDate = (row) => {
   return formatDueDate(row?.completion_date)
 }
 
-onMounted(() => loadDetail())
+onMounted(() => {
+  loadReferenceOptions()
+  loadDetail()
+})
 </script>
-
-<style scoped>
-.detail-container {
-  width: 100%;
-}
-
-.detail-card {
-  margin-top: 0;
-}
-
-.detail-inner-card {
-  position: relative;
-  margin-bottom: 16px;
-}
-
-.detail-inner-card:last-child {
-  margin-bottom: 0;
-}
-
-.detail-inner-card + .detail-inner-card {
-  margin-top: 20px;
-}
-
-.detail-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.detail-header h2 {
-  margin: 0;
-  font-size: 26px;
-}
-
-.detail-subtitle {
-  margin: 8px 0 0;
-  color: rgba(226, 232, 240, 0.72);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.detail-people {
-  display: flex;
-  gap: 32px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(148, 163, 184, 0.12);
-  border-radius: 14px;
-}
-
-.people-item {
-  font-size: 14px;
-}
-
-.due-date-text {
-  color: rgba(148, 163, 184, 0.9);
-}
-
-.due-date-text--warning {
-  color: #f59e0b;
-  font-weight: 600;
-}
-
-.due-date-text--danger {
-  color: #ef4444;
-  font-weight: 600;
-}
-
-.detail-info {
-  margin-bottom: 0;
-}
-
-.detail-container :deep(.detail-inner-card.el-card) {
-  background: rgba(8, 15, 28, 0.78) !important;
-  border-color: rgba(148, 163, 184, 0.3) !important;
-  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.08), 0 12px 28px rgba(2, 8, 23, 0.28);
-}
-
-.detail-container :deep(.detail-inner-card .el-card__header) {
-  background: rgba(255, 255, 255, 0.02) !important;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.32) !important;
-  box-shadow: inset 0 -1px 0 rgba(56, 189, 248, 0.2);
-}
-
-.detail-container :deep(.detail-inner-card .el-card__body) {
-  border-top: 1px solid rgba(15, 23, 42, 0.6);
-}
-
-.detail-container :deep(.detail-info.el-descriptions) {
-  --el-descriptions-table-border: rgba(148, 163, 184, 0.28);
-  --el-descriptions-item-bordered-label-background: rgba(148, 163, 184, 0.1);
-  --el-descriptions-item-bordered-content-background: rgba(255, 255, 255, 0.03);
-}
-
-.detail-container :deep(.detail-info .el-descriptions__label.el-descriptions__cell.is-bordered-label) {
-  background: rgba(148, 163, 184, 0.1) !important;
-  color: #f8fafc !important;
-  font-weight: 700;
-  border-right: 2px solid rgba(148, 163, 184, 0.36) !important;
-  border-top: 1px solid rgba(148, 163, 184, 0.32) !important;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.32) !important;
-  box-shadow: inset -1px 0 0 rgba(56, 189, 248, 0.24);
-}
-
-.detail-container :deep(.detail-info .el-descriptions__row > .el-descriptions__cell.is-bordered-label:not(:first-child)) {
-  border-left: 2px solid rgba(148, 163, 184, 0.34) !important;
-}
-
-.detail-container :deep(.detail-info .el-descriptions__row:first-child > .el-descriptions__cell.is-bordered-label) {
-  border-top-color: rgba(125, 211, 252, 0.45) !important;
-}
-
-.detail-container :deep(.detail-info .el-descriptions__row:last-child > .el-descriptions__cell.is-bordered-label) {
-  border-bottom-color: rgba(125, 211, 252, 0.45) !important;
-}
-
-.detail-container :deep(.detail-info .el-descriptions__content.el-descriptions__cell.is-bordered-content) {
-  background: rgba(255, 255, 255, 0.02) !important;
-  color: #e2e8f0 !important;
-  border-top: 1px solid rgba(148, 163, 184, 0.3) !important;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.3) !important;
-  border-left: 1px solid rgba(148, 163, 184, 0.24) !important;
-}
-
-.detail-container :deep(.detail-info .el-descriptions__row > .el-descriptions__cell.is-bordered-content:nth-child(4)) {
-  border-left: 2px solid rgba(148, 163, 184, 0.34) !important;
-}
-
-.detail-container :deep(.detail-info .el-descriptions__row:first-child > .el-descriptions__cell.is-bordered-content) {
-  border-top-color: rgba(125, 211, 252, 0.45) !important;
-}
-
-.detail-container :deep(.detail-info .el-descriptions__row:last-child > .el-descriptions__cell.is-bordered-content) {
-  border-bottom-color: rgba(125, 211, 252, 0.45) !important;
-}
-
-.detail-container :deep(.detail-info .el-descriptions__row) {
-  border-bottom: 1px solid rgba(148, 163, 184, 0.22) !important;
-}
-
-.detail-container :deep(.detail-info .el-descriptions__row:last-child) {
-  border-bottom: none !important;
-}
-
-.detail-container :deep(.detail-inner-card .el-table th.el-table__cell) {
-  border-bottom: 1px solid rgba(148, 163, 184, 0.3) !important;
-}
-
-.detail-container :deep(.detail-inner-card .el-table td.el-table__cell) {
-  border-bottom: 1px solid rgba(148, 163, 184, 0.18) !important;
-}
-
-.bugs-section h3 {
-  margin: 0 0 16px 0;
-  font-size: 18px;
-}
-
-.description-text {
-  white-space: pre-wrap;
-  line-height: 1.6;
-}
-
-.detail-metrics {
-  margin-bottom: 20px;
-}
-
-.metric-card__value--small {
-  font-size: 20px;
-  line-height: 1.4;
-}
-
-.case-stats {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-weight: 600;
-}
-
-.pass-count {
-  color: #34d399;
-}
-
-.fail-count {
-  color: #fb7185;
-}
-
-.total-count {
-  color: #e2e8f0;
-}
-
-.sep {
-  color: rgba(148, 163, 184, 0.78);
-}
-
-@media (max-width: 768px) {
-  .detail-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .detail-header .inline-stats {
-    width: 100%;
-  }
-
-  .detail-people {
-    flex-direction: column;
-    gap: 10px;
-  }
-}
-</style>
+<style scoped src="../styles/detail-shared.css"></style>

@@ -16,6 +16,8 @@ export const updateUser = (id, data) => api.put(`/personnel/users/${id}`, data)
 
 export const getWorkload = () => api.get('/personnel/workload')
 
+export const getWorkloadByUser = (userId) => api.get(`/personnel/workload/${userId}`)
+
 export const getPersonnelSummary = () => api.get('/personnel/summary')
 
 export const getTaskAllocations = (testId) => api.get(`/personnel/task-allocations/${testId}`)

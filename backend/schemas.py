@@ -64,6 +64,7 @@ class Bug(BugBase):
     id: int
     cr_assignee: Optional[str] = None
     cr_created_on: Optional[datetime] = None
+    available_images: Optional[str] = None
     test_task_name: Optional[str] = None
     test_fr_number: Optional[str] = None
     work_task_key: Optional[str] = None
@@ -93,6 +94,9 @@ class KPIMetricBase(BaseModel):
     source: str = ""
     model_size: str = ""
     description: str = ""
+    test_platform: str = ""
+    test_version: str = ""
+    test_condition: str = ""
     metric_name: str
     metric_value: float
 
@@ -115,6 +119,37 @@ class ModelPerformance(BaseModel):
 class KPIChartData(BaseModel):
     models: List[ModelPerformance]
     date_range: Optional[tuple] = None
+
+
+class KPIModelRecord(BaseModel):
+    model_category: str
+    model_name: str
+    source: str = ""
+    model_size: str = ""
+    description: str = ""
+    test_platform: str = ""
+    test_version: str = ""
+    test_condition: str = ""
+    test_date: datetime
+    metrics: dict
+
+
+class KPIModelVersionOption(BaseModel):
+    test_version: str = ""
+    test_date: datetime
+
+
+class KPIModelUpsert(BaseModel):
+    model_category: str
+    model_name: str
+    source: str = ""
+    model_size: str = ""
+    description: str = ""
+    test_platform: str = ""
+    test_version: str = ""
+    test_condition: str = ""
+    test_date: Optional[datetime] = None
+    metrics: dict = Field(default_factory=dict)
 
 
 class PermissionGroupBase(BaseModel):
@@ -222,12 +257,16 @@ class PersonnelOverlapItem(BaseModel):
 
 class PersonnelTaskItem(BaseModel):
     id: int
+    task_kind: str = "test"
+    task_label: str = ""
     fr_number: str = ""
     test_name: str
     model_name: str
     status: str
     progress: float
     estimated_hours: float
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
     total_cases: int
     passed_cases: int
     failed_cases: int
@@ -269,6 +308,7 @@ class WorkTaskBase(BaseModel):
     end_date: Optional[date] = None
     estimated_hours: float = 0.0
     status: str
+    progress: float = 0.0
     assignee_user_id: Optional[int] = None
 
 
@@ -286,6 +326,7 @@ class WorkTaskUpdate(BaseModel):
     end_date: Optional[date] = None
     estimated_hours: Optional[float] = None
     status: Optional[str] = None
+    progress: Optional[float] = None
     assignee_user_id: Optional[int] = None
 
 

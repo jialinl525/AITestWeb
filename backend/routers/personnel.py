@@ -206,15 +206,47 @@ def _build_overlaps(tasks: List[Dict]) -> List[Dict]:
                 overlaps.append(
                     {
                         "task_id_1": first["id"],
-                        "task_name_1": first["test_name"],
+                        "task_name_1": first.get("task_label") or first.get("test_name") or "",
                         "task_id_2": second["id"],
-                        "task_name_2": second["test_name"],
+                        "task_name_2": second.get("task_label") or second.get("test_name") or "",
                         "overlap_start": overlap_start,
                         "overlap_end": overlap_end,
                         "overlap_days": (overlap_end - overlap_start).days + 1,
                     }
                 )
     return overlaps
+
+
+def _get_work_task_progress(status: str) -> float:
+    mapping = {
+        "planned": 0.0,
+        "in progress": 50.0,
+        "completed": 100.0,
+        "paused": 20.0,
+    }
+    return mapping.get((status or "").strip().lower(), 0.0)
+
+
+def _build_test_task_label(task: models.TestProgress) -> str:
+    fr_number = (task.fr_number or "").strip()
+    task_name = (task.test_name or "").strip()
+    if fr_number and task_name:
+        return f"{fr_number} | {task_name}"
+    if fr_number:
+        return fr_number
+    if task_name:
+        return task_name
+    return f"Test #{task.id}"
+
+
+def _build_work_task_label(task: models.WorkTask) -> str:
+    task_name = (task.task_name or "").strip()
+    if task_name:
+        return task_name
+    task_key = (task.task_key or "").strip()
+    if task_key:
+        return task_key
+    return f"Task #{task.id}"
 
 
 @router.post("/login", response_model=schemas.UserLoginResponse)
@@ -513,6 +545,15 @@ def update_task_allocations(
 def get_workload(db: Session = Depends(get_db)):
     users = _get_visible_users(db, only_active=True)
     tasks = db.query(models.TestProgress).order_by(models.TestProgress.id.desc()).all()
+    user_ids = [user.id for user in users]
+    work_tasks = (
+        db.query(models.WorkTask)
+        .filter(models.WorkTask.assignee_user_id.in_(user_ids))
+        .order_by(models.WorkTask.id.desc())
+        .all()
+        if user_ids
+        else []
+    )
     allocation_map = _get_task_allocations_map(db)
 
     workload_map: Dict[int, Dict] = {}
@@ -543,14 +584,19 @@ def get_workload(db: Session = Depends(get_db)):
             uid = item["user_id"]
             hours = item["allocated_hours"]
             row = workload_map[uid]
+            task_label = _build_test_task_label(task)
             task_item = {
                 "id": task.id,
+                "task_kind": "test",
+                "task_label": task_label,
                 "fr_number": task.fr_number or "",
-                "test_name": task.test_name,
+                "test_name": (task.test_name or "").strip() or task_label,
                 "model_name": task.model_name,
                 "status": task.status,
                 "progress": float(task.progress or 0.0),
                 "estimated_hours": round(max(0.0, hours), 2),
+                "start_date": task.l0_due_date,
+                "end_date": task.l4_due_date,
                 "total_cases": int(task.total_cases or 0),
                 "passed_cases": int(task.passed_cases or 0),
                 "failed_cases": failed_cases,
@@ -568,6 +614,38 @@ def get_workload(db: Session = Depends(get_db)):
             row["total_estimated_hours"] = round(row["total_estimated_hours"] + task_item["estimated_hours"], 2)
             row["tasks"].append(task_item)
 
+    for work_task in work_tasks:
+        uid = work_task.assignee_user_id
+        if uid not in workload_map:
+            continue
+        row = workload_map[uid]
+        task_label = _build_work_task_label(work_task)
+        task_item = {
+            "id": work_task.id,
+            "task_kind": "work_task",
+            "task_label": task_label,
+            "fr_number": "",
+            "test_name": task_label,
+            "model_name": work_task.task_type,
+            "status": work_task.status,
+            "progress": float(work_task.progress) if work_task.progress is not None else _get_work_task_progress(work_task.status),
+            "estimated_hours": round(max(0.0, float(work_task.estimated_hours or 0.0)), 2),
+            "start_date": work_task.start_date,
+            "end_date": work_task.end_date,
+            "total_cases": 0,
+            "passed_cases": 0,
+            "failed_cases": 0,
+            "l0_due_date": None,
+            "l2_due_date": None,
+            "l4_due_date": None,
+            "period_start": work_task.start_date,
+            "period_end": work_task.end_date,
+            "part_description": (work_task.task_summary or "").strip(),
+        }
+        row["task_count"] += 1
+        row["total_estimated_hours"] = round(row["total_estimated_hours"] + task_item["estimated_hours"], 2)
+        row["tasks"].append(task_item)
+
     for row in workload_map.values():
         row["tasks"].sort(key=lambda item: ((item["period_start"] or date.max), item["id"]))
         overlaps = _build_overlaps(row["tasks"])
@@ -575,6 +653,15 @@ def get_workload(db: Session = Depends(get_db)):
         row["overlaps"] = overlaps
 
     return list(workload_map.values())
+
+
+@router.get("/workload/{user_id}", response_model=schemas.PersonnelWorkload)
+def get_workload_by_user(user_id: int, db: Session = Depends(get_db)):
+    rows = get_workload(db)
+    for row in rows:
+        if int(row.get("user_id", 0)) == user_id:
+            return row
+    raise HTTPException(status_code=404, detail="Member not found")
 
 
 @router.get("/summary", response_model=schemas.PersonnelSummary)

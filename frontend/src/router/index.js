@@ -3,8 +3,11 @@ import TestProgress from '../views/TestProgress.vue'
 import TestProgressDetail from '../views/TestProgressDetail.vue'
 import Bugs from '../views/Bugs.vue'
 import KPI from '../views/KPI.vue'
+import KPIModelDetail from '../views/KPIModelDetail.vue'
 import Personnel from '../views/Personnel.vue'
+import PersonnelDetail from '../views/PersonnelDetail.vue'
 import WorkTasks from '../views/WorkTasks.vue'
+import WorkTaskDetail from '../views/WorkTaskDetail.vue'
 
 const routes = [
   {
@@ -32,14 +35,29 @@ const routes = [
     component: KPI
   },
   {
+    path: '/kpi/models/:modelName',
+    name: 'KPIModelDetail',
+    component: KPIModelDetail
+  },
+  {
     path: '/personnel',
     name: 'Personnel',
     component: Personnel
   },
   {
+    path: '/personnel/:id',
+    name: 'PersonnelDetail',
+    component: PersonnelDetail
+  },
+  {
     path: '/work-tasks',
     name: 'WorkTasks',
     component: WorkTasks
+  },
+  {
+    path: '/work-tasks/:id',
+    name: 'WorkTaskDetail',
+    component: WorkTaskDetail
   }
 ]
 

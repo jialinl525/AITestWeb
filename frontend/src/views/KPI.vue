@@ -2,22 +2,23 @@
   <div class="page-shell kpi-container">
     <section class="page-hero">
       <div class="page-hero__content">
-        <div class="page-hero__eyebrow">Model Performance</div>
-        <h2 class="page-hero__title">KPI Smart Analytics Dashboard</h2>
-        <p class="page-hero__desc">Compare model performance through a modern visualization surface to spot leading models, key changes, and trade-offs across metrics.</p>
+        <div class="page-hero__eyebrow">{{ LT.heroEyebrow }}</div>
+        <h2 class="page-hero__title">{{ LT.heroTitle }}</h2>
+        <p class="page-hero__desc">{{ DT.hero }}</p>
       </div>
       <div class="page-hero__actions">
-        <div class="glass-pill">Current Scope: all models in the selected category</div>
-        <div class="glass-pill">Comparison Axes: {{ getMetricName(scatterXMetric) }} / {{ getMetricName(scatterYMetric) }}</div>
+        <div class="glass-pill">{{ DT.scope }}</div>
+        <div v-if="showScatterChart" class="glass-pill">Comparison Axes: {{ getMetricName(scatterXMetric) }} / {{ getMetricName(scatterYMetric) }}</div>
+        <div v-if="showScatterChart" class="glass-pill">Best Region: {{ getScatterBestRegionText(scatterXMetric, scatterYMetric) }}</div>
       </div>
     </section>
 
     <el-card class="section-card category-focus-card">
       <div class="category-focus">
         <div class="category-focus__left">
-          <div class="category-focus__eyebrow">Model Category</div>
-          <h3 class="category-focus__title">Model Category Filter</h3>
-          <p class="category-focus__desc">Current category: <strong>{{ modelCategory }}</strong>. The charts compare all models within this category only.</p>
+          <div class="category-focus__eyebrow">{{ LT.category.eyebrow }}</div>
+          <h3 class="category-focus__title">{{ LT.category.title }}</h3>
+          <p class="category-focus__desc">{{ DT.categoryCurrentPrefix }} <strong>{{ modelCategory }}</strong>. {{ DT.categoryCurrentSuffix }}</p>
         </div>
       </div>
 
@@ -35,67 +36,19 @@
         >
           <div class="category-description-item__header">
             <span>{{ key }}</span>
-            <el-tag v-if="key === modelCategory" size="small" type="success">Current</el-tag>
+            <el-tag v-if="key === modelCategory" size="small" type="success">{{ LT.category.current }}</el-tag>
           </div>
           <p>{{ info }}</p>
         </article>
       </div>
     </el-card>
 
-    <div class="metrics-grid metrics-grid--single">
-      <article class="metric-card model-info-card accent-blue">
-        <div class="model-info-card__top">
-          <div>
-            <div class="metric-card__label">Model Information</div>
-            <div class="metric-card__value metric-card__value--small">{{ selectedModelInfo.name }}</div>
-            <div class="metric-card__meta">Click a model in the ladder chart to sync the information shown here.</div>
-          </div>
-          <el-button type="primary" @click="openCompareDialog">Compare Models</el-button>
-        </div>
-
-        <div class="model-info-grid">
-          <div class="model-info-item">
-            <span class="model-info-item__label">Model Category</span>
-            <span class="model-info-item__value">{{ modelCategory }}</span>
-          </div>
-          <div class="model-info-item">
-            <span class="model-info-item__label">Current Metric</span>
-            <span class="model-info-item__value">{{ getMetricName(ladderMetric) }}</span>
-          </div>
-          <div class="model-info-item model-info-item--full">
-            <span class="model-info-item__label">Description</span>
-            <span class="model-info-item__value model-info-item__value--multiline">{{ selectedModelInfo.description }}</span>
-          </div>
-          <div class="model-info-item">
-            <span class="model-info-item__label">Source</span>
-            <span class="model-info-item__value">{{ selectedModelInfo.source }}</span>
-          </div>
-          <div class="model-info-item">
-            <span class="model-info-item__label">Model Size</span>
-            <span class="model-info-item__value">{{ selectedModelInfo.modelSize }}</span>
-          </div>
-          <div class="model-info-item">
-            <span class="model-info-item__label">Power Consumption</span>
-            <span class="model-info-item__value">{{ formatMetricValue(selectedModelInfo.metrics.power_consumption) }}</span>
-          </div>
-          <div class="model-info-item">
-            <span class="model-info-item__label">Latency</span>
-            <span class="model-info-item__value">{{ formatMetricValue(selectedModelInfo.metrics.latency) }}</span>
-          </div>
-          <div class="model-info-item">
-            <span class="model-info-item__label">Accuracy</span>
-            <span class="model-info-item__value">{{ formatMetricValue(selectedModelInfo.metrics.accuracy_overall) }}</span>
-          </div>
-        </div>
-      </article>
-    </div>
-
     <el-card class="section-card">
       <template #header>
         <div class="section-title">
           <div class="section-title__main">
-            <h3>Model Performance Ladder</h3>
-            <span class="section-title__meta">Vertical ranking of models in the same category under one core metric.</span>
+            <h3>{{ LT.section.ladder }}</h3>
+            <span class="section-title__meta">{{ DT.sectionMeta.ladder }}</span>
           </div>
           <div class="metric-tag-group" role="tablist" aria-label="Ladder metric selector">
             <button
@@ -117,17 +70,18 @@
         class="chart"
         :option="ladderChartOption"
         v-loading="ladderLoading"
-        @click="handleLadderChartClick"
+        @click="handleChartSingleClick"
+        @dblclick="handleChartDoubleClick"
         style="height: 400px"
       />
     </el-card>
 
-    <el-card class="section-card">
+    <el-card v-if="showScatterChart" class="section-card">
       <template #header>
         <div class="section-title">
           <div class="section-title__main">
-            <h3>Model Performance Scatter Plot</h3>
-            <span class="section-title__meta">Observe the trade-offs and distribution between two core metrics for models in the same category.</span>
+            <h3>{{ LT.section.scatter }}</h3>
+            <span class="section-title__meta">{{ DT.sectionMeta.scatter }}</span>
           </div>
           <div class="scatter-selector-wrap">
             <div class="metric-tag-group" role="group" aria-label="Scatter plot metric selector">
@@ -142,7 +96,7 @@
                 {{ item.label }}
               </button>
             </div>
-            <span class="selector-hint">Two metrics are selected by default; choosing a third removes the earliest selected metric.</span>
+            <span class="selector-hint">{{ DT.scatterHint }}</span>
           </div>
         </div>
       </template>
@@ -150,40 +104,303 @@
         class="chart"
         :option="scatterChartOption"
         v-loading="scatterLoading"
+        @click="handleChartSingleClick"
+        @dblclick="handleChartDoubleClick"
         style="height: 400px"
       />
     </el-card>
 
-    <el-dialog v-model="showCompareDialog" title="Model Comparison" width="920px">
+    <el-card class="section-card">
+      <template #header>
+        <div class="section-title">
+          <div class="section-title__main">
+            <h3>Model List</h3>
+            <span class="section-title__meta">Only latest test-time data is shown for each model name</span>
+          </div>
+          <div class="compare-toolbar">
+            <el-button type="primary" @click="openCompareDialog">{{ BT.compareModels }}</el-button>
+            <el-button type="warning" @click="openUpdatePickerDialog">Update Model</el-button>
+            <el-button type="success" @click="openCreateModelDialog">New Model</el-button>
+          </div>
+        </div>
+      </template>
+
+      <el-table :data="modelList" v-loading="modelListLoading" stripe table-layout="fixed" class="model-list-table">
+        <el-table-column prop="model_name" label="Model Name" align="center" header-align="center">
+          <template #default="{ row }">
+            <button type="button" class="model-link-btn" @click="goModelDetail(row.model_name)">
+              {{ row.model_name }}
+            </button>
+          </template>
+        </el-table-column>
+        <el-table-column prop="test_version" label="Test Version" align="center" header-align="center" show-overflow-tooltip />
+        <el-table-column prop="model_size" label="Model Size" align="center" header-align="center" show-overflow-tooltip />
+        <el-table-column prop="source" label="Source" align="center" header-align="center" show-overflow-tooltip />
+        <el-table-column prop="test_date" label="Test Time" align="center" header-align="center">
+          <template #default="{ row }">{{ formatDateTime(row.test_date) }}</template>
+        </el-table-column>
+        <el-table-column label="Actions" align="center" header-align="center">
+          <template #default="{ row }">
+            <div class="row-actions">
+              <el-button size="small" @click="openEditModelDialog(row)">Update</el-button>
+              <el-button size="small" type="danger" plain @click="deleteModelRow(row)">Delete</el-button>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <el-dialog v-model="showModelDialog" :title="isEditingModel ? 'Edit Model (Latest Test Run)' : 'New Model Test Run'" width="760px">
+      <el-form :model="modelForm" label-width="170px" class="model-dialog-form">
+        <el-row :gutter="12">
+          <el-col :span="12">
+            <el-form-item label="Model Category">
+              <el-select v-model="modelForm.model_category" style="width: 100%">
+                <el-option v-for="key in Object.keys(MODEL_CATEGORY_INFO)" :key="key" :label="key" :value="key" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="Model Name">
+              <el-input v-model="modelForm.model_name" :disabled="isEditingModel" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="12">
+          <el-col :span="12">
+            <el-form-item label="Source">
+              <el-input v-model="modelForm.source" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="Model Size">
+              <el-input v-model="modelForm.model_size" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item label="Description">
+          <el-input v-model="modelForm.description" type="textarea" :rows="2" />
+        </el-form-item>
+
+        <el-row :gutter="12">
+          <el-col :span="12">
+            <el-form-item label="Test Time">
+              <el-date-picker
+                v-model="modelForm.test_date"
+                type="datetime"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="Test Platform">
+              <el-input v-model="modelForm.test_platform" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="12">
+          <el-col :span="12">
+            <el-form-item label="Test Version">
+              <el-input v-model="modelForm.test_version" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="Test Condition">
+              <el-input v-model="modelForm.test_condition" type="textarea" :rows="2" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="12">
+          <el-col v-for="metric in MODEL_FORM_METRICS" :key="metric.value" :span="24">
+            <el-form-item :label="metric.label">
+              <el-input-number
+                v-model="modelForm.metrics[metric.value]"
+                :min="getMetricMin(metric.value)"
+                :max="getMetricMax(metric.value)"
+                :step="0.01"
+                :precision="2"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </el-form>
+      <template #footer>
+        <el-button @click="showModelDialog = false">Cancel</el-button>
+        <el-button type="primary" :loading="modelDialogSaving" @click="saveModelDialog">Save</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="showCompareDialog" :title="LT.compare.title" width="920px">
       <div class="compare-toolbar">
-        <el-select v-model="compareModelA" placeholder="Select Model A" style="width: 240px">
+        <el-select v-model="compareModelA" :placeholder="DT.placeholders.selectModelA" style="width: 240px">
           <el-option v-for="name in availableModelNames" :key="`a-${name}`" :label="name" :value="name" />
         </el-select>
-        <el-select v-model="compareModelB" placeholder="Select Model B" style="width: 240px">
+        <el-select v-model="compareModelB" :placeholder="DT.placeholders.selectModelB" style="width: 240px">
           <el-option v-for="name in availableModelNames" :key="`b-${name}`" :label="name" :value="name" />
         </el-select>
       </div>
 
-      <el-table :data="compareRows" stripe empty-text="Select two different models to compare">
-        <el-table-column prop="label" label="Parameter" width="220" />
-        <el-table-column prop="modelA" :label="compareModelA || 'Model A'" min-width="220" />
-        <el-table-column prop="modelB" :label="compareModelB || 'Model B'" min-width="220" />
+      <el-table :data="compareRows" stripe :empty-text="DT.placeholders.compareEmpty">
+        <el-table-column prop="label" :label="LT.compare.parameter" width="220" />
+        <el-table-column prop="modelA" :label="compareModelA || LT.compare.modelA" min-width="220" />
+        <el-table-column prop="modelB" :label="compareModelB || LT.compare.modelB" min-width="220" />
       </el-table>
+    </el-dialog>
+
+    <el-dialog v-model="showUpdatePickerDialog" title="Update Existing Model" width="500px">
+      <el-form label-width="110px">
+        <el-form-item label="Model Name">
+          <el-select v-model="selectedUpdateModelName" style="width: 100%" filterable placeholder="Select model to update">
+            <el-option
+              v-for="row in modelList"
+              :key="`update-${row.model_name}`"
+              :label="row.model_name"
+              :value="row.model_name"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showUpdatePickerDialog = false">Cancel</el-button>
+        <el-button type="primary" @click="confirmUpdateModelSelection">Update</el-button>
+      </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { getKPIMetrics, getLadderChartData, getScatterChartData } from '../api/kpi'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  getKPIMetrics,
+  getLadderChartData,
+  getScatterChartData,
+  getKPIModelLatestList,
+  createKPIModel,
+  updateKPILatestModel,
+  deleteKPIModel
+} from '../api/kpi'
+import { LabelText } from '../texts/LabelText'
+import { ButtonText } from '../texts/ButtonText'
+import { DescriptionText } from '../texts/DescriptionText'
+
+const LT = LabelText.kpi
+const BT = ButtonText.kpi
+const DT = DescriptionText.kpi
+const router = useRouter()
 
 const SCATTER_PALETTE = ['#22d3ee', '#60a5fa', '#a78bfa', '#f472b6', '#fb7185', '#f59e0b', '#34d399', '#facc15', '#38bdf8', '#818cf8']
+
+const METRIC_UNITS = {
+  power_consumption: 'W',
+  latency: 'ms',
+  e2e_latency: 'ms',
+  wakeup_rate: '%',
+  accuracy_total: '%',
+  accuracy_overall: '%',
+  accuracy_en: '%',
+  accuracy_cn: '%',
+  accuracy_zh: '%',
+  accuracy_es: '%',
+  accuracy_en_to_cn: '%',
+  accuracy_cn_to_en: '%',
+  accuracy_en_to_es: '%',
+  accuracy_es_to_en: '%'
+}
+
+const LOWER_IS_BETTER_METRICS = new Set([
+  'power_consumption',
+  'latency',
+  'e2e_latency'
+])
 
 const MODEL_CATEGORY_INFO = {
   ASR: 'Automatic Speech Recognition. Focuses on recognition accuracy, real-time performance, and resource usage for speech-to-text scenarios.',
   TTS: 'Text To Speech. Focuses on naturalness, latency, and power efficiency for spoken output scenarios.',
   Translation: 'Text translation models. Focus on multilingual translation accuracy, end-to-end latency, and deployment cost.',
-  'VoicecallTranslation Solution': 'Real-time voice call translation solutions. Focus on latency, stability, and overall translation quality in call scenarios.'
+  'VoiceCallTranslation Solution': 'Real-time voice call translation solutions. Focus on latency, stability, and overall translation quality in call scenarios.',
+  'LPI Recording': 'Low-power recording scenario focused on ultra-low power consumption.',
+  'Multi Model Detection': 'Multi-model trigger/detection scenario focused on wakeup quality and responsiveness.'
+}
+
+const CATEGORY_METRIC_DEFS = {
+  ASR: [
+    { label: 'Power', value: 'power_consumption' },
+    { label: 'Latency', value: 'latency' },
+    { label: 'Accuracy-en', value: 'accuracy_en' },
+    { label: 'Accuracy-cn', value: 'accuracy_cn' },
+    { label: 'Accuracy-es', value: 'accuracy_es' },
+    { label: 'Accuracy-total', value: 'accuracy_total' }
+  ],
+  TTS: [
+    { label: 'Power', value: 'power_consumption' },
+    { label: 'Latency', value: 'latency' },
+    { label: 'Accuracy-en', value: 'accuracy_en' },
+    { label: 'Accuracy-cn', value: 'accuracy_cn' },
+    { label: 'Accuracy-es', value: 'accuracy_es' },
+    { label: 'Accuracy-total', value: 'accuracy_total' }
+  ],
+  Translation: [
+    { label: 'Power', value: 'power_consumption' },
+    { label: 'Latency', value: 'latency' },
+    { label: 'Accuracy-en to cn', value: 'accuracy_en_to_cn' },
+    { label: 'Accuracy-cn to en', value: 'accuracy_cn_to_en' },
+    { label: 'Accuracy-en to es', value: 'accuracy_en_to_es' },
+    { label: 'Accuracy-es to en', value: 'accuracy_es_to_en' },
+    { label: 'Accuracy-total', value: 'accuracy_total' }
+  ],
+  'VoiceCallTranslation Solution': [
+    { label: 'Power', value: 'power_consumption' },
+    { label: 'E2E Latency', value: 'e2e_latency' },
+    { label: 'Accuracy-en to cn', value: 'accuracy_en_to_cn' },
+    { label: 'Accuracy-cn to en', value: 'accuracy_cn_to_en' },
+    { label: 'Accuracy-total', value: 'accuracy_total' }
+  ],
+  'LPI Recording': [
+    { label: 'Power', value: 'power_consumption' }
+  ],
+  'Multi Model Detection': [
+    { label: 'Power', value: 'power_consumption' },
+    { label: 'Latency', value: 'latency' },
+    { label: 'Wakeup Rate', value: 'wakeup_rate' }
+  ]
+}
+
+const METRIC_LABEL_MAP = Object.fromEntries(
+  Object.values(CATEGORY_METRIC_DEFS)
+    .flat()
+    .map((item) => [item.value, item.label])
+)
+
+const LEGACY_METRIC_FALLBACKS = {
+  accuracy_total: ['accuracy_overall'],
+  accuracy_cn: ['accuracy_zh'],
+  e2e_latency: ['latency']
+}
+
+const getMetricDefsForCategory = (category) => {
+  return CATEGORY_METRIC_DEFS[category] || CATEGORY_METRIC_DEFS.ASR
+}
+
+const getMetricValueByKey = (metrics = {}, metricKey = '') => {
+  if (!metricKey) return null
+  if (metrics?.[metricKey] !== undefined) {
+    return metrics[metricKey]
+  }
+  const fallbacks = LEGACY_METRIC_FALLBACKS[metricKey] || []
+  for (const fallbackKey of fallbacks) {
+    if (metrics?.[fallbackKey] !== undefined) {
+      return metrics[fallbackKey]
+    }
+  }
+  return null
 }
 
 const MODEL_META_INFO = {
@@ -219,21 +436,64 @@ const MODEL_META_INFO = {
   }
 }
 
-const LADDER_METRIC_OPTIONS = [
-  { label: 'Power Consumption', value: 'power_consumption' },
-  { label: 'Latency', value: 'latency' },
-  { label: 'Accuracy', value: 'accuracy_overall' }
-]
-
-const SCATTER_METRIC_OPTIONS = [
-  { label: 'Power Consumption', value: 'power_consumption' },
-  { label: 'Latency', value: 'latency' },
-  { label: 'Accuracy', value: 'accuracy_overall' }
-]
-
 const getModelColor = (modelName, index) => {
   const seed = [...(modelName || '')].reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
   return SCATTER_PALETTE[(seed + index) % SCATTER_PALETTE.length]
+}
+
+const roundToTwo = (value) => Number(value.toFixed(2))
+
+const toDisplayMetricNumber = (value, metricName = '') => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) {
+    return null
+  }
+  const converted = isAccuracyMetric(metricName) ? numeric * 100 : numeric
+  return roundToTwo(converted)
+}
+
+const isLowerBetterMetric = (metricName = '') => LOWER_IS_BETTER_METRICS.has(String(metricName || '').trim())
+
+const getMetricPreferenceText = (metricName = '') => (isLowerBetterMetric(metricName) ? 'lower is better' : 'higher is better')
+
+const getLadderMetricTitle = (metricName = '') => `${getMetricName(metricName)} Ranking • ${getMetricPreferenceText(metricName)}`
+
+const getScatterBestRegionText = (xMetric = '', yMetric = '') => {
+  const horizontal = isLowerBetterMetric(xMetric) ? 'left' : 'right'
+  const vertical = isLowerBetterMetric(yMetric) ? 'bottom' : 'top'
+  return `${vertical}-${horizontal}`
+}
+
+const getScatterMetricTitle = (xMetric = '', yMetric = '') => {
+  return `${getMetricName(xMetric)} vs ${getMetricName(yMetric)} • Best region: ${getScatterBestRegionText(xMetric, yMetric)}`
+}
+
+const isMetricBetterOrEqual = (candidate, target, metricName = '') => {
+  return isLowerBetterMetric(metricName) ? candidate <= target : candidate >= target
+}
+
+const isMetricStrictlyBetter = (candidate, target, metricName = '') => {
+  return isLowerBetterMetric(metricName) ? candidate < target : candidate > target
+}
+
+const isParetoDominated = (candidate, target, xMetric = '', yMetric = '') => {
+  const betterOrEqualX = isMetricBetterOrEqual(candidate.rawX, target.rawX, xMetric)
+  const betterOrEqualY = isMetricBetterOrEqual(candidate.rawY, target.rawY, yMetric)
+  const strictlyBetterX = isMetricStrictlyBetter(candidate.rawX, target.rawX, xMetric)
+  const strictlyBetterY = isMetricStrictlyBetter(candidate.rawY, target.rawY, yMetric)
+
+  return betterOrEqualX && betterOrEqualY && (strictlyBetterX || strictlyBetterY)
+}
+
+const buildParetoFront = (points = [], xMetric = '', yMetric = '') => {
+  return points.filter((target) => {
+    return !points.some((candidate) => {
+      if (candidate.modelName === target.modelName) {
+        return false
+      }
+      return isParetoDominated(candidate, target, xMetric, yMetric)
+    })
+  })
 }
 
 const getLadderBarColor = (modelName, index) => {
@@ -252,8 +512,8 @@ const calcAxisRange = (values) => {
   if (minVal === maxVal) {
     const pad = Math.max(Math.abs(minVal) * 0.08, 1)
     return {
-      min: Number((minVal - pad).toFixed(4)),
-      max: Number((maxVal + pad).toFixed(4))
+      min: roundToTwo(minVal - pad),
+      max: roundToTwo(maxVal + pad)
     }
   }
 
@@ -261,14 +521,14 @@ const calcAxisRange = (values) => {
   const pad = span * 0.18
 
   return {
-    min: Number((minVal - pad).toFixed(4)),
-    max: Number((maxVal + pad).toFixed(4))
+    min: roundToTwo(minVal - pad),
+    max: roundToTwo(maxVal + pad)
   }
 }
 
 const ladderLoading = ref(false)
 const scatterLoading = ref(false)
-const ladderMetric = ref('accuracy_overall')
+const ladderMetric = ref('accuracy_total')
 const modelCategory = ref('ASR')
 const scatterMetricSelection = ref(['power_consumption', 'latency'])
 const scatterXMetric = ref('power_consumption')
@@ -280,6 +540,45 @@ const compareModelB = ref('')
 const ladderRecords = ref([])
 const scatterRecords = ref([])
 const kpiMetrics = ref([])
+const modelList = ref([])
+const modelListLoading = ref(false)
+const showModelDialog = ref(false)
+const modelDialogSaving = ref(false)
+const editingModelName = ref('')
+const showUpdatePickerDialog = ref(false)
+const selectedUpdateModelName = ref('')
+
+const LADDER_METRIC_OPTIONS = computed(() => getMetricDefsForCategory(modelCategory.value))
+
+const SCATTER_METRIC_OPTIONS = computed(() => getMetricDefsForCategory(modelCategory.value))
+
+const showScatterChart = computed(() => SCATTER_METRIC_OPTIONS.value.length > 1)
+
+const MODEL_FORM_METRICS = computed(() => getMetricDefsForCategory(modelForm.value.model_category || modelCategory.value))
+
+const buildDefaultMetricsForCategory = (category) => {
+  const defaults = {}
+  getMetricDefsForCategory(category).forEach((metric) => {
+    defaults[metric.value] = 0
+  })
+  return defaults
+}
+
+const createDefaultModelForm = (category = modelCategory.value) => ({
+  model_category: category,
+  model_name: '',
+  source: '',
+  model_size: '',
+  description: '',
+  test_date: '',
+  test_platform: '',
+  test_version: '',
+  test_condition: '',
+  metrics: buildDefaultMetricsForCategory(category)
+})
+
+const modelForm = ref(createDefaultModelForm())
+const isEditingModel = computed(() => Boolean(editingModelName.value))
 
 const metricsByModel = computed(() => {
   const grouped = {}
@@ -343,18 +642,20 @@ const compareRows = computed(() => {
   const modelAInfo = buildModelInfo(compareModelA.value)
   const modelBInfo = buildModelInfo(compareModelB.value)
 
-  return [
+  const baseRows = [
     { label: 'Model Category', modelA: modelCategory.value, modelB: modelCategory.value },
     { label: 'Description', modelA: modelAInfo.description, modelB: modelBInfo.description },
     { label: 'Source', modelA: modelAInfo.source, modelB: modelBInfo.source },
-    { label: 'Model Size', modelA: modelAInfo.modelSize, modelB: modelBInfo.modelSize },
-    { label: 'Power Consumption', modelA: formatMetricValue(modelAInfo.metrics.power_consumption), modelB: formatMetricValue(modelBInfo.metrics.power_consumption) },
-    { label: 'Latency', modelA: formatMetricValue(modelAInfo.metrics.latency), modelB: formatMetricValue(modelBInfo.metrics.latency) },
-    { label: 'Accuracy', modelA: formatMetricValue(modelAInfo.metrics.accuracy_overall), modelB: formatMetricValue(modelBInfo.metrics.accuracy_overall) },
-    { label: 'Accuracy - English', modelA: formatMetricValue(modelAInfo.metrics.accuracy_en), modelB: formatMetricValue(modelBInfo.metrics.accuracy_en) },
-    { label: 'Accuracy - Chinese', modelA: formatMetricValue(modelAInfo.metrics.accuracy_zh), modelB: formatMetricValue(modelBInfo.metrics.accuracy_zh) },
-    { label: 'Accuracy - Spanish', modelA: formatMetricValue(modelAInfo.metrics.accuracy_es), modelB: formatMetricValue(modelBInfo.metrics.accuracy_es) }
+    { label: 'Model Size', modelA: modelAInfo.modelSize, modelB: modelBInfo.modelSize }
   ]
+
+  const metricRows = getMetricDefsForCategory(modelCategory.value).map((metric) => ({
+    label: metric.label,
+    modelA: formatMetricValue(getMetricValueByKey(modelAInfo.metrics, metric.value), metric.value),
+    modelB: formatMetricValue(getMetricValueByKey(modelBInfo.metrics, metric.value), metric.value)
+  }))
+
+  return [...baseRows, ...metricRows]
 })
 
 const ladderChartOption = ref({
@@ -371,6 +672,13 @@ const ladderChartOption = ref({
     trigger: 'axis',
     axisPointer: {
       type: 'shadow'
+    },
+    formatter: (params) => {
+      const row = Array.isArray(params) ? params[0] : params
+      if (!row) return ''
+      const modelName = row.name || row.axisValue || ''
+      const rawValue = typeof row.data === 'object' && row.data !== null ? row.data.value : row.value
+      return `${modelName}<br/>${getMetricName(ladderMetric.value)}: ${formatMetricValue(rawValue, ladderMetric.value, { alreadyDisplay: true })}`
     }
   },
   grid: {
@@ -427,24 +735,35 @@ const ladderChartOption = ref({
 const scatterChartOption = ref({
   title: {
     text: 'Model Performance Comparison',
+    subtext: '',
     left: 'center',
     textStyle: {
       color: '#f8fafc',
       fontSize: 18,
       fontWeight: 700
+    },
+    subtextStyle: {
+      color: 'rgba(226, 232, 240, 0.72)',
+      fontSize: 12
     }
   },
   tooltip: {
     trigger: 'item',
     formatter: (params) => {
-      return `${params.data.modelName}<br/>${getMetricName(scatterXMetric.value)}: ${params.data.value[0]}<br/>${getMetricName(scatterYMetric.value)}: ${params.data.value[1]}`
+      const modelName = params?.data?.modelName
+      const point = params?.data?.value
+      if (!modelName || !Array.isArray(point)) {
+        return ''
+      }
+      const paretoTag = params?.data?.isParetoOptimal ? '<br/><strong>Pareto-optimal</strong>' : ''
+      return `${modelName}<br/>${getMetricName(scatterXMetric.value)}: ${formatMetricValue(point[0], scatterXMetric.value, { alreadyDisplay: true })}<br/>${getMetricName(scatterYMetric.value)}: ${formatMetricValue(point[1], scatterYMetric.value, { alreadyDisplay: true })}${paretoTag}`
     }
   },
   grid: {
     left: 30,
     right: 24,
     top: 70,
-    bottom: 30,
+    bottom: 42,
     containLabel: true
   },
   xAxis: {
@@ -499,13 +818,18 @@ const ladderSummary = computed(() => {
     }
   }
 
-  const sorted = [...ladderRecords.value].sort((a, b) => b.value - a.value)
+  const sorted = [...ladderRecords.value].sort((a, b) => {
+    if (isLowerBetterMetric(ladderMetric.value)) {
+      return a.value - b.value
+    }
+    return b.value - a.value
+  })
   const avg = sorted.reduce((sum, item) => sum + item.value, 0) / sorted.length
 
   return {
     topModel: sorted[0].model_name,
-    topValue: Number(sorted[0].value).toFixed(3),
-    average: Number(avg).toFixed(3)
+    topValue: Number(sorted[0].value).toFixed(2),
+    average: Number(avg).toFixed(2)
   }
 })
 
@@ -527,6 +851,32 @@ const buildModelInfo = (name) => {
     metrics: metricsByModel.value[name] || {}
   }
 }
+
+const loadModelList = async () => {
+  modelListLoading.value = true
+  try {
+    modelList.value = await getKPIModelLatestList({ model_category: modelCategory.value })
+  } catch (error) {
+    console.error('Failed to load model list', error)
+    ElMessage.error('Failed to load model list')
+  } finally {
+    modelListLoading.value = false
+  }
+}
+
+const isAccuracyMetric = (metricName) => String(metricName || '').toLowerCase().startsWith('accuracy')
+
+const getBestLatencyMetricName = (metrics = {}) => {
+  const latency = getMetricValueByKey(metrics, 'latency')
+  if (latency !== null && latency !== undefined) {
+    return 'latency'
+  }
+  return 'e2e_latency'
+}
+
+const getMetricMin = (metricName) => (isAccuracyMetric(metricName) ? 0 : -Infinity)
+
+const getMetricMax = (metricName) => (isAccuracyMetric(metricName) ? 1 : Infinity)
 
 const loadMetricDetails = async () => {
   try {
@@ -552,14 +902,17 @@ const loadLadderData = async () => {
   try {
     const data = await getLadderChartData(ladderMetric.value, modelCategory.value)
     ladderRecords.value = data.data || []
+    const metricName = data.metric_name || ladderMetric.value
 
-    const rawValues = ladderRecords.value.map(item => Number(item.value)).filter(v => Number.isFinite(v))
+    const rawValues = ladderRecords.value
+      .map(item => toDisplayMetricNumber(item.value, metricName))
+      .filter(v => Number.isFinite(v))
     const xRange = calcAxisRange(rawValues)
     
     const ladderRows = (data.data || []).slice().reverse()
     const modelNames = ladderRows.map(item => item.model_name)
     const values = ladderRows.map((item, index) => ({
-      value: item.value,
+      value: toDisplayMetricNumber(item.value, metricName),
       itemStyle: {
         color: getLadderBarColor(item.model_name, index),
         borderRadius: [0, 10, 10, 0]
@@ -572,12 +925,12 @@ const loadLadderData = async () => {
     ladderChartOption.value = {
       ...ladderChartOption.value,
       title: {
-        text: `${getMetricName(data.metric_name)} Ranking`,
+        text: getLadderMetricTitle(metricName),
         left: 'center'
       },
       xAxis: {
         ...ladderChartOption.value.xAxis,
-        name: getMetricName(data.metric_name),
+        name: getMetricName(metricName),
         min: xRange.min,
         max: xRange.max
       },
@@ -609,16 +962,20 @@ const loadScatterData = async () => {
   try {
     const data = await getScatterChartData(scatterXMetric.value, scatterYMetric.value, modelCategory.value)
     scatterRecords.value = data.data || []
+    const xMetric = data.x_metric || scatterXMetric.value
+    const yMetric = data.y_metric || scatterYMetric.value
 
-    const xValues = scatterRecords.value.map(item => Number(item.x)).filter(v => Number.isFinite(v))
-    const yValues = scatterRecords.value.map(item => Number(item.y)).filter(v => Number.isFinite(v))
+    const xValues = scatterRecords.value.map(item => toDisplayMetricNumber(item.x, xMetric)).filter(v => Number.isFinite(v))
+    const yValues = scatterRecords.value.map(item => toDisplayMetricNumber(item.y, yMetric)).filter(v => Number.isFinite(v))
     const xRange = calcAxisRange(xValues)
     const yRange = calcAxisRange(yValues)
     
     const scatterData = data.data.map((item, index) => {
       const color = getModelColor(item.model_name, index)
       return {
-        value: [item.x, item.y],
+        value: [toDisplayMetricNumber(item.x, xMetric), toDisplayMetricNumber(item.y, yMetric)],
+        rawX: Number(item.x),
+        rawY: Number(item.y),
         modelName: item.model_name,
         itemStyle: {
           color,
@@ -629,30 +986,53 @@ const loadScatterData = async () => {
           color
         }
       }
+    }).filter((item) => Number.isFinite(item.value[0]) && Number.isFinite(item.value[1]))
+
+    const paretoFront = buildParetoFront(scatterData, xMetric, yMetric)
+    const paretoModelNames = new Set(paretoFront.map((item) => item.modelName))
+    const displayScatterData = scatterData.map((item) => {
+      const isParetoOptimal = paretoModelNames.has(item.modelName)
+      return {
+        ...item,
+        isParetoOptimal,
+        symbolSize: isParetoOptimal ? 24 : 18,
+        itemStyle: {
+          ...item.itemStyle,
+          borderColor: isParetoOptimal ? '#facc15' : 'rgba(248, 250, 252, 0.85)',
+          borderWidth: isParetoOptimal ? 3 : 1,
+          shadowColor: isParetoOptimal ? '#facc15' : item.itemStyle.shadowColor,
+          shadowBlur: isParetoOptimal ? 24 : 16
+        },
+        label: {
+          ...item.label,
+          fontWeight: isParetoOptimal ? 700 : 500
+        }
+      }
     })
     
     scatterChartOption.value = {
       ...scatterChartOption.value,
       title: {
-        text: `${getMetricName(data.x_metric)} vs ${getMetricName(data.y_metric)}`,
+        text: getScatterMetricTitle(xMetric, yMetric),
+        subtext: paretoFront.length ? 'Pareto-optimal models are highlighted in gold' : '',
         left: 'center'
       },
       xAxis: {
         ...scatterChartOption.value.xAxis,
-        name: getMetricName(data.x_metric),
+        name: getMetricName(xMetric),
         min: xRange.min,
         max: xRange.max
       },
       yAxis: {
         ...scatterChartOption.value.yAxis,
-        name: getMetricName(data.y_metric),
+        name: getMetricName(yMetric),
         min: yRange.min,
         max: yRange.max
       },
       series: [
         {
           ...scatterChartOption.value.series[0],
-          data: scatterData
+          data: displayScatterData
         }
       ]
     }
@@ -663,10 +1043,46 @@ const loadScatterData = async () => {
   }
 }
 
+const syncMetricSelectionsForCategory = () => {
+  const available = SCATTER_METRIC_OPTIONS.value.map((item) => item.value)
+  if (!available.length) {
+    ladderMetric.value = ''
+    scatterMetricSelection.value = []
+    scatterXMetric.value = ''
+    scatterYMetric.value = ''
+    return
+  }
+
+  const preferredLadder = available.includes('accuracy_total') ? 'accuracy_total' : available[0]
+  if (!available.includes(ladderMetric.value)) {
+    ladderMetric.value = preferredLadder
+  }
+
+  const selected = scatterMetricSelection.value.filter((metric) => available.includes(metric))
+  for (const metric of available) {
+    if (selected.length >= 2) break
+    if (!selected.includes(metric)) {
+      selected.push(metric)
+    }
+  }
+
+  if (selected.length === 1) {
+    selected.push(selected[0])
+  }
+
+  scatterMetricSelection.value = selected.slice(0, 2)
+  scatterXMetric.value = scatterMetricSelection.value[0] || available[0]
+  scatterYMetric.value = scatterMetricSelection.value[1] || scatterXMetric.value
+}
+
 const handleCategoryChange = () => {
+  syncMetricSelectionsForCategory()
   loadMetricDetails()
   loadLadderData()
-  loadScatterData()
+  if (showScatterChart.value) {
+    loadScatterData()
+  }
+  loadModelList()
 }
 
 const selectModelCategory = (category) => {
@@ -682,6 +1098,10 @@ const selectLadderMetric = (metric) => {
 }
 
 const toggleScatterMetric = (metric) => {
+  if (!showScatterChart.value) {
+    return
+  }
+
   if (scatterMetricSelection.value.includes(metric)) {
     return
   }
@@ -700,10 +1120,33 @@ const toggleScatterMetric = (metric) => {
   loadScatterData()
 }
 
-const handleLadderChartClick = (params) => {
-  const clickedName = params?.name
+const resolveClickedModelName = (params) => {
+  return params?.data?.modelName || params?.name || ''
+}
+
+const handleChartSingleClick = (params) => {
+  const clickedName = resolveClickedModelName(params)
   if (!clickedName) return
   selectedModelName.value = clickedName
+  const info = buildModelInfo(clickedName)
+  ElMessage.closeAll()
+  ElMessage({
+    type: 'info',
+    duration: 2400,
+    showClose: true,
+    message: `${clickedName}: ${info.description || 'No description'}`
+  })
+}
+
+const goModelDetail = (modelName) => {
+  if (!modelName) return
+  router.push({ path: `/kpi/models/${encodeURIComponent(modelName)}`, query: { category: modelCategory.value } })
+}
+
+const handleChartDoubleClick = (params) => {
+  const clickedName = resolveClickedModelName(params)
+  if (!clickedName) return
+  goModelDetail(clickedName)
 }
 
 const openCompareDialog = () => {
@@ -713,30 +1156,218 @@ const openCompareDialog = () => {
   showCompareDialog.value = true
 }
 
-const formatMetricValue = (value) => {
+const openCreateModelDialog = () => {
+  editingModelName.value = ''
+  modelForm.value = createDefaultModelForm(modelCategory.value)
+  showModelDialog.value = true
+}
+
+const openUpdatePickerDialog = () => {
+  if (!modelList.value.length) {
+    ElMessage.warning('No existing model available for update')
+    return
+  }
+  selectedUpdateModelName.value = modelList.value[0]?.model_name || ''
+  showUpdatePickerDialog.value = true
+}
+
+const confirmUpdateModelSelection = () => {
+  const target = modelList.value.find((row) => row.model_name === selectedUpdateModelName.value)
+  if (!target) {
+    ElMessage.warning('Please select an existing model')
+    return
+  }
+  showUpdatePickerDialog.value = false
+  openEditModelDialog(target)
+}
+
+const deleteModelRow = async (row) => {
+  const targetName = row?.model_name
+  if (!targetName) {
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `Delete all KPI runs for model ${targetName} in category ${modelCategory.value}?`,
+      'Delete Model',
+      {
+        confirmButtonText: 'Delete',
+        cancelButtonText: 'Cancel',
+        type: 'warning'
+      }
+    )
+  } catch {
+    return
+  }
+
+  try {
+    await deleteKPIModel(targetName, { model_category: modelCategory.value })
+    ElMessage.success('Model deleted')
+
+    const refreshTasks = [loadMetricDetails(), loadLadderData(), loadModelList()]
+    if (showScatterChart.value) {
+      refreshTasks.push(loadScatterData())
+    }
+    await Promise.all(refreshTasks)
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.detail || 'Failed to delete model')
+  }
+}
+
+const openEditModelDialog = (row) => {
+  const targetCategory = row.model_category || modelCategory.value
+  const metricDefs = getMetricDefsForCategory(targetCategory)
+  const dynamicMetrics = {}
+  metricDefs.forEach((metric) => {
+    dynamicMetrics[metric.value] = toMetricNumber(getMetricValueByKey(row.metrics, metric.value))
+  })
+
+  editingModelName.value = row.model_name || ''
+  modelForm.value = {
+    model_category: targetCategory,
+    model_name: row.model_name || '',
+    source: row.source || '',
+    model_size: row.model_size || '',
+    description: row.description || '',
+    test_date: row.test_date ? formatDateTimeForEdit(row.test_date) : '',
+    test_platform: row.test_platform || '',
+    test_version: row.test_version || '',
+    test_condition: row.test_condition || '',
+    metrics: dynamicMetrics
+  }
+  showModelDialog.value = true
+}
+
+const saveModelDialog = async () => {
+  if (!modelForm.value.model_name?.trim()) {
+    ElMessage.warning('Model name is required')
+    return
+  }
+
+  const metrics = {}
+  MODEL_FORM_METRICS.value.forEach((metric) => {
+    const raw = modelForm.value.metrics?.[metric.value]
+    if (raw === undefined || raw === null || raw === '') return
+    const numeric = Number(raw)
+    if (Number.isFinite(numeric)) {
+      metrics[metric.value] = numeric
+    }
+  })
+
+  if (!Object.keys(metrics).length) {
+    ElMessage.warning('At least one metric value is required')
+    return
+  }
+
+  const outOfRangeAccuracyMetric = Object.keys(metrics).find(
+    (metricName) => isAccuracyMetric(metricName) && (metrics[metricName] < 0 || metrics[metricName] > 1)
+  )
+  if (outOfRangeAccuracyMetric) {
+    ElMessage.warning('Accuracy values must be between 0 and 1')
+    return
+  }
+
+  const payload = {
+    model_category: modelForm.value.model_category || modelCategory.value,
+    model_name: modelForm.value.model_name.trim(),
+    source: modelForm.value.source || '',
+    model_size: modelForm.value.model_size || '',
+    description: modelForm.value.description || '',
+    test_date: modelForm.value.test_date || null,
+    test_platform: modelForm.value.test_platform || '',
+    test_version: modelForm.value.test_version || '',
+    test_condition: modelForm.value.test_condition || '',
+    metrics
+  }
+
+  modelDialogSaving.value = true
+  try {
+    if (isEditingModel.value) {
+      await updateKPILatestModel(editingModelName.value, payload)
+      ElMessage.success('Model updated')
+    } else {
+      await createKPIModel(payload)
+      ElMessage.success('Model created')
+    }
+    showModelDialog.value = false
+    editingModelName.value = ''
+    selectedModelName.value = payload.model_name
+    const refreshTasks = [loadMetricDetails(), loadLadderData(), loadModelList()]
+    if (showScatterChart.value) {
+      refreshTasks.push(loadScatterData())
+    }
+    await Promise.all(refreshTasks)
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.detail || 'Failed to save model')
+  } finally {
+    modelDialogSaving.value = false
+  }
+}
+
+const formatMetricValue = (value, metricName = '', options = {}) => {
   if (value === undefined || value === null || value === '') {
     return '--'
   }
+  const alreadyDisplay = options?.alreadyDisplay === true
   const numeric = Number(value)
-  return Number.isFinite(numeric) ? numeric.toFixed(3) : String(value)
+  const hasNumeric = Number.isFinite(numeric)
+  const displayValue = hasNumeric
+    ? (alreadyDisplay ? numeric : (isAccuracyMetric(metricName) ? numeric * 100 : numeric))
+    : numeric
+  const base = hasNumeric ? displayValue.toFixed(2) : String(value)
+  const unit = METRIC_UNITS[metricName] || ''
+  if (!unit) {
+    return base
+  }
+  if (unit === '%') {
+    return `${base}${unit}`
+  }
+  return `${base} ${unit}`
+}
+
+const toMetricNumber = (value) => {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : 0
+}
+
+const formatDateTime = (value) => {
+  if (!value) return '-'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '-'
+  return d.toLocaleString('en-US')
+}
+
+const formatDateTimeForEdit = (value) => {
+  if (!value) return ''
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mi = String(d.getMinutes()).padStart(2, '0')
+  const ss = String(d.getSeconds()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`
 }
 
 const getMetricName = (metric) => {
-  const map = {
-    power_consumption: 'Power Consumption',
-    latency: 'Latency',
-    accuracy_overall: 'Accuracy',
-    accuracy_en: 'Accuracy - English',
-    accuracy_zh: 'Accuracy - Chinese',
-    accuracy_es: 'Accuracy - Spanish'
+  const label = METRIC_LABEL_MAP[metric] || metric
+  const unit = METRIC_UNITS[metric]
+  if (!unit) {
+    return label
   }
-  return map[metric] || metric
+  return `${label} (${unit})`
 }
 
 onMounted(() => {
+  syncMetricSelectionsForCategory()
   loadMetricDetails()
   loadLadderData()
-  loadScatterData()
+  if (showScatterChart.value) {
+    loadScatterData()
+  }
+  loadModelList()
 })
 </script>
 
@@ -752,10 +1383,6 @@ onMounted(() => {
 .metric-card__value--small {
   font-size: 24px;
   line-height: 1.2;
-}
-
-.metrics-grid--single {
-  grid-template-columns: 1fr;
 }
 
 .model-info-card {
@@ -816,6 +1443,43 @@ onMounted(() => {
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 16px;
+}
+
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.model-dialog-form :deep(.el-form-item__label) {
+  white-space: nowrap;
+}
+
+.model-link-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  display: inline-block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  color: #7dd3fc;
+  cursor: pointer;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.model-link-btn:hover {
+  color: #bae6fd;
+}
+
+.model-link-btn:focus-visible {
+  outline: 2px solid rgba(125, 211, 252, 0.75);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 .category-focus-card :deep(.el-card__body) {

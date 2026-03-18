@@ -2,16 +2,16 @@
   <div class="page-shell test-progress-container">
     <section class="page-hero">
       <div class="page-hero__content">
-        <div class="page-hero__eyebrow">Test Operations</div>
-        <h2 class="page-hero__title">Test Progress Overview</h2>
-        <p class="page-hero__desc">Review task status, case pass results, and team collaboration in one place so delivery pace and risk exposure stay visible.</p>
+        <div class="page-hero__eyebrow">{{ LT.heroEyebrow }}</div>
+        <h2 class="page-hero__title">{{ LT.heroTitle }}</h2>
+        <p class="page-hero__desc">{{ DT.hero }}</p>
       </div>
       <div class="page-hero__actions">
-        <div class="glass-pill">Test Tasks {{ overviewStats.total }}</div>
-        <div class="glass-pill">Average Progress {{ overviewStats.avgProgress }}%</div>
+        <div class="glass-pill">{{ LT.pills.testTasks }} {{ overviewStats.total }}</div>
+        <div class="glass-pill">{{ LT.pills.averageProgress }} {{ overviewStats.avgProgress }}%</div>
         <el-button v-if="canCreateOrEditTest()" type="primary" @click="showCreateDialog = true">
           <el-icon><Plus /></el-icon>
-          New Test
+          {{ BT.newTest }}
         </el-button>
       </div>
     </section>
@@ -20,33 +20,33 @@
       <template #header>
         <div class="section-title">
           <div class="section-title__main">
-            <h3>Overall Test Progress Distribution</h3>
-            <span class="section-title__meta">Aggregate passed, failed, and untested cases across all tasks to quickly gauge current execution health.</span>
+            <h3>{{ LT.overviewTitle }}</h3>
+            <span class="section-title__meta">{{ DT.sectionMeta.overview }}</span>
           </div>
-          <div class="inline-stats muted-text">Total Cases {{ overviewStats.totalCases }}</div>
+          <div class="inline-stats muted-text">{{ LT.inline.totalCases }} {{ overviewStats.totalCases }}</div>
         </div>
       </template>
 
       <div class="metrics-grid progress-overview-metrics">
         <article class="metric-card accent-blue">
-          <div class="metric-card__label">Total Tests</div>
+          <div class="metric-card__label">{{ LT.metrics.total }}</div>
           <div class="metric-card__value">{{ overviewStats.total }}</div>
-          <div class="metric-card__meta">All test tasks included in the current view</div>
+          <div class="metric-card__meta">{{ DT.metricsMeta.total }}</div>
         </article>
         <article class="metric-card accent-orange">
-          <div class="metric-card__label">Running</div>
+          <div class="metric-card__label">{{ LT.metrics.running }}</div>
           <div class="metric-card__value">{{ overviewStats.running }}</div>
-          <div class="metric-card__meta">Tests currently in execution</div>
+          <div class="metric-card__meta">{{ DT.metricsMeta.running }}</div>
         </article>
         <article class="metric-card accent-green">
-          <div class="metric-card__label">Completed</div>
+          <div class="metric-card__label">{{ LT.metrics.completed }}</div>
           <div class="metric-card__value">{{ overviewStats.completed }}</div>
-          <div class="metric-card__meta">Delivered and completed test items</div>
+          <div class="metric-card__meta">{{ DT.metricsMeta.completed }}</div>
         </article>
         <article class="metric-card accent-purple">
-          <div class="metric-card__label">Case Pass Rate</div>
+          <div class="metric-card__label">{{ LT.metrics.passRate }}</div>
           <div class="metric-card__value">{{ overviewStats.passRate }}%</div>
-          <div class="metric-card__meta">Overall pass performance from the current list</div>
+          <div class="metric-card__meta">{{ DT.metricsMeta.passRate }}</div>
         </article>
       </div>
 
@@ -56,21 +56,21 @@
           <div class="progress-summary-item progress-summary-item--passed">
             <span class="progress-summary-item__dot"></span>
             <div>
-              <div class="progress-summary-item__label">Passed</div>
+              <div class="progress-summary-item__label">{{ LT.summary.passed }}</div>
               <div class="progress-summary-item__value">{{ overviewStats.passedCases }}</div>
             </div>
           </div>
           <div class="progress-summary-item progress-summary-item--failed">
             <span class="progress-summary-item__dot"></span>
             <div>
-              <div class="progress-summary-item__label">Failed</div>
+              <div class="progress-summary-item__label">{{ LT.summary.failed }}</div>
               <div class="progress-summary-item__value">{{ overviewStats.failedCases }}</div>
             </div>
           </div>
           <div class="progress-summary-item progress-summary-item--untested">
             <span class="progress-summary-item__dot"></span>
             <div>
-              <div class="progress-summary-item__label">Untested</div>
+              <div class="progress-summary-item__label">{{ LT.summary.untested }}</div>
               <div class="progress-summary-item__value">{{ overviewStats.untestedCases }}</div>
             </div>
           </div>
@@ -82,10 +82,10 @@
       <template #header>
         <div class="section-title">
           <div class="section-title__main">
-            <h3>Test Task List</h3>
-            <span class="section-title__meta">Review current execution status by status, pass rate, and ownership.</span>
+            <h3>{{ LT.listTitle }}</h3>
+            <span class="section-title__meta">{{ DT.sectionMeta.list }}</span>
           </div>
-          <div class="inline-stats muted-text">{{ testProgressList.length }} Records</div>
+          <div class="inline-stats muted-text">{{ testProgressList.length }} {{ LT.inline.records }}</div>
         </div>
       </template>
 
@@ -99,29 +99,37 @@
         table-layout="auto"
         :row-class-name="getTableRowClassName"
       >
-        <el-table-column label="Task Info" min-width="220">
+        <el-table-column :label="LT.table.taskInfo" min-width="220">
           <template #default="{ row }">
             <div class="task-info-cell">
               <div class="task-info-cell__fr">{{ row.fr_number || '-' }}</div>
-              <div class="task-info-cell__name">{{ row.test_name || '-' }}</div>
+              <button
+                v-if="row.id"
+                type="button"
+                class="task-info-cell__name task-info-cell__name--link"
+                @click="viewDetail(row.id)"
+              >
+                {{ row.test_name || '-' }}
+              </button>
+              <div v-else class="task-info-cell__name">{{ row.test_name || '-' }}</div>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="Risk" width="96">
+        <el-table-column :label="LT.table.risk" width="96">
           <template #default="{ row }">
             <el-tag :type="getRiskTagType(row)" size="small">
               {{ getRiskText(row) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="Status" width="104">
+        <el-table-column prop="status" :label="LT.table.status" width="104">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)" size="small">
               {{ getStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="L0" min-width="168">
+        <el-table-column :label="LT.table.l0" min-width="168">
           <template #default="{ row }">
             <div class="case-stats-wrap">
               <div class="case-stats" :title="`Pass ${row.l0_passed_cases} / Fail ${getStageFailed(row, 'l0')} / Total ${row.l0_total_cases}`">
@@ -132,12 +140,12 @@
                 <span class="total-count">{{ row.l0_total_cases }}</span>
               </div>
               <div class="due-date-text" :class="`due-date-text--${getStageDeadlineLevel(row, 'l0')}`">
-                Due Date: {{ formatDueDate(row.l0_due_date) }}
+                {{ DT.helper.dueDatePrefix }} {{ formatDueDate(row.l0_due_date) }}
               </div>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="L2" min-width="168">
+        <el-table-column :label="LT.table.l2" min-width="168">
           <template #default="{ row }">
             <div class="case-stats-wrap">
               <div class="case-stats" :title="`Pass ${row.l2_passed_cases} / Fail ${getStageFailed(row, 'l2')} / Total ${row.l2_total_cases}`">
@@ -148,12 +156,12 @@
                 <span class="total-count">{{ row.l2_total_cases }}</span>
               </div>
               <div class="due-date-text" :class="`due-date-text--${getStageDeadlineLevel(row, 'l2')}`">
-                Due Date: {{ formatDueDate(row.l2_due_date) }}
+                {{ DT.helper.dueDatePrefix }} {{ formatDueDate(row.l2_due_date) }}
               </div>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="L4" min-width="168">
+        <el-table-column :label="LT.table.l4" min-width="168">
           <template #default="{ row }">
             <div class="case-stats-wrap">
               <div class="case-stats" :title="`Pass ${row.l4_passed_cases} / Fail ${getStageFailed(row, 'l4')} / Total ${row.l4_total_cases}`">
@@ -164,12 +172,12 @@
                 <span class="total-count">{{ row.l4_total_cases }}</span>
               </div>
               <div class="due-date-text" :class="`due-date-text--${getStageDeadlineLevel(row, 'l4')}`">
-                Due Date: {{ formatDueDate(row.l4_due_date) }}
+                {{ DT.helper.dueDatePrefix }} {{ formatDueDate(row.l4_due_date) }}
               </div>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="Total" min-width="140">
+        <el-table-column :label="LT.table.total" min-width="140">
           <template #default="{ row }">
             <div class="case-stats" :title="`Pass ${row.passed_cases} / Fail ${getTotalFailed(row)} / Total ${row.total_cases}`">
               <span class="pass-count">{{ row.passed_cases }}</span>
@@ -180,22 +188,22 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="Progress" min-width="132">
+        <el-table-column :label="LT.table.progress" min-width="132">
           <template #default="{ row }">
             <el-progress :percentage="row.progress" :status="getProgressStatus(row.status)" :stroke-width="10" />
           </template>
         </el-table-column>
-        <el-table-column label="Testers" min-width="128">
+        <el-table-column :label="LT.table.testers" min-width="128">
           <template #default="{ row }">
             <span class="people-cell" :title="row.test_owners">{{ row.test_owners || '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="Actions" min-width="166">
+        <el-table-column :label="LT.table.actions" min-width="166">
           <template #default="{ row }">
             <div class="table-action-group">
-              <el-button size="small" @click="viewDetail(row.id)">Details</el-button>
-              <el-button size="small" @click="viewBugs(row.id)">Bugs</el-button>
-              <el-button v-if="canCreateOrEditTest()" size="small" type="primary" @click="editTest(row)">Edit</el-button>
+              <el-button size="small" @click="viewDetail(row.id)">{{ BT.details }}</el-button>
+              <el-button size="small" @click="viewBugs(row.id)">{{ BT.bugs }}</el-button>
+              <el-button v-if="canCreateOrEditTest()" size="small" type="primary" @click="editTest(row)">{{ BTCommon.edit }}</el-button>
             </div>
           </template>
         </el-table-column>
@@ -205,26 +213,26 @@
     <!-- Create/Edit Dialog -->
     <el-dialog
       v-model="showCreateDialog"
-      :title="editingTest ? 'Edit Test' : 'New Test'"
+      :title="editingTest ? LT.dialog.editTitle : LT.dialog.newTitle"
       width="560px"
     >
       <el-form :model="testForm" label-width="120px">
-        <el-form-item label="FR Number">
-          <el-input v-model="testForm.fr_number" placeholder="Example: FR-2026-001" />
+        <el-form-item :label="LT.form.frNumber">
+          <el-input v-model="testForm.fr_number" :placeholder="DT.placeholders.frExample" />
         </el-form-item>
-        <el-form-item label="Test Name">
-          <el-input v-model="testForm.test_name" placeholder="Enter the test name" />
+        <el-form-item :label="LT.form.testName">
+          <el-input v-model="testForm.test_name" :placeholder="DT.placeholders.testName" />
         </el-form-item>
-        <el-form-item label="Feature Summary">
-          <el-input v-model="testForm.model_name" placeholder="Briefly describe the FR feature" />
+        <el-form-item :label="LT.form.featureSummary">
+          <el-input v-model="testForm.model_name" :placeholder="DT.placeholders.featureSummary" />
         </el-form-item>
-        <el-form-item label="Detailed Description">
-          <el-input v-model="testForm.description" type="textarea" :rows="4" placeholder="Detailed description of the feature" />
+        <el-form-item :label="LT.form.detailedDescription">
+          <el-input v-model="testForm.description" type="textarea" :rows="4" :placeholder="DT.placeholders.detailDescription" />
         </el-form-item>
-        <el-form-item label="Configuration Method">
-          <el-input v-model="testForm.config_method" type="textarea" :rows="3" placeholder="How the feature is configured" />
+        <el-form-item :label="LT.form.configMethod">
+          <el-input v-model="testForm.config_method" type="textarea" :rows="3" :placeholder="DT.placeholders.configMethod" />
         </el-form-item>
-        <el-form-item label="Testers">
+        <el-form-item :label="LT.form.testers">
           <el-select
             v-model="testForm.test_owners_list"
             multiple
@@ -232,7 +240,7 @@
             allow-create
             default-first-option
             style="width: 100%"
-            placeholder="Multiple selection supported, new names allowed"
+            :placeholder="DT.placeholders.testers"
           >
             <el-option
               v-for="owner in ownerOptions"
@@ -242,75 +250,75 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="Developers">
-          <el-input v-model="testForm.developers" placeholder="Separate multiple names with commas, e.g. Alice, Bob" />
+        <el-form-item :label="LT.form.developers">
+          <el-input v-model="testForm.developers" :placeholder="DT.placeholders.developers" />
         </el-form-item>
-        <el-form-item label="Status">
+        <el-form-item :label="LT.form.status">
           <el-select v-model="testForm.status" style="width: 100%">
-            <el-option label="Pending" value="pending" />
-            <el-option label="Running" value="running" />
-            <el-option label="Completed" value="completed" />
-            <el-option label="Failed" value="failed" />
+            <el-option :label="LT.statusText.pending" value="pending" />
+            <el-option :label="LT.statusText.running" value="running" />
+            <el-option :label="LT.statusText.completed" value="completed" />
+            <el-option :label="LT.statusText.failed" value="failed" />
           </el-select>
         </el-form-item>
-        <el-form-item label="L0 Cases">
+        <el-form-item :label="LT.form.l0Cases">
           <el-input-number v-model="testForm.l0_passed_cases" :min="0" size="small" style="width: 88px" />
           <span class="form-divider">/</span>
           <el-input-number v-model="testForm.l0_failed_cases" :min="0" size="small" style="width: 88px" />
           <span class="form-divider">/</span>
           <el-input-number v-model="testForm.l0_total_cases" :min="0" size="small" style="width: 88px" />
         </el-form-item>
-        <el-form-item label="L0 Due Date">
+        <el-form-item :label="LT.form.l0DueDate">
           <el-date-picker
             v-model="testForm.l0_due_date"
             type="date"
             value-format="YYYY-MM-DD"
-            placeholder="Select the L0 due date"
+            :placeholder="DT.placeholders.l0DueDate"
             style="width: 100%"
           />
         </el-form-item>
-        <el-form-item label="L2 Cases">
+        <el-form-item :label="LT.form.l2Cases">
           <el-input-number v-model="testForm.l2_passed_cases" :min="0" size="small" style="width: 88px" />
           <span class="form-divider">/</span>
           <el-input-number v-model="testForm.l2_failed_cases" :min="0" size="small" style="width: 88px" />
           <span class="form-divider">/</span>
           <el-input-number v-model="testForm.l2_total_cases" :min="0" size="small" style="width: 88px" />
         </el-form-item>
-        <el-form-item label="L2 Due Date">
+        <el-form-item :label="LT.form.l2DueDate">
           <el-date-picker
             v-model="testForm.l2_due_date"
             type="date"
             value-format="YYYY-MM-DD"
-            placeholder="Select the L2 due date"
+            :placeholder="DT.placeholders.l2DueDate"
             style="width: 100%"
           />
         </el-form-item>
-        <el-form-item label="L4 Cases">
+        <el-form-item :label="LT.form.l4Cases">
           <el-input-number v-model="testForm.l4_passed_cases" :min="0" size="small" style="width: 88px" />
           <span class="form-divider">/</span>
           <el-input-number v-model="testForm.l4_failed_cases" :min="0" size="small" style="width: 88px" />
           <span class="form-divider">/</span>
           <el-input-number v-model="testForm.l4_total_cases" :min="0" size="small" style="width: 88px" />
         </el-form-item>
-        <el-form-item label="L4 Due Date">
+        <el-form-item :label="LT.form.l4DueDate">
           <el-date-picker
             v-model="testForm.l4_due_date"
             type="date"
             value-format="YYYY-MM-DD"
-            placeholder="Select the L4 due date"
+            :placeholder="DT.placeholders.l4DueDate"
             style="width: 100%"
           />
         </el-form-item>
         <el-form-item>
-          <span class="form-helper">Input format: Pass / Fail / Total (Untested = Total - Pass - Fail, not counted as failures)</span>
+          <span class="form-helper">{{ DT.helper.inputFormat }}</span>
         </el-form-item>
-        <el-form-item label="Progress" v-if="calcProgress !== null">
-          <span class="progress-hint">Calculated automatically: {{ calcProgress }}%</span>
+        <el-form-item :label="LT.form.progress" v-if="calcProgress !== null">
+          <span class="progress-hint">{{ DT.helper.autoProgressPrefix }}: {{ calcProgress }}%</span>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showCreateDialog = false">Cancel</el-button>
-        <el-button type="primary" @click="saveTest">Save</el-button>
+        <el-button @click="showCreateDialog = false">{{ BTCommon.cancel }}</el-button>
+        <el-button type="primary" @click="saveTest">{{ BTCommon.save }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -321,11 +329,18 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import { LabelText } from '../texts/LabelText'
+import { ButtonText } from '../texts/ButtonText'
+import { DescriptionText } from '../texts/DescriptionText'
 import { getTestProgressList, createTestProgress, updateTestProgress } from '../api/testProgress'
 import { getMembers } from '../api/personnel'
 import { canCreateOrEditTest } from '../stores/auth'
 
 const router = useRouter()
+const LT = LabelText.testProgress
+const BT = ButtonText.testProgress
+const BTCommon = ButtonText.common
+const DT = DescriptionText.testProgress
 const loading = ref(false)
 const testProgressList = ref([])
 const members = ref([])
@@ -467,7 +482,7 @@ const loadData = async () => {
     const data = await getTestProgressList()
     testProgressList.value = data
   } catch (error) {
-    ElMessage.error('Failed to load data')
+    ElMessage.error(DT.toast.loadFailed)
   } finally {
     loading.value = false
   }
@@ -492,12 +507,7 @@ const getStatusType = (status) => {
 }
 
 const getStatusText = (status) => {
-  const map = {
-    pending: 'Pending',
-    running: 'Running',
-    completed: 'Completed',
-    failed: 'Failed'
-  }
+  const map = LT.statusText
   return map[status] || status
 }
 
@@ -563,9 +573,9 @@ const getTaskRiskLevel = (row) => {
 
 const getRiskText = (row) => {
   const level = getTaskRiskLevel(row)
-  if (level === 'danger') return 'Overdue'
-  if (level === 'warning') return 'At Risk'
-  return 'Normal'
+  if (level === 'danger') return LT.riskText.overdue
+  if (level === 'warning') return LT.riskText.atRisk
+  return LT.riskText.normal
 }
 
 const getRiskTagType = (row) => {
@@ -640,10 +650,10 @@ const saveTest = async () => {
 
     if (editingTest.value) {
       await updateTestProgress(editingTest.value.id, payload)
-      ElMessage.success('Updated successfully')
+      ElMessage.success(DT.toast.updateSuccess)
     } else {
       await createTestProgress(payload)
-      ElMessage.success('Created successfully')
+      ElMessage.success(DT.toast.createSuccess)
     }
     showCreateDialog.value = false
     editingTest.value = null
@@ -672,7 +682,7 @@ const saveTest = async () => {
     }
     loadData()
   } catch (error) {
-    ElMessage.error('Failed to save')
+    ElMessage.error(DT.toast.saveFailed)
   }
 }
 
@@ -710,8 +720,17 @@ onMounted(() => {
 }
 
 .task-info-cell__fr {
-  color: rgba(148, 163, 184, 0.86);
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: #67e8f9;
+  background: rgba(34, 211, 238, 0.16);
+  border: 1px solid rgba(34, 211, 238, 0.38);
   font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   word-break: break-word;
 }
 
@@ -723,6 +742,29 @@ onMounted(() => {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+}
+
+.task-info-cell__name--link {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(125, 211, 252, 0.5);
+  text-underline-offset: 2px;
+}
+
+.task-info-cell__name--link:hover {
+  color: #7dd3fc;
+  text-decoration-color: rgba(125, 211, 252, 0.9);
+}
+
+.task-info-cell__name--link:focus-visible {
+  outline: 2px solid rgba(125, 211, 252, 0.7);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 .people-cell {

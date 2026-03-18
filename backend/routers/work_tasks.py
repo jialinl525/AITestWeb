@@ -44,6 +44,10 @@ def _normalize_hours(value: Optional[float]) -> float:
     return round(max(0.0, float(value or 0.0)), 2)
 
 
+def _normalize_progress(value: Optional[float]) -> float:
+    return round(min(100.0, max(0.0, float(value or 0.0))), 2)
+
+
 def _get_alias_variants(alias_map: Dict[str, str], canonical_value: str) -> List[str]:
     return [raw_value for raw_value, normalized_value in alias_map.items() if normalized_value == canonical_value]
 
@@ -100,6 +104,7 @@ def _serialize_task(task: models.WorkTask) -> Dict:
         "end_date": task.end_date,
         "estimated_hours": round(max(0.0, float(task.estimated_hours or 0.0)), 2),
         "status": TASK_STATUS_ALIASES.get(task.status, task.status),
+        "progress": round(min(100.0, max(0.0, float(task.progress or 0.0))), 2),
         "assignee_user_id": task.assignee_user_id,
         "assignee_username": assignee.username if assignee else None,
         "assignee_display_name": (assignee.display_name or assignee.username) if assignee else None,
@@ -141,6 +146,14 @@ def list_work_tasks(
     return [_serialize_task(row) for row in rows]
 
 
+@router.get("/{task_id}", response_model=schemas.WorkTask)
+def get_work_task(task_id: int, db: Session = Depends(get_db)):
+    row = db.query(models.WorkTask).filter(models.WorkTask.id == task_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return _serialize_task(row)
+
+
 @router.post("", response_model=schemas.WorkTask)
 def create_work_task(
     payload: schemas.WorkTaskCreate,
@@ -171,6 +184,7 @@ def create_work_task(
         end_date=payload.end_date,
         estimated_hours=_normalize_hours(payload.estimated_hours),
         status=_validate_status(payload.status),
+        progress=_normalize_progress(payload.progress),
         assignee_user_id=assignee.id if assignee else None,
     )
     db.add(row)
@@ -225,6 +239,9 @@ def update_work_task(
 
     if "status" in patch:
         row.status = _validate_status(patch["status"])
+
+    if "progress" in patch:
+        row.progress = _normalize_progress(patch["progress"])
 
     if "assignee_user_id" in patch:
         assignee = _resolve_assignee(db, patch["assignee_user_id"])
