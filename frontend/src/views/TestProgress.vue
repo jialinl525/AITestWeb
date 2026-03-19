@@ -302,6 +302,8 @@ import { Plus } from '@element-plus/icons-vue'
 import { LabelText } from '../texts/LabelText'
 import { ButtonText } from '../texts/ButtonText'
 import { DescriptionText } from '../texts/DescriptionText'
+import { useAsyncAction } from '../composables/useAsyncAction'
+import { formatDate } from '../utils/formatters'
 import { getTestProgressList, createTestProgress, updateTestProgress } from '../api/testProgress'
 import { getMembers } from '../api/personnel'
 import { canCreateOrEditTest } from '../stores/auth'
@@ -317,8 +319,9 @@ const members = ref([])
 const showCreateDialog = ref(false)
 const editingTest = ref(null)
 const DAYS_TO_WARNING = 3
+const { runAsync } = useAsyncAction()
 
-const testForm = ref({
+const createDefaultTestForm = () => ({
   test_name: '',
   model_name: '',
   fr_number: '',
@@ -341,6 +344,8 @@ const testForm = ref({
   test_owners_list: [],
   developers: ''
 })
+
+const testForm = ref(createDefaultTestForm())
 
 const ownerOptions = computed(() => members.value.map(item => item.display_name || item.username))
 
@@ -428,17 +433,17 @@ const progressPieOption = computed(() => ({
       data: [
         {
           value: overviewStats.value.passedCases,
-          name: 'Passed',
+          name: LT.summary.passed,
           itemStyle: { color: '#34d399' }
         },
         {
           value: overviewStats.value.failedCases,
-          name: 'Failed',
+          name: LT.summary.failed,
           itemStyle: { color: '#fb7185' }
         },
         {
           value: overviewStats.value.untestedCases,
-          name: 'Untested',
+          name: LT.summary.untested,
           itemStyle: { color: '#60a5fa' }
         }
       ]
@@ -447,15 +452,16 @@ const progressPieOption = computed(() => ({
 }))
 
 const loadData = async () => {
-  loading.value = true
-  try {
-    const data = await getTestProgressList()
-    testProgressList.value = data
-  } catch (error) {
-    ElMessage.error(DT.toast.loadFailed)
-  } finally {
-    loading.value = false
-  }
+  await runAsync(
+    async () => {
+      const data = await getTestProgressList()
+      testProgressList.value = data
+    },
+    {
+      loadingRef: loading,
+      errorMessage: DT.toast.loadFailed,
+    }
+  )
 }
 
 const loadMembers = async () => {
@@ -600,16 +606,8 @@ const getTableRowClassName = ({ row }) => {
   return ''
 }
 
-const formatDate = (dateString) => {
-  if (!dateString) return ''
-  return new Date(dateString).toLocaleString('en-CA')
-}
-
 const formatDueDate = (dateString) => {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  if (Number.isNaN(date.getTime())) return '-'
-  return date.toLocaleDateString('en-CA')
+  return formatDate(dateString)
 }
 
 const viewDetail = (testId) => {
@@ -665,29 +663,7 @@ const saveTest = async () => {
     }
     showCreateDialog.value = false
     editingTest.value = null
-    testForm.value = {
-      test_name: '',
-      model_name: '',
-      fr_number: '',
-      description: '',
-      config_method: '',
-      status: 'pending',
-      l0_total_cases: 0,
-      l0_passed_cases: 0,
-      l0_failed_cases: 0,
-      l0_due_date: null,
-      l2_total_cases: 0,
-      l2_passed_cases: 0,
-      l2_failed_cases: 0,
-      l2_due_date: null,
-      l4_total_cases: 0,
-      l4_passed_cases: 0,
-      l4_failed_cases: 0,
-      l4_due_date: null,
-      estimated_hours: 0,
-      test_owners_list: [],
-      developers: ''
-    }
+    testForm.value = createDefaultTestForm()
     loadData()
   } catch (error) {
     ElMessage.error(DT.toast.saveFailed)

@@ -99,6 +99,7 @@ import { getWorkTaskById } from '../api/workTasks'
 import { LabelText } from '../texts/LabelText'
 import { ButtonText } from '../texts/ButtonText'
 import { DescriptionText } from '../texts/DescriptionText'
+import { formatDate, formatDateTime } from '../utils/formatters'
 
 const route = useRoute()
 const router = useRouter()
@@ -108,20 +109,6 @@ const DT = DescriptionText.workTaskDetail
 
 const loading = ref(false)
 const taskDetail = ref(null)
-
-const formatDate = (value) => {
-  if (!value) return '-'
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return '-'
-  return d.toLocaleDateString('en-CA')
-}
-
-const formatDateTime = (value) => {
-  if (!value) return ''
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleString('en-CA')
-}
 
 const loadDetail = async () => {
   const id = route.params.id

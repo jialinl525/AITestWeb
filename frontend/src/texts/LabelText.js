@@ -39,8 +39,19 @@ export const LabelText = {
       listTitle: 'Bug List'
     },
     filter: {
+      verification: 'Verification',
       status: 'Status',
       createdBy: 'Created By'
+    },
+    verificationOptions: {
+      all: 'All',
+      waitingBuild: 'Waiting Build',
+      pendingVerification: 'Pending Verification',
+      verified: 'Verified',
+      discarded: 'Discarded'
+    },
+    toolbar: {
+      confirmDelete: 'Confirm Delete'
     },
     metrics: {
       total: 'Total Bugs',
@@ -60,12 +71,18 @@ export const LabelText = {
     },
     dialog: {
       exportTopNTitle: 'Export Top N Bugs',
+      exportArea: 'Export Area',
       rowsToExport: 'Rows to export',
       editTitle: 'Edit Bug',
-      newTitle: 'New Bug'
+      newTitle: 'New Bug',
+      quickBuildTitle: 'Quick Select Build Image',
+      quickBuildCrNumber: 'CR Number',
+      quickBuildBugTitle: 'Title',
+      quickBuildAvailableImage: 'Available Image'
     },
     form: {
       crNumber: 'CR Number',
+      noFr: 'No FR',
       testTask: 'Test Task',
       workTask: 'WorkTask',
       title: 'Title',
@@ -174,6 +191,11 @@ export const LabelText = {
       featureConfig: 'Feature and Configuration',
       stageStats: 'Stage Statistics and Task Status',
       linkedBugs: 'Linked Bugs'
+    },
+    bugZones: {
+      pendingBuild: 'Pending Build',
+      pendingVerification: 'Pending Verification',
+      verified: 'Verified'
     },
     info: {
       featureSummary: 'Feature Summary (FR Brief)',

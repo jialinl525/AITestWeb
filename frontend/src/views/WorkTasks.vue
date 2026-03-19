@@ -68,7 +68,7 @@
 
         <el-button @click="loadTasks">{{ BTCommon.search }}</el-button>
         <el-button @click="resetFilters">{{ BTCommon.reset }}</el-button>
-        <el-button v-if="canCreateOrEditTest()" type="primary" @click="openCreateDialog">{{ BT.newTask }}</el-button>
+        <el-button v-if="canCreateOrEditTest()" type="primary" @click="openCreateTaskDialog">{{ BT.newTask }}</el-button>
       </div>
 
       <el-table :data="tasks" v-loading="loading" stripe class="full-width-table" style="width: 100%" table-layout="auto">
@@ -98,7 +98,7 @@
           </template>
         </el-table-column>
         <el-table-column :label="LT.table.progress" min-width="110">
-          <template #default="{ row }">{{ Number(row.progress || 0).toFixed(0) }}%</template>
+          <template #default="{ row }">{{ formatPercent(row.progress) }}</template>
         </el-table-column>
         <el-table-column :label="LT.table.assignee" min-width="150">
           <template #default="{ row }">{{ row.assignee_display_name || '-' }}</template>
@@ -190,6 +190,9 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { LabelText } from '../texts/LabelText'
 import { ButtonText } from '../texts/ButtonText'
 import { DescriptionText } from '../texts/DescriptionText'
+import { useCrudDialog } from '../composables/useCrudDialog'
+import { useFilterState } from '../composables/useListState'
+import { formatDate, formatPercent } from '../utils/formatters'
 
 import { canCreateOrEditTest } from '../stores/auth'
 import { getMembers } from '../api/personnel'
@@ -198,8 +201,6 @@ import { createWorkTask, deleteWorkTask, getWorkTaskMeta, getWorkTasks, updateWo
 const router = useRouter()
 const loading = ref(false)
 const saving = ref(false)
-const showDialog = ref(false)
-const editingId = ref(null)
 const LT = LabelText.workTasks
 const BT = ButtonText.workTasks
 const BTCommon = ButtonText.common
@@ -211,14 +212,17 @@ const members = ref([])
 const taskTypeOptions = ref(['Customer Support', 'Automation Development', 'Other'])
 const statusOptions = ref(['Planned', 'In Progress', 'Completed', 'Paused'])
 
-const filters = ref({
+const {
+  filters,
+  resetFilters: resetFilterState
+} = useFilterState({
   keyword: '',
   task_type: '',
   status: '',
   assignee_user_id: null
 })
 
-const form = ref({
+const createDefaultTaskForm = () => ({
   task_key: '',
   task_type: 'Customer Support',
   task_name: '',
@@ -232,18 +236,34 @@ const form = ref({
   assignee_user_id: null
 })
 
+const mapTaskRowToForm = (row = {}) => ({
+  task_key: row.task_key || '',
+  task_type: row.task_type || 'Customer Support',
+  task_name: row.task_name || '',
+  task_summary: row.task_summary || '',
+  task_detail: row.task_detail || '',
+  start_date: row.start_date || null,
+  end_date: row.end_date || null,
+  estimated_hours: Number(row.estimated_hours || 0),
+  progress: Number(row.progress || 0),
+  status: row.status || 'Planned',
+  assignee_user_id: row.assignee_user_id || null
+})
+
+const {
+  showDialog,
+  editingId,
+  form,
+  openCreateDialog,
+  openEditDialog,
+  closeDialog
+} = useCrudDialog(createDefaultTaskForm, mapTaskRowToForm)
+
 const totalEstimatedHours = computed(() => Number(tasks.value.reduce((sum, item) => sum + Number(item.estimated_hours || 0), 0).toFixed(1)))
 const planCount = computed(() => tasks.value.filter(item => item.status === 'Planned').length)
 const inProgressCount = computed(() => tasks.value.filter(item => item.status === 'In Progress').length)
 const doneCount = computed(() => tasks.value.filter(item => item.status === 'Completed').length)
 const pausedCount = computed(() => tasks.value.filter(item => item.status === 'Paused').length)
-
-const formatDate = (value) => {
-  if (!value) return '-'
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return '-'
-  return d.toLocaleDateString('en-CA')
-}
 
 const statusTagType = (status) => {
   if (status === 'Completed') return 'success'
@@ -301,44 +321,9 @@ const loadTasks = async () => {
   }
 }
 
-const resetForm = () => {
-  form.value = {
-    task_key: buildTaskKey(),
-    task_type: 'Customer Support',
-    task_name: '',
-    task_summary: '',
-    task_detail: '',
-    start_date: null,
-    end_date: null,
-    estimated_hours: 0,
-    progress: 0,
-    status: 'Planned',
-    assignee_user_id: null
-  }
-}
-
-const openCreateDialog = () => {
-  editingId.value = null
-  resetForm()
-  showDialog.value = true
-}
-
-const openEditDialog = (row) => {
-  editingId.value = row.id
-  form.value = {
-    task_key: row.task_key || '',
-    task_type: row.task_type || 'Customer Support',
-    task_name: row.task_name || '',
-    task_summary: row.task_summary || '',
-    task_detail: row.task_detail || '',
-    start_date: row.start_date || null,
-    end_date: row.end_date || null,
-    estimated_hours: Number(row.estimated_hours || 0),
-    progress: Number(row.progress || 0),
-    status: row.status || 'Planned',
-    assignee_user_id: row.assignee_user_id || null
-  }
-  showDialog.value = true
+const openCreateTaskDialog = () => {
+  openCreateDialog()
+  form.value.task_key = buildTaskKey()
 }
 
 const saveTask = async () => {
@@ -382,7 +367,7 @@ const saveTask = async () => {
       await createWorkTask(payload)
       ElMessage.success(DT.toast.createSuccess)
     }
-    showDialog.value = false
+    closeDialog()
     await loadTasks()
   } catch (error) {
     ElMessage.error(error?.response?.data?.detail || DT.toast.saveFailed)
@@ -410,12 +395,7 @@ const handleDelete = async (row) => {
 }
 
 const resetFilters = async () => {
-  filters.value = {
-    keyword: '',
-    task_type: '',
-    status: '',
-    assignee_user_id: null
-  }
+  resetFilterState()
   await loadTasks()
 }
 

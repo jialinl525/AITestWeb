@@ -59,13 +59,13 @@
       </template>
 
       <el-form :inline="true" class="filter-form">
-        <el-form-item label="Verification">
+        <el-form-item :label="LT.filter.verification">
           <el-select v-model="filters.verification_zone" class="filter-select" style="width: 180px" popper-class="bugs-filter-popper">
-            <el-option label="All" value="all" />
-            <el-option label="Waiting Build" value="waiting_build" />
-            <el-option label="Pending Verification" value="pending_verification" />
-            <el-option label="Verified" value="verified" />
-            <el-option label="Discarded" value="discarded" />
+            <el-option :label="LT.verificationOptions.all" value="all" />
+            <el-option :label="LT.verificationOptions.waitingBuild" value="waiting_build" />
+            <el-option :label="LT.verificationOptions.pendingVerification" value="pending_verification" />
+            <el-option :label="LT.verificationOptions.verified" value="verified" />
+            <el-option :label="LT.verificationOptions.discarded" value="discarded" />
           </el-select>
         </el-form-item>
         <el-form-item :label="LT.filter.status">
@@ -110,10 +110,10 @@
           </div>
           <div v-if="canDeleteBug()" class="bug-list-toolbar">
             <template v-if="!bulkDeleteMode">
-              <el-button class="btn-style-3" type="danger" plain @click="enterBulkDeleteMode">Delete Bugs</el-button>
+              <el-button class="btn-style-3" type="danger" plain @click="enterBulkDeleteMode">{{ BT.deleteBugs }}</el-button>
             </template>
             <template v-else>
-              <el-button class="btn-style-3" @click="cancelBulkDeleteMode">Cancel</el-button>
+              <el-button class="btn-style-3" @click="cancelBulkDeleteMode">{{ BTCommon.cancel }}</el-button>
               <el-button
                 class="btn-style-2"
                 type="danger"
@@ -121,7 +121,7 @@
                 :loading="bulkDeleting"
                 @click="confirmBulkDelete"
               >
-                Confirm Delete ({{ selectedBugIds.length }})
+                {{ LT.toolbar.confirmDelete }} ({{ selectedBugIds.length }})
               </el-button>
             </template>
           </div>
@@ -165,13 +165,13 @@
       width="420px"
     >
       <el-form label-width="120px">
-        <el-form-item label="Export Area">
+        <el-form-item :label="LT.dialog.exportArea">
           <el-select v-model="exportArea" style="width: 100%">
-            <el-option label="All" value="all" />
-            <el-option label="Waiting Build" value="waiting_build" />
-            <el-option label="Pending Verification" value="pending_verification" />
-            <el-option label="Verified" value="verified" />
-            <el-option label="Discarded" value="discarded" />
+            <el-option :label="LT.verificationOptions.all" value="all" />
+            <el-option :label="LT.verificationOptions.waitingBuild" value="waiting_build" />
+            <el-option :label="LT.verificationOptions.pendingVerification" value="pending_verification" />
+            <el-option :label="LT.verificationOptions.verified" value="verified" />
+            <el-option :label="LT.verificationOptions.discarded" value="discarded" />
           </el-select>
         </el-form-item>
         <el-form-item :label="LT.dialog.rowsToExport">
@@ -192,21 +192,21 @@
 
     <el-dialog
       v-model="showQuickBuildDialog"
-      title="Quick Select Build Image"
+      :title="LT.dialog.quickBuildTitle"
       width="520px"
     >
       <el-form label-width="120px">
-        <el-form-item label="CR Number">
+        <el-form-item :label="LT.dialog.quickBuildCrNumber">
           <span>{{ quickBuildTargetBug?.external_cr_number || '-' }}</span>
         </el-form-item>
-        <el-form-item label="Title">
+        <el-form-item :label="LT.dialog.quickBuildBugTitle">
           <span class="quick-build-title">{{ quickBuildTargetBug?.title || '-' }}</span>
         </el-form-item>
-        <el-form-item label="Available Image">
+        <el-form-item :label="LT.dialog.quickBuildAvailableImage">
           <el-select
             v-model="quickBuildSelection"
             filterable
-            placeholder="Select image"
+            :placeholder="DT.placeholders.selectImage"
             style="width: 100%"
           >
             <el-option
@@ -272,7 +272,7 @@
             v-model="bugForm.software_image_integration_build"
             clearable
             filterable
-            placeholder="Select from available images"
+            :placeholder="DT.placeholders.selectFromAvailableImages"
             style="width: 100%"
           >
             <el-option
@@ -312,6 +312,7 @@ import { LabelText } from '../texts/LabelText'
 import { ButtonText } from '../texts/ButtonText'
 import { DescriptionText } from '../texts/DescriptionText'
 import { getStatusBucket } from '../utils/bugDisplay'
+import { useFilterState, usePaginationState } from '../composables/useListState'
 import {
   queryBugs,
   createBug,
@@ -357,13 +358,22 @@ const workTaskOptions = ref([])
 const createdByOptions = ref([])
 const statusOptions = ref([])
 const bugBuildOptions = ref([])
-const pagination = ref({
+const {
+  pagination,
+  resetPage,
+  setPage,
+  setPageSize,
+  setTotal
+} = usePaginationState({
   page: 1,
   pageSize: 30,
   total: 0
 })
 
-const filters = ref({
+const {
+  filters,
+  resetFilters: resetFilterState
+} = useFilterState({
   verification_zone: 'waiting_build',
   status: null,
   created_by: null
@@ -443,7 +453,7 @@ const openQuickBuildDialog = (bug) => {
 
   const options = getQuickBuildOptions(bug)
   if (!options.length) {
-    ElMessage.warning('No available image found for quick selection')
+    ElMessage.warning(DT.toast.noAvailableImage)
     return
   }
 
@@ -457,14 +467,14 @@ const saveQuickBuildSelection = async () => {
   const target = quickBuildTargetBug.value
   const selectedImage = String(quickBuildSelection.value || '').trim()
   if (!target?.id || !selectedImage) {
-    ElMessage.warning('Please select an image')
+    ElMessage.warning(DT.toast.selectImageRequired)
     return
   }
 
   quickBuildSaving.value = true
   try {
     await updateBug(target.id, toBugUpdatePayload(target, { software_image_integration_build: selectedImage }))
-    ElMessage.success('Software Image Integration Build updated')
+    ElMessage.success(DT.toast.quickBuildUpdated)
     closeQuickBuildDialog()
     await loadFilterOptions()
     await loadData()
@@ -499,7 +509,7 @@ const loadData = async () => {
   try {
     const data = await queryBugs(buildQueryParams())
     bugsList.value = data?.items || []
-    pagination.value.total = Number(data?.total || 0)
+    setTotal(data?.total)
 
     if (bulkDeleteMode.value) {
       const currentIds = new Set((bugsList.value || []).map((item) => Number(item.id)))
@@ -517,22 +527,17 @@ const loadData = async () => {
 }
 
 const resetFilters = () => {
-  filters.value = {
-    verification_zone: 'waiting_build',
-    status: null,
-    created_by: null
-  }
-  pagination.value.page = 1
+  resetFilterState()
+  resetPage()
 }
 
 const handlePageSizeChange = (size) => {
-  pagination.value.pageSize = size
-  pagination.value.page = 1
+  setPageSize(size)
   loadData()
 }
 
 const handlePageChange = (page) => {
-  pagination.value.page = page
+  setPage(page)
   loadData()
 }
 
@@ -560,14 +565,14 @@ const handleBugSelectionChange = (rows) => {
 const confirmBulkDelete = async () => {
   const ids = [...selectedBugIds.value]
   if (!ids.length) {
-    ElMessage.warning('Please select bugs to delete')
+    ElMessage.warning(DT.toast.selectBugsToDelete)
     return
   }
 
   try {
     await ElMessageBox.confirm(
-      `Delete ${ids.length} selected bugs?`,
-      'Confirm Bulk Delete',
+      `${DT.toast.bulkDeleteConfirmPrefix} ${ids.length} ${DT.toast.bulkDeleteConfirmSuffix}`,
+      DT.toast.bulkDeleteConfirmTitle,
       {
         confirmButtonText: BTCommon.confirm,
         cancelButtonText: BTCommon.cancel,
@@ -585,10 +590,10 @@ const confirmBulkDelete = async () => {
     const failedCount = results.length - successCount
 
     if (successCount > 0) {
-      ElMessage.success(`Deleted ${successCount} bugs`)
+      ElMessage.success(`${DT.toast.bulkDeleteSuccessPrefix} ${successCount} ${DT.toast.bulkDeleteSuccessSuffix}`)
     }
     if (failedCount > 0) {
-      ElMessage.error(`Failed to delete ${failedCount} bugs`)
+      ElMessage.error(`${DT.toast.bulkDeleteFailedPrefix} ${failedCount} ${DT.toast.bulkDeleteFailedSuffix}`)
     }
 
     await loadFilterOptions()
@@ -716,7 +721,7 @@ const markBugVerified = async (row) => {
   try {
     await delay(1000)
     await updateBug(row.id, toBugUpdatePayload(row, { status: 'verified' }))
-    ElMessage.success('Moved to Verified')
+    ElMessage.success(DT.toast.movedToVerified)
     await loadFilterOptions()
     await loadData()
   } catch (error) {
@@ -849,14 +854,14 @@ onMounted(() => {
 })
 
 watch(() => route.query.testId, () => {
-  pagination.value.page = 1
+  resetPage()
   loadData()
 })
 
 watch(
   () => [filters.value.verification_zone, filters.value.status, filters.value.created_by],
   () => {
-    pagination.value.page = 1
+    resetPage()
     loadData()
   }
 )

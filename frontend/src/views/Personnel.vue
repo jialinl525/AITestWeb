@@ -280,6 +280,8 @@ import { ElMessage } from 'element-plus'
 import { LabelText } from '../texts/LabelText'
 import { ButtonText } from '../texts/ButtonText'
 import { DescriptionText } from '../texts/DescriptionText'
+import { formatDate, formatManday as formatMandayValue, formatPercent } from '../utils/formatters'
+import { formatTaskLabel } from '../utils/taskDisplay'
 import {
   getMembers,
   getWorkload,
@@ -361,28 +363,17 @@ const getOverlapTagType = (count) => {
   return 'success'
 }
 
-const formatDate = (value) => {
-  if (!value) return '-'
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return '-'
-  return d.toLocaleDateString('en-CA')
-}
-
 const formatStatus = (value) => {
   const text = String(value || '').trim()
   return text || '-'
 }
 
 const formatProgress = (value) => {
-  const num = Number(value)
-  if (!Number.isFinite(num)) return '0%'
-  return `${num.toFixed(0)}%`
+  return formatPercent(value)
 }
 
 const formatManday = (value) => {
-  const num = Number(value)
-  if (!Number.isFinite(num)) return '0.0 manday'
-  return `${num.toFixed(1)} manday`
+  return formatMandayValue(value)
 }
 
 const getPartDescription = (task) => {
@@ -392,14 +383,7 @@ const getPartDescription = (task) => {
 }
 
 const formatTaskName = (task) => {
-  const taskLabel = String(task?.task_label || '').trim()
-  if (taskLabel) return taskLabel
-
-  const frNumber = String(task?.fr_number || '').trim()
-  const testName = String(task?.test_name || '').trim()
-  if (frNumber && testName) return `${frNumber} | ${testName}`
-  if (frNumber) return frNumber
-  return testName || '-'
+  return formatTaskLabel(task)
 }
 
 const normalizeTaskRows = (tasks) => {

@@ -19,6 +19,7 @@ export const ButtonText = {
     exportTopN: 'Export Top N',
     importCsv: 'Import CSV Bugs',
     newBug: 'New Bug',
+    deleteBugs: 'Delete Bugs',
     filter: 'Filter',
     export: 'Export'
   },

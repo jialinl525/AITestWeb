@@ -26,7 +26,7 @@
                 {{ getStatusText(testDetail.status) }}
               </el-tag>
             </div>
-            <div class="glass-pill">{{ LT.createdOn }} {{ formatDate(testDetail.created_at) }}</div>
+            <div class="glass-pill">{{ LT.createdOn }} {{ formatDateTimeText(testDetail.created_at) }}</div>
           </div>
         </div>
 
@@ -48,7 +48,7 @@
           </article>
           <article class="metric-card accent-purple">
             <div class="metric-card__label">{{ LT.metrics.estimatedManday }}</div>
-            <div class="metric-card__value metric-card__value--small">{{ Number(testDetail.estimated_hours || 0).toFixed(1) }} manday</div>
+            <div class="metric-card__value metric-card__value--small">{{ formatManday(testDetail.estimated_hours) }}</div>
             <div class="metric-card__meta">{{ DT.metricsMeta.estimatedManday }}</div>
           </article>
         </div>
@@ -97,7 +97,7 @@
             <el-descriptions-item :label="LT.info.status">{{ getStatusText(testDetail.status) }}</el-descriptions-item>
             <el-descriptions-item :label="LT.info.testers">{{ testDetail.test_owners || '-' }}</el-descriptions-item>
             <el-descriptions-item :label="LT.info.developers">{{ testDetail.developers || '-' }}</el-descriptions-item>
-            <el-descriptions-item :label="LT.info.estimatedManday">{{ Number(testDetail.estimated_hours || 0).toFixed(1) }} manday</el-descriptions-item>
+            <el-descriptions-item :label="LT.info.estimatedManday">{{ formatManday(testDetail.estimated_hours) }}</el-descriptions-item>
             <el-descriptions-item :label="LT.info.startDate">{{ getStartDate(testDetail) }}</el-descriptions-item>
             <el-descriptions-item :label="LT.info.completionDate">{{ getCompletionDate(testDetail) }}</el-descriptions-item>
             <el-descriptions-item :label="LT.info.l0">
@@ -154,8 +154,8 @@
             <el-descriptions-item :label="LT.info.progress">
               <el-progress :percentage="testDetail.progress" :status="getProgressStatus(testDetail.status)" style="width: 200px" />
             </el-descriptions-item>
-            <el-descriptions-item :label="LT.info.createdAt">{{ formatDate(testDetail.created_at) }}</el-descriptions-item>
-            <el-descriptions-item :label="LT.info.updatedAt">{{ formatDate(testDetail.updated_at) || '-' }}</el-descriptions-item>
+            <el-descriptions-item :label="LT.info.createdAt">{{ formatDateTimeText(testDetail.created_at) }}</el-descriptions-item>
+            <el-descriptions-item :label="LT.info.updatedAt">{{ formatDateTimeText(testDetail.updated_at) || '-' }}</el-descriptions-item>
           </el-descriptions>
         </el-card>
 
@@ -170,7 +170,7 @@
           </template>
           <div class="bug-zone-stack">
             <section class="bug-zone-item">
-              <div class="bug-zone-item__title">Pending Build ({{ pendingBuildBugs.length }})</div>
+              <div class="bug-zone-item__title">{{ LT.bugZones.pendingBuild }} ({{ pendingBuildBugs.length }})</div>
               <BugTable
                 :bugs="pendingBuildBugs"
                 :empty-text="DT.tableEmptyBugs"
@@ -187,7 +187,7 @@
             </section>
 
             <section class="bug-zone-item">
-              <div class="bug-zone-item__title">待验证 ({{ pendingVerificationBugs.length }})</div>
+              <div class="bug-zone-item__title">{{ LT.bugZones.pendingVerification }} ({{ pendingVerificationBugs.length }})</div>
               <BugTable
                 :bugs="pendingVerificationBugs"
                 :empty-text="DT.tableEmptyBugs"
@@ -204,7 +204,7 @@
             </section>
 
             <section class="bug-zone-item">
-              <div class="bug-zone-item__title">已验证 ({{ verifiedBugs.length }})</div>
+              <div class="bug-zone-item__title">{{ LT.bugZones.verified }} ({{ verifiedBugs.length }})</div>
               <BugTable
                 :bugs="verifiedBugs"
                 :empty-text="DT.tableEmptyBugs"
@@ -236,7 +236,7 @@
                 <el-option
                   v-for="item in testOptions"
                   :key="item.id"
-                  :label="`${item.fr_number || 'No FR'} | ${item.test_name}`"
+                  :label="`${item.fr_number || LTBug.form.noFr} | ${item.test_name}`"
                   :value="item.id"
                 />
               </el-select>
@@ -269,7 +269,7 @@
                 v-model="bugForm.software_image_integration_build"
                 clearable
                 filterable
-                placeholder="Select from available images"
+                :placeholder="DTBug.placeholders.selectFromAvailableImages"
                 style="width: 100%"
               >
                 <el-option
@@ -314,6 +314,7 @@ import { LabelText } from '../texts/LabelText'
 import { ButtonText } from '../texts/ButtonText'
 import { DescriptionText } from '../texts/DescriptionText'
 import { getStatusBucket, getVerificationZone } from '../utils/bugDisplay'
+import { formatDate, formatDateTime, formatManday } from '../utils/formatters'
 
 const route = useRoute()
 const router = useRouter()
@@ -512,7 +513,7 @@ const markBugVerified = async (row) => {
   try {
     await delay(1000)
     await updateBug(bugId, toBugUpdatePayload(row, { status: 'verified' }))
-    ElMessage.success('Moved to Verified')
+    ElMessage.success(DTBug.toast.movedToVerified)
     await loadDetail()
   } catch (error) {
     ElMessage.error(error?.response?.data?.detail || DTBug.toast.saveFailed)
@@ -571,17 +572,11 @@ const deleteBug = async (id) => {
   }
 }
 
-const formatDate = (dateString) => {
-  if (!dateString) return ''
-  return new Date(dateString).toLocaleString('en-CA')
+const formatDueDate = (dateString) => {
+  return formatDate(dateString, { emptyText: '-' })
 }
 
-const formatDueDate = (dateString) => {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  if (Number.isNaN(date.getTime())) return '-'
-  return date.toLocaleDateString('en-CA')
-}
+const formatDateTimeText = (dateString) => formatDateTime(dateString)
 
 const getStartDate = (row) => {
   return formatDueDate(row?.start_date)

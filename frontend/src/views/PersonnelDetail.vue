@@ -39,7 +39,7 @@
           </article>
           <article class="metric-card accent-purple">
             <div class="metric-card__label">{{ LT.metrics.totalManday }}</div>
-            <div class="metric-card__value">{{ Number(memberDetail.total_estimated_hours || 0).toFixed(1) }} manday</div>
+            <div class="metric-card__value">{{ formatManday(memberDetail.total_estimated_hours) }}</div>
           </article>
         </div>
 
@@ -93,10 +93,10 @@
             </el-table-column>
             <el-table-column prop="status" :label="LTP.table.status" min-width="120" />
             <el-table-column prop="progress" :label="LTP.table.progress" min-width="120">
-              <template #default="{ row }">{{ Number(row.progress || 0).toFixed(0) }}%</template>
+              <template #default="{ row }">{{ formatPercent(row.progress) }}</template>
             </el-table-column>
             <el-table-column prop="estimated_hours" :label="LTP.table.allocatedManday" min-width="130">
-              <template #default="{ row }">{{ Number(row.estimated_hours || 0).toFixed(1) }} manday</template>
+              <template #default="{ row }">{{ formatManday(row.estimated_hours) }}</template>
             </el-table-column>
           </el-table>
         </el-card>
@@ -149,6 +149,8 @@ import { LabelText } from '../texts/LabelText'
 import { ButtonText } from '../texts/ButtonText'
 import { DescriptionText } from '../texts/DescriptionText'
 import { canEditPersonnelProfile } from '../stores/auth'
+import { formatDate, formatManday, formatPercent } from '../utils/formatters'
+import { formatTaskLabel } from '../utils/taskDisplay'
 
 const route = useRoute()
 const router = useRouter()
@@ -173,22 +175,8 @@ const completedTasks = computed(() => {
   return (memberDetail.value?.tasks || []).filter(task => String(task.status || '').toLowerCase() === 'completed').length
 })
 
-const formatDate = (value) => {
-  if (!value) return '-'
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return '-'
-  return d.toLocaleDateString('en-CA')
-}
-
 const formatTaskName = (task) => {
-  const taskLabel = String(task?.task_label || '').trim()
-  if (taskLabel) return taskLabel
-
-  const frNumber = String(task?.fr_number || '').trim()
-  const testName = String(task?.test_name || '').trim()
-  if (frNumber && testName) return `${frNumber} | ${testName}`
-  if (frNumber) return frNumber
-  return testName || '-'
+  return formatTaskLabel(task)
 }
 
 const taskRowKey = (task) => `${task?.task_kind || 'test'}-${task?.id || 'na'}`
