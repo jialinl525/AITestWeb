@@ -315,6 +315,7 @@ import { ButtonText } from '../texts/ButtonText'
 import { DescriptionText } from '../texts/DescriptionText'
 import { getStatusBucket, getVerificationZone } from '../utils/bugDisplay'
 import { formatDate, formatDateTime, formatManday } from '../utils/formatters'
+import { useAsyncAction } from '../composables/useAsyncAction'
 
 const route = useRoute()
 const router = useRouter()
@@ -324,6 +325,7 @@ const BT = ButtonText.testDetail
 const BTCommon = ButtonText.common
 const DT = DescriptionText.testDetail
 const DTBug = DescriptionText.bugs
+const { runAsync } = useAsyncAction()
 const loading = ref(false)
 const testDetail = ref(null)
 const DAYS_TO_WARNING = 3
@@ -380,14 +382,12 @@ const getBugBuildOptions = (bug) => {
 const loadDetail = async () => {
   const id = route.params.id
   if (!id) return
-  loading.value = true
-  try {
+  await runAsync(async () => {
     testDetail.value = await getTestProgressDetail(id)
-  } catch (error) {
-    ElMessage.error(DT.toast.loadFailed)
-  } finally {
-    loading.value = false
-  }
+  }, {
+    loadingRef: loading,
+    errorMessage: DT.toast.loadFailed
+  })
 }
 
 const goBack = () => {
@@ -476,17 +476,19 @@ const getBugTableRowClassName = ({ row }) => {
 }
 
 const loadReferenceOptions = async () => {
-  try {
+  await runAsync(async () => {
     const [tests, tasks] = await Promise.all([
       getTestProgressList({ limit: 500 }),
       getWorkTasks()
     ])
     testOptions.value = tests || []
     workTaskOptions.value = tasks || []
-  } catch {
-    testOptions.value = []
-    workTaskOptions.value = []
-  }
+  }, {
+    onError: () => {
+      testOptions.value = []
+      workTaskOptions.value = []
+    }
+  })
 }
 
 const toBugUpdatePayload = (row, patch = {}) => {
@@ -510,16 +512,17 @@ const markBugVerified = async (row) => {
   if (!bugId || isVerifying(row)) return
 
   verifyingMap.value[bugId] = true
-  try {
+  await runAsync(async () => {
     await delay(1000)
     await updateBug(bugId, toBugUpdatePayload(row, { status: 'verified' }))
     ElMessage.success(DTBug.toast.movedToVerified)
     await loadDetail()
-  } catch (error) {
-    ElMessage.error(error?.response?.data?.detail || DTBug.toast.saveFailed)
-  } finally {
-    verifyingMap.value[bugId] = false
-  }
+  }, {
+    errorMessage: DTBug.toast.saveFailed,
+    onFinally: () => {
+      verifyingMap.value[bugId] = false
+    }
+  })
 }
 
 const editBug = (bug) => {
@@ -543,16 +546,16 @@ const editBug = (bug) => {
 const saveBug = async () => {
   if (!editingBug.value?.id) return
 
-  try {
+  await runAsync(async () => {
     await updateBug(editingBug.value.id, bugForm.value)
     ElMessage.success(DTBug.toast.updateSuccess)
     showBugDialog.value = false
     editingBug.value = null
     bugBuildOptions.value = []
     await loadDetail()
-  } catch (error) {
-    ElMessage.error(error?.response?.data?.detail || DTBug.toast.saveFailed)
-  }
+  }, {
+    errorMessage: DTBug.toast.saveFailed
+  })
 }
 
 const deleteBug = async (id) => {

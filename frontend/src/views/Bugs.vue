@@ -313,6 +313,7 @@ import { ButtonText } from '../texts/ButtonText'
 import { DescriptionText } from '../texts/DescriptionText'
 import { getStatusBucket } from '../utils/bugDisplay'
 import { useFilterState, usePaginationState } from '../composables/useListState'
+import { useAsyncAction } from '../composables/useAsyncAction'
 import {
   queryBugs,
   createBug,
@@ -332,6 +333,7 @@ const LT = LabelText.bugs
 const BT = ButtonText.bugs
 const BTCommon = ButtonText.common
 const DT = DescriptionText.bugs
+const { runAsync } = useAsyncAction()
 const loading = ref(false)
 const bugsList = ref([])
 const bugStats = ref({})
@@ -471,18 +473,16 @@ const saveQuickBuildSelection = async () => {
     return
   }
 
-  quickBuildSaving.value = true
-  try {
+  await runAsync(async () => {
     await updateBug(target.id, toBugUpdatePayload(target, { software_image_integration_build: selectedImage }))
     ElMessage.success(DT.toast.quickBuildUpdated)
     closeQuickBuildDialog()
     await loadFilterOptions()
     await loadData()
-  } catch (error) {
-    ElMessage.error(error?.response?.data?.detail || DT.toast.saveFailed)
-  } finally {
-    quickBuildSaving.value = false
-  }
+  }, {
+    loadingRef: quickBuildSaving,
+    errorMessage: DT.toast.saveFailed
+  })
 }
 
 const buildQueryParams = (override = {}) => {
@@ -505,8 +505,7 @@ const isVerifying = (row) => Boolean(verifyingMap.value?.[Number(row?.id)])
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const loadData = async () => {
-  loading.value = true
-  try {
+  await runAsync(async () => {
     const data = await queryBugs(buildQueryParams())
     bugsList.value = data?.items || []
     setTotal(data?.total)
@@ -519,11 +518,10 @@ const loadData = async () => {
     // Load summary stats.
     const stats = await getBugStats()
     bugStats.value = stats
-  } catch (error) {
-    ElMessage.error(DT.toast.loadFailed)
-  } finally {
-    loading.value = false
-  }
+  }, {
+    loadingRef: loading,
+    errorMessage: DT.toast.loadFailed
+  })
 }
 
 const resetFilters = () => {
@@ -605,14 +603,16 @@ const confirmBulkDelete = async () => {
 }
 
 const loadFilterOptions = async () => {
-  try {
+  await runAsync(async () => {
     const options = await getBugFilterOptions()
     createdByOptions.value = options?.created_by || []
     statusOptions.value = options?.status || []
-  } catch {
-    createdByOptions.value = []
-    statusOptions.value = []
-  }
+  }, {
+    onError: () => {
+      createdByOptions.value = []
+      statusOptions.value = []
+    }
+  })
 }
 
 const clearTestFilter = () => {
@@ -676,8 +676,7 @@ const handleExportTopN = async () => {
   const desired = Math.max(1, Number(exportTopN.value || 1))
   const limit = desired
 
-  exporting.value = true
-  try {
+  await runAsync(async () => {
     const data = await queryBugs({
       ...buildQueryParams({ page: 1, pageSize: limit }),
       skip: 0,
@@ -688,11 +687,10 @@ const handleExportTopN = async () => {
     downloadCsv(rows, exportArea.value || 'all')
     showExportDialog.value = false
     ElMessage.success(`${DT.toast.exportSuccessPrefix} ${rows.length} ${DT.toast.exportSuccessSuffix}`)
-  } catch (error) {
-    ElMessage.error(error?.response?.data?.detail || DT.toast.exportFailed)
-  } finally {
-    exporting.value = false
-  }
+  }, {
+    loadingRef: exporting,
+    errorMessage: DT.toast.exportFailed
+  })
 }
 
 const toBugUpdatePayload = (row, patch = {}) => {
@@ -718,31 +716,34 @@ const markBugVerified = async (row) => {
   }
 
   verifyingMap.value[bugId] = true
-  try {
+  await runAsync(async () => {
     await delay(1000)
     await updateBug(row.id, toBugUpdatePayload(row, { status: 'verified' }))
     ElMessage.success(DT.toast.movedToVerified)
     await loadFilterOptions()
     await loadData()
-  } catch (error) {
-    ElMessage.error(error?.response?.data?.detail || DT.toast.saveFailed)
-  } finally {
-    verifyingMap.value[bugId] = false
-  }
+  }, {
+    errorMessage: DT.toast.saveFailed,
+    onFinally: () => {
+      verifyingMap.value[bugId] = false
+    }
+  })
 }
 
 const loadReferenceOptions = async () => {
-  try {
+  await runAsync(async () => {
     const [tests, tasks] = await Promise.all([
       getTestProgressList({ limit: 500 }),
       getWorkTasks()
     ])
     testOptions.value = tests || []
     workTaskOptions.value = tasks || []
-  } catch {
-    testOptions.value = []
-    workTaskOptions.value = []
-  }
+  }, {
+    onError: () => {
+      testOptions.value = []
+      workTaskOptions.value = []
+    }
+  })
 }
 
 const importCsvBugs = async () => {
@@ -755,22 +756,22 @@ const handleCsvFileSelected = async (event) => {
   const file = event?.target?.files?.[0]
   if (!file) return
 
-  importingCsv.value = true
-  try {
+  await runAsync(async () => {
     const result = await importBugsFromCsvFile(file)
     ElMessage.success(
       `${file.name}: imported ${result.imported}, updated ${result.updated}, skipped ${result.skipped}`
     )
     await loadFilterOptions()
     await loadData()
-  } catch (error) {
-    ElMessage.error(error?.response?.data?.detail || DT.toast.importFailed)
-  } finally {
-    importingCsv.value = false
-    if (event?.target) {
-      event.target.value = ''
+  }, {
+    loadingRef: importingCsv,
+    errorMessage: DT.toast.importFailed,
+    onFinally: () => {
+      if (event?.target) {
+        event.target.value = ''
+      }
     }
-  }
+  })
 }
 
 const getTableRowClassName = ({ row }) => {
@@ -810,7 +811,7 @@ const editBug = (bug) => {
 }
 
 const saveBug = async () => {
-  try {
+  await runAsync(async () => {
     if (editingBug.value) {
       await updateBug(editingBug.value.id, bugForm.value)
       ElMessage.success(DT.toast.updateSuccess)
@@ -824,9 +825,9 @@ const saveBug = async () => {
     bugForm.value = createEmptyBugForm()
     await loadFilterOptions()
     loadData()
-  } catch (error) {
-    ElMessage.error(DT.toast.saveFailed)
-  }
+  }, {
+    errorMessage: DT.toast.saveFailed
+  })
 }
 
 const deleteBug = async (id) => {

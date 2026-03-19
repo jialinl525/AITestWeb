@@ -39,18 +39,6 @@
             <span>{{ LT.menu.kpi }}</span>
           </el-menu-item>
         </el-menu>
-
-        <div class="sidebar-footer">
-          <div class="glass-pill sidebar-pill">
-            <span class="dot dot-green"></span>
-            {{ LT.currentRole }}: {{ getRoleLabel(userRole) }} / {{ canEditTest ? LT.editableTest : LT.readOnly }}
-          </div>
-          <div class="sidebar-mini-card">
-            <div class="sidebar-mini-card__label">{{ LT.workbenchStatus }}</div>
-            <div class="sidebar-mini-card__value">{{ LT.online }}</div>
-            <p>{{ DT.miniCard }}</p>
-          </div>
-        </div>
       </div>
     </el-aside>
 
@@ -374,46 +362,6 @@ onMounted(() => {
 .sidebar-menu .el-menu-item.is-active .el-icon {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
-}
-
-.sidebar-footer {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: auto;
-}
-
-.sidebar-pill {
-  width: 100%;
-  justify-content: center;
-}
-
-.sidebar-mini-card {
-  padding: 16px;
-  border-radius: 20px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03));
-  border: 1px solid rgba(148, 163, 184, 0.1);
-  text-align: center;
-}
-
-.sidebar-mini-card__label {
-  color: rgba(148, 163, 184, 0.82);
-  font-size: 12px;
-}
-
-.sidebar-mini-card__value {
-  margin-top: 8px;
-  color: #5eead4;
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.sidebar-mini-card p {
-  margin: 0;
-  margin-top: 10px;
-  color: rgba(148, 163, 184, 0.88);
-  font-size: 12px;
-  line-height: 1.6;
 }
 
 .app-workspace {
