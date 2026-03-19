@@ -16,6 +16,11 @@ DEFAULT_MANAGER_GROUP_DESC = "Personnel group allowed to edit test progress and 
 LEGACY_MANAGER_GROUP_DESC = "\u53ef\u7f16\u8f91\u6d4b\u8bd5\u8fdb\u5ea6\u4e0eBug\u7684\u4eba\u5458\u7ec4"
 DEFAULT_MANAGER_DISPLAY_NAME = "Administrator"
 LEGACY_MANAGER_DISPLAY_NAME = "\u7ba1\u7406\u5458"
+DEFAULT_INTERNAL_GROUP = "internal-group"
+DEFAULT_INTERNAL_GROUP_DESC = "Read-only internal visibility group"
+DEFAULT_INTERNAL_DISPLAY_NAME = "Internal"
+DEFAULT_INTERNAL_USERNAME = "internal"
+DEFAULT_INTERNAL_PASSWORD = "qualcommvoiceai"
 PROTECTED_USERNAMES = {"manager"}
 
 
@@ -30,6 +35,12 @@ def _normalize_role(role: str) -> str:
 
 def _is_protected_user(user: models.User) -> bool:
     return _normalize_username(user.username) in PROTECTED_USERNAMES
+
+
+def _require_primary_manager(identity: Dict):
+    username = _normalize_username(identity.get("username", ""))
+    if username != "manager":
+        raise HTTPException(status_code=403, detail="Only the manager account can edit personnel settings")
 
 
 def _split_people(raw_names: str) -> List[str]:
@@ -77,6 +88,47 @@ def bootstrap_security_data(db: Session):
     if not exists:
         db.add(models.UserGroupMembership(user_id=manager_user.id, group_id=group.id))
 
+    internal_group = (
+        db.query(models.PermissionGroup)
+        .filter(models.PermissionGroup.name == DEFAULT_INTERNAL_GROUP)
+        .first()
+    )
+    if not internal_group:
+        internal_group = models.PermissionGroup(
+            name=DEFAULT_INTERNAL_GROUP,
+            description=DEFAULT_INTERNAL_GROUP_DESC,
+            can_edit_test=False,
+        )
+        db.add(internal_group)
+        db.flush()
+    elif (internal_group.description or "").strip() == "":
+        internal_group.description = DEFAULT_INTERNAL_GROUP_DESC
+
+    internal_user = db.query(models.User).filter(models.User.username == DEFAULT_INTERNAL_USERNAME).first()
+    if not internal_user:
+        internal_user = models.User(
+            username=DEFAULT_INTERNAL_USERNAME,
+            display_name=DEFAULT_INTERNAL_DISPLAY_NAME,
+            password=DEFAULT_INTERNAL_PASSWORD,
+            role="viewer",
+            is_active=True,
+        )
+        db.add(internal_user)
+        db.flush()
+    elif (internal_user.display_name or "").strip() == "":
+        internal_user.display_name = DEFAULT_INTERNAL_DISPLAY_NAME
+
+    internal_exists = (
+        db.query(models.UserGroupMembership)
+        .filter(
+            models.UserGroupMembership.user_id == internal_user.id,
+            models.UserGroupMembership.group_id == internal_group.id,
+        )
+        .first()
+    )
+    if not internal_exists:
+        db.add(models.UserGroupMembership(user_id=internal_user.id, group_id=internal_group.id))
+
     db.commit()
 
 
@@ -102,6 +154,9 @@ def _serialize_user(user: models.User) -> Dict:
         "id": user.id,
         "username": user.username,
         "display_name": user.display_name or "",
+        "email": user.email or "",
+        "responsibilities": user.responsibilities or "",
+        "specialty_tasks": user.specialty_tasks or "",
         "role": _normalize_role(user.role),
         "is_active": bool(user.is_active),
         "created_at": user.created_at,
@@ -126,6 +181,34 @@ def _get_visible_users(db: Session, only_active: bool = True) -> List[models.Use
     if only_active:
         query = query.filter(models.User.is_active.is_(True))
     return query.order_by(models.User.id.asc()).all()
+
+
+def _is_manager_group_member(user: models.User) -> bool:
+    for membership in user.memberships:
+        group = membership.group
+        if not group:
+            continue
+        if (group.name or "").strip().lower() == DEFAULT_MANAGER_GROUP:
+            return True
+    return False
+
+
+def _is_administrator_user(user: models.User) -> bool:
+    if _normalize_username(user.username) == "manager":
+        return True
+    return (user.display_name or "").strip().lower() == DEFAULT_MANAGER_DISPLAY_NAME.lower()
+
+
+def _get_personnel_statistics_users(db: Session) -> List[models.User]:
+    users = _get_user_query(db).filter(models.User.is_active.is_(True)).order_by(models.User.id.asc()).all()
+    result = []
+    for user in users:
+        if _is_administrator_user(user):
+            continue
+        if not _is_manager_group_member(user):
+            continue
+        result.append(user)
+    return result
 
 
 def _get_task_period(task: models.TestProgress) -> Tuple[date, date]:
@@ -322,8 +405,9 @@ def list_groups(db: Session = Depends(get_db)):
 def create_group(
     payload: schemas.PermissionGroupCreate,
     db: Session = Depends(get_db),
-    _: Dict = Depends(require_manager),
+    identity: Dict = Depends(require_manager),
 ):
+    _require_primary_manager(identity)
     name = (payload.name or "").strip()
     if not name:
         raise HTTPException(status_code=400, detail="Group name cannot be empty")
@@ -348,8 +432,9 @@ def update_group(
     group_id: int,
     payload: schemas.PermissionGroupCreate,
     db: Session = Depends(get_db),
-    _: Dict = Depends(require_manager),
+    identity: Dict = Depends(require_manager),
 ):
+    _require_primary_manager(identity)
     group = db.query(models.PermissionGroup).filter(models.PermissionGroup.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="User group not found")
@@ -389,8 +474,9 @@ def list_users(db: Session = Depends(get_db)):
 def create_user(
     payload: schemas.UserCreate,
     db: Session = Depends(get_db),
-    _: Dict = Depends(require_manager),
+    identity: Dict = Depends(require_manager),
 ):
+    _require_primary_manager(identity)
     username = _normalize_username(payload.username)
     if not username:
         raise HTTPException(status_code=400, detail="Username cannot be empty")
@@ -402,6 +488,9 @@ def create_user(
     user = models.User(
         username=username,
         display_name=(payload.display_name or username).strip(),
+        email=(payload.email or "").strip(),
+        responsibilities=(payload.responsibilities or "").strip(),
+        specialty_tasks=(payload.specialty_tasks or "").strip(),
         password=payload.password,
         role=_normalize_role(payload.role),
         is_active=payload.is_active,
@@ -420,8 +509,9 @@ def update_user(
     user_id: int,
     payload: schemas.UserUpdate,
     db: Session = Depends(get_db),
-    _: Dict = Depends(require_manager),
+    identity: Dict = Depends(require_manager),
 ):
+    _require_primary_manager(identity)
     user = _get_user_query(db).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -430,6 +520,12 @@ def update_user(
 
     if payload.display_name is not None:
         user.display_name = payload.display_name.strip()
+    if payload.email is not None:
+        user.email = payload.email.strip()
+    if payload.responsibilities is not None:
+        user.responsibilities = payload.responsibilities.strip()
+    if payload.specialty_tasks is not None:
+        user.specialty_tasks = payload.specialty_tasks.strip()
     if payload.role is not None:
         user.role = _normalize_role(payload.role)
     if payload.is_active is not None:
@@ -444,9 +540,27 @@ def update_user(
     return _serialize_user(updated_user)
 
 
+@router.delete("/users/{user_id}")
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    identity: Dict = Depends(require_manager),
+):
+    _require_primary_manager(identity)
+    user = _get_user_query(db).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if _is_protected_user(user):
+        raise HTTPException(status_code=403, detail="The default system administrator cannot be deleted")
+
+    db.delete(user)
+    db.commit()
+    return {"message": "User deleted successfully"}
+
+
 @router.get("/members", response_model=List[schemas.User])
 def list_members(db: Session = Depends(get_db)):
-    users = _get_visible_users(db, only_active=True)
+    users = _get_personnel_statistics_users(db)
     return [_serialize_user(user) for user in users]
 
 
@@ -543,7 +657,7 @@ def update_task_allocations(
 
 @router.get("/workload", response_model=List[schemas.PersonnelWorkload])
 def get_workload(db: Session = Depends(get_db)):
-    users = _get_visible_users(db, only_active=True)
+    users = _get_personnel_statistics_users(db)
     tasks = db.query(models.TestProgress).order_by(models.TestProgress.id.desc()).all()
     user_ids = [user.id for user in users]
     work_tasks = (
@@ -562,6 +676,9 @@ def get_workload(db: Session = Depends(get_db)):
             "user_id": user.id,
             "username": user.username,
             "display_name": user.display_name or user.username,
+            "email": user.email or "",
+            "responsibilities": user.responsibilities or "",
+            "specialty_tasks": user.specialty_tasks or "",
             "can_edit_test": user_can_edit_test(user),
             "task_count": 0,
             "total_cases": 0,

@@ -22,15 +22,15 @@
             <el-icon><Document /></el-icon>
             <span>{{ LT.menu.testProgress }}</span>
           </el-menu-item>
-          <el-menu-item index="/work-tasks">
+          <el-menu-item v-if="canViewAllMenu" index="/work-tasks">
             <el-icon><Document /></el-icon>
             <span>{{ LT.menu.workTasks }}</span>
           </el-menu-item>
-          <el-menu-item index="/bugs">
+          <el-menu-item v-if="canViewAllMenu" index="/bugs">
             <el-icon><Warning /></el-icon>
             <span>{{ LT.menu.bugs }}</span>
           </el-menu-item>
-          <el-menu-item index="/personnel">
+          <el-menu-item v-if="canViewAllMenu" index="/personnel">
             <el-icon><UserFilled /></el-icon>
             <span>{{ LT.menu.personnel }}</span>
           </el-menu-item>
@@ -38,8 +38,6 @@
             <el-icon><DataAnalysis /></el-icon>
             <span>{{ LT.menu.kpi }}</span>
           </el-menu-item>
-
-
         </el-menu>
 
         <div class="sidebar-footer">
@@ -142,6 +140,8 @@ import {
   userName,
   canEditTest,
   currentUsername,
+  canViewAllPages,
+  isInternalUser,
   login,
   logout,
   changePassword,
@@ -152,7 +152,7 @@ import { ElMessage } from 'element-plus'
 const route = useRoute()
 const showLoginDialog = ref(false)
 const showPasswordDialog = ref(false)
-const loginForm = ref({ username: 'manager', password: '123456' })
+const loginForm = ref({ username: 'Internal', password: '' })
 const passwordForm = ref({ oldPassword: '', newPassword: '', confirmPassword: '' })
 const LT = LabelText.app
 const BT = ButtonText.app
@@ -170,9 +170,11 @@ const activeMenu = computed(() => {
 })
 
 const isLoggedIn = computed(() => Boolean(currentUsername.value))
+const canViewAllMenu = computed(() => canViewAllPages())
 
 const getRoleLabel = (role) => {
   const map = LT.roleMap
+  if (isInternalUser()) return 'Internal'
   return map[role] || role
 }
 
@@ -180,7 +182,7 @@ const handleLogin = async () => {
   const ok = await login(loginForm.value.username, loginForm.value.password)
   if (ok) {
     showLoginDialog.value = false
-    loginForm.value = { username: 'manager', password: '123456' }
+    loginForm.value = { username: 'Internal', password: '' }
     ElMessage.success(DT.toast.loginSuccess)
   } else {
     ElMessage.error(DT.toast.loginFailed)

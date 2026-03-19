@@ -8,6 +8,7 @@ import Personnel from '../views/Personnel.vue'
 import PersonnelDetail from '../views/PersonnelDetail.vue'
 import WorkTasks from '../views/WorkTasks.vue'
 import WorkTaskDetail from '../views/WorkTaskDetail.vue'
+import { canViewAllPages } from '../stores/auth'
 
 const routes = [
   {
@@ -64,6 +65,18 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+const VIEWER_ALLOWED_ROUTES = new Set(['TestProgress', 'TestProgressDetail', 'KPI', 'KPIModelDetail'])
+
+router.beforeEach((to) => {
+  if (canViewAllPages()) {
+    return true
+  }
+  if (VIEWER_ALLOWED_ROUTES.has(String(to.name || ''))) {
+    return true
+  }
+  return { path: '/test-progress' }
 })
 
 export default router

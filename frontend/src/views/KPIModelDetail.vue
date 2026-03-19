@@ -124,8 +124,6 @@ const METRIC_UNITS = {
   accuracy_es_to_en: '%'
 }
 
-const isAccuracyMetric = (metricName = '') => String(metricName).toLowerCase().startsWith('accuracy')
-
 const metricRows = computed(() => {
   const metrics = detail.value?.metrics || {}
   return Object.keys(metrics).map((key) => ({
@@ -137,7 +135,7 @@ const metricRows = computed(() => {
 const formatMetric = (value, metricName = '') => {
   const numeric = Number(value)
   const hasNumeric = Number.isFinite(numeric)
-  const displayValue = hasNumeric && isAccuracyMetric(metricName) ? numeric * 100 : numeric
+  const displayValue = hasNumeric ? numeric : numeric
   const base = hasNumeric ? displayValue.toFixed(2) : String(value ?? '--')
   const unit = METRIC_UNITS[metricName] || ''
   if (!unit) {

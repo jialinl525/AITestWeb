@@ -38,43 +38,9 @@ from typing import Dict, List, Optional
 from database import SessionLocal
 from init_db import init_db
 import models
+from kpi_schema import canonical_category, get_category_metric_fields
 
-CATEGORY_METRIC_FIELDS: Dict[str, List[str]] = {
-    "ASR": [
-        "power_consumption",
-        "latency",
-        "accuracy_en",
-        "accuracy_cn",
-        "accuracy_es",
-        "accuracy_total",
-    ],
-    "TTS": [
-        "power_consumption",
-        "latency",
-        "accuracy_en",
-        "accuracy_cn",
-        "accuracy_es",
-        "accuracy_total",
-    ],
-    "Translation": [
-        "power_consumption",
-        "latency",
-        "accuracy_en_to_cn",
-        "accuracy_cn_to_en",
-        "accuracy_en_to_es",
-        "accuracy_es_to_en",
-        "accuracy_total",
-    ],
-    "VoiceCallTranslation Solution": [
-        "power_consumption",
-        "e2e_latency",
-        "accuracy_en_to_cn",
-        "accuracy_cn_to_en",
-        "accuracy_total",
-    ],
-    "LPI Recording": ["power_consumption"],
-    "Multi Model Detection": ["power_consumption", "latency", "wakeup_rate"],
-}
+CATEGORY_METRIC_FIELDS: Dict[str, List[str]] = get_category_metric_fields()
 
 BASE_REQUIRED_COLUMNS = {"model_name"}
 
@@ -105,7 +71,7 @@ def import_csv(csv_path: Path, model_category: str, clear_existing: bool = False
     if not csv_path.exists() or not csv_path.is_file():
         raise FileNotFoundError(f"CSV file does not exist: {csv_path}")
 
-    category = (model_category or "").strip()
+    category = canonical_category(model_category)
     if category not in CATEGORY_METRIC_FIELDS:
         raise ValueError(
             f"Unsupported model category: {model_category}. Allowed values: {sorted(CATEGORY_METRIC_FIELDS.keys())}"

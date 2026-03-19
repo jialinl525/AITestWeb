@@ -111,6 +111,7 @@ export const LabelText = {
       taskInfo: 'Task Info',
       risk: 'Risk',
       status: 'Status',
+      currentStage: 'Current Stage',
       l0: 'L0',
       l2: 'L2',
       l4: 'L4',
@@ -281,7 +282,10 @@ export const LabelText = {
     profile: {
       displayName: 'Display Name',
       username: 'Username',
-      editable: 'Editable'
+      editable: 'Editable',
+      email: 'Email',
+      responsibilities: 'Work Responsibilities',
+      specialtyTasks: 'Specialty Tasks'
     }
   },
   kpi: {

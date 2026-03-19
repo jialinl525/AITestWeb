@@ -40,6 +40,46 @@
       </article>
     </div>
 
+    <el-card v-if="canManagePersonnel" class="section-card">
+      <template #header>
+        <div class="section-title">
+          <div class="section-title__main">
+            <h3>Personnel Management</h3>
+            <span class="section-title__meta">Administrator can create or delete user accounts</span>
+          </div>
+          <div class="user-admin-actions">
+            <el-button @click="loadManagementData">Refresh Users</el-button>
+            <el-button type="primary" @click="openCreateUserDialog">New Member</el-button>
+          </div>
+        </div>
+      </template>
+
+      <el-table :data="managedUsers" stripe>
+        <el-table-column prop="username" label="Username" min-width="160" />
+        <el-table-column prop="display_name" label="Display Name" min-width="180" />
+        <el-table-column prop="role" label="Role" min-width="120" />
+        <el-table-column label="Groups" min-width="260">
+          <template #default="{ row }">
+            <span>{{ formatUserGroups(row) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="Status" min-width="120">
+          <template #default="{ row }">
+            <el-tag :type="row.is_active ? 'success' : 'info'">{{ row.is_active ? 'Active' : 'Inactive' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="Actions" width="140" fixed="right">
+          <template #default="{ row }">
+            <el-popconfirm title="Delete this user?" @confirm="handleDeleteUser(row)">
+              <template #reference>
+                <el-button type="danger" link>Delete</el-button>
+              </template>
+            </el-popconfirm>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
     <el-card class="section-card">
       <template #header>
         <div class="section-title">
@@ -196,6 +236,40 @@
         <el-button type="primary" :loading="savingAllocation" @click="saveAllocation">{{ BT.saveAllocation }}</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="showCreateUserDialog" title="Create Member" width="620px">
+      <el-form :model="createUserForm" label-width="120px">
+        <el-form-item label="Username">
+          <el-input v-model="createUserForm.username" maxlength="64" show-word-limit />
+        </el-form-item>
+        <el-form-item label="Display Name">
+          <el-input v-model="createUserForm.display_name" maxlength="100" show-word-limit />
+        </el-form-item>
+        <el-form-item label="Password">
+          <el-input v-model="createUserForm.password" type="password" show-password maxlength="100" />
+        </el-form-item>
+        <el-form-item label="Role">
+          <el-select v-model="createUserForm.role" style="width: 100%">
+            <el-option label="Viewer" value="viewer" />
+            <el-option label="Manager" value="manager" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Groups">
+          <el-select v-model="createUserForm.group_ids" multiple filterable style="width: 100%" collapse-tags>
+            <el-option
+              v-for="group in permissionGroups"
+              :key="group.id"
+              :label="group.name"
+              :value="group.id"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showCreateUserDialog = false">Cancel</el-button>
+        <el-button type="primary" :loading="savingUser" @click="handleCreateUser">Create</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -210,9 +284,13 @@ import {
   getMembers,
   getWorkload,
   getTaskAllocations,
-  updateTaskAllocations
+  updateTaskAllocations,
+  getUsers,
+  getGroups,
+  createUser,
+  deleteUser
 } from '../api/personnel'
-import { canCreateOrEditTest } from '../stores/auth'
+import { canCreateOrEditTest, canEditPersonnelProfile } from '../stores/auth'
 
 const router = useRouter()
 const LT = LabelText.personnel
@@ -224,10 +302,21 @@ const workload = ref([])
 const workloadTableRef = ref(null)
 const expandedUserIds = ref([])
 const runtimeDiagnostics = ref([])
+const managedUsers = ref([])
+const permissionGroups = ref([])
 let runtimeSeed = 0
 
 const showAllocationDialog = ref(false)
 const savingAllocation = ref(false)
+const showCreateUserDialog = ref(false)
+const savingUser = ref(false)
+const createUserForm = ref({
+  username: '',
+  display_name: '',
+  password: '123456',
+  role: 'viewer',
+  group_ids: []
+})
 
 const allocationTask = ref({
   test_id: null,
@@ -252,6 +341,8 @@ const totalTasks = computed(() => {
 const totalOverlaps = computed(() => {
   return workload.value.reduce((sum, item) => sum + Number(item.overlap_count || 0), 0)
 })
+
+const canManagePersonnel = computed(() => canEditPersonnelProfile())
 
 const averageTasks = computed(() => {
   if (!members.value.length) return 0
@@ -394,11 +485,92 @@ const viewMemberDetail = (userId) => {
   router.push({ path: `/personnel/${userId}` })
 }
 
+const formatUserGroups = (user) => {
+  const names = (user?.groups || []).map(item => String(item?.name || '').trim()).filter(Boolean)
+  return names.length ? names.join(', ') : '-'
+}
+
+const resetCreateUserForm = () => {
+  createUserForm.value = {
+    username: '',
+    display_name: '',
+    password: '123456',
+    role: 'viewer',
+    group_ids: []
+  }
+}
+
+const loadManagementData = async () => {
+  if (!canManagePersonnel.value) return
+  try {
+    const [users, groups] = await Promise.all([getUsers(), getGroups()])
+    managedUsers.value = users
+    permissionGroups.value = groups
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.detail || 'Failed to load personnel management data')
+  }
+}
+
+const openCreateUserDialog = () => {
+  resetCreateUserForm()
+  showCreateUserDialog.value = true
+}
+
+const handleCreateUser = async () => {
+  const username = (createUserForm.value.username || '').trim()
+  const password = String(createUserForm.value.password || '')
+  if (!username) {
+    ElMessage.warning('Username is required')
+    return
+  }
+  if (password.length < 6) {
+    ElMessage.warning('Password must be at least 6 characters')
+    return
+  }
+
+  savingUser.value = true
+  try {
+    await createUser({
+      username,
+      display_name: (createUserForm.value.display_name || '').trim() || username,
+      password,
+      role: createUserForm.value.role || 'viewer',
+      is_active: true,
+      group_ids: Array.isArray(createUserForm.value.group_ids) ? createUserForm.value.group_ids : []
+    })
+    ElMessage.success('User created successfully')
+    showCreateUserDialog.value = false
+    await loadData()
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.detail || 'Failed to create user')
+  } finally {
+    savingUser.value = false
+  }
+}
+
+const handleDeleteUser = async (user) => {
+  const userId = Number(user?.id)
+  if (!userId) return
+  try {
+    await deleteUser(userId)
+    ElMessage.success('User deleted successfully')
+    await loadData()
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.detail || 'Failed to delete user')
+  }
+}
+
 const loadData = async () => {
   try {
     const [memberData, workloadData] = await Promise.all([getMembers(), getWorkload()])
     members.value = memberData
     workload.value = workloadData
+    if (canManagePersonnel.value) {
+      await loadManagementData()
+    } else {
+      managedUsers.value = []
+      permissionGroups.value = []
+    }
   } catch (error) {
     ElMessage.error(error?.response?.data?.detail || DT.toast.loadFailed)
   }
@@ -604,6 +776,12 @@ onBeforeUnmount(() => {
 
 .runtime-card {
   margin-top: 16px;
+}
+
+.user-admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .runtime-log-list {

@@ -184,59 +184,73 @@ cd backend
 python add_user_to_manager_group.py charlie --activate
 ```
 
-### Manual KPI Data Import (Wide Table: One Model per Row)
+### KPI Schema-Driven Import and Extension
 
-KPI data is currently recommended to be imported via one-click CSV import. The new format is a wide table: each row describes one model, avoiding repeated `source/model_size/description`.
+KPI category/metric definitions are now centralized in one place:
+- `backend/kpi_schema.py`
 
-#### One-click CSV Import (Recommended)
+The following components all read from this schema:
+- `backend/routers/kpi.py`
+- `backend/import_kpi_csv.py`
+- `frontend/src/views/KPI.vue` (via API `GET /api/kpi/schema`)
 
-The project includes a built-in script: `backend/import_kpi_csv.py`, which can import from CSV in batch into the database (does not depend on the API service being running).
+This means: when adding a new KPI model type or metric, you only need to modify `backend/kpi_schema.py`.
 
-1. If the database is an old version, migrate fields first:
+#### Generate CSV Templates from Schema
+
+Use template generator to avoid manual header mistakes:
+
 ```bash
 cd backend
-venv\Scripts\python migrate_db.py
+venv\Scripts\python generate_kpi_csv_templates.py --all --output-dir .\kpi_templates --include-example
 ```
 
-2. Prepare the CSV (UTF-8, header row required). Columns:
-- `model_category` (required, ASR/TTS/Translation/VoicecallTranslation Solution)
-- `model_name` (required)
-- `source` (optional)
-- `model_size` (optional)
-- `description` (optional)
-- `power_consumption` (required, numeric)
-- `latency` (required, numeric)
-- `accuracy_en` (required, numeric)
-- `accuracy_zh` (required, numeric)
-- `accuracy_es` (required, numeric)
-- `accuracy_overall` (required, numeric)
-- `test_date` (optional, ISO datetime, e.g. `2026-03-14T10:30:00`)
+Or generate for specific categories only:
 
-3. CSV example:
-```csv
-model_category,model_name,source,model_size,description,power_consumption,latency,accuracy_en,accuracy_zh,accuracy_es,accuracy_overall,test_date
-ASR,Model-A,Internal Benchmark Set A,1.2B,Lightweight model optimized for general speech recognition, emphasizing real-time transcription and on-device deployment capability.,72.8,118.4,0.946,0.931,0.919,0.932,
-Translation,Model-F,Global Translation Benchmark v2,1.9B,Next-generation multilingual translation model with improved long-sentence semantic retention and cross-domain terminology consistency.,70.2,112.7,0.958,0.941,0.929,0.943,
-```
-
-4. Run one-click import:
 ```bash
 cd backend
-venv\Scripts\python import_kpi_csv.py .\\kpi_data_sample_5models.csv
+venv\Scripts\python generate_kpi_csv_templates.py --category ASR --category "LPI Recording" --output-dir .\kpi_templates
 ```
 
-5. To clear old KPI data before importing:
+#### Import KPI Data by Category (Strict Mode)
+
+Each CSV should contain one category only, and must include that category's metric columns from schema.
+
 ```bash
 cd backend
-venv\Scripts\python import_kpi_csv.py .\\kpi_data_sample_5models.csv --clear
+venv\Scripts\python import_kpi_csv.py .\kpi_templates\kpi_asr.csv --category ASR --clear
+venv\Scripts\python import_kpi_csv.py .\kpi_templates\kpi_translation.csv --category Translation
 ```
 
-> Note: This script is not compatible with the old long-table CSV format using `metric_name/metric_value`.
+> `--clear` should be used only on the first import when rebuilding KPI data.
 
-#### Quick Check: Verify Import Success
+#### Add New KPI Category / Metric (One-Place Change)
+
+1. Edit `backend/kpi_schema.py`:
+- Add a new item in `categories` with `key`, `label`, `description`
+- Add metrics with `key`, `label`, `unit`, `direction`, `chart_roles`
+
+2. (Optional) Add aliases:
+- `category_aliases`
+- `metric_aliases`
+- `metric_filter_aliases`
+
+3. Restart backend service.
+
+4. Regenerate templates:
 
 ```bash
-curl "http://localhost:8000/api/kpi/metrics?model_name=Model-A"
+cd backend
+venv\Scripts\python generate_kpi_csv_templates.py --all --output-dir .\kpi_templates --include-example
+```
+
+5. Fill CSV data and import with `import_kpi_csv.py`.
+
+#### Quick Check: Verify Schema and Data
+
+```bash
+curl "http://localhost:8000/api/kpi/schema"
+curl "http://localhost:8000/api/kpi/models/latest"
 ```
 
 ## Development Notes

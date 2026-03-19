@@ -7,6 +7,9 @@
         <p class="page-hero__desc">{{ DT.hero }}</p>
       </div>
       <div class="page-hero__actions">
+        <el-button v-if="canEditPersonnelProfile() && memberDetail" type="primary" @click="openProfileEditDialog">
+          Edit Profile
+        </el-button>
         <el-button @click="goBack">{{ BT.backToList }}</el-button>
       </div>
     </section>
@@ -17,9 +20,7 @@
           <div>
             <h2>{{ memberDetail.display_name }}</h2>
             <p class="detail-subtitle">{{ LT.profile.username }}: {{ memberDetail.username }}</p>
-          </div>
-          <div class="inline-stats">
-            <div class="glass-pill">{{ LT.profile.editable }}: {{ memberDetail.can_edit_test ? 'Yes' : 'No' }}</div>
+            <p class="detail-subtitle">{{ LT.profile.email }}: {{ memberDetail.email || '-' }}</p>
           </div>
         </div>
 
@@ -51,11 +52,17 @@
               </div>
             </div>
           </template>
-          <el-descriptions :column="2" border class="detail-info">
+          <el-descriptions :column="1" border class="detail-info detail-info--ratio">
             <el-descriptions-item :label="LT.profile.displayName">{{ memberDetail.display_name || '-' }}</el-descriptions-item>
             <el-descriptions-item :label="LT.profile.username">{{ memberDetail.username || '-' }}</el-descriptions-item>
-            <el-descriptions-item :label="LT.profile.editable">{{ memberDetail.can_edit_test ? 'Yes' : 'No' }}</el-descriptions-item>
+            <el-descriptions-item :label="LT.profile.email">{{ memberDetail.email || '-' }}</el-descriptions-item>
             <el-descriptions-item :label="LT.metrics.overlapGroups">{{ memberDetail.overlap_count || 0 }}</el-descriptions-item>
+            <el-descriptions-item :label="LT.profile.responsibilities">
+              <div class="profile-multiline">{{ memberDetail.responsibilities || '-' }}</div>
+            </el-descriptions-item>
+            <el-descriptions-item :label="LT.profile.specialtyTasks">
+              <div class="profile-multiline">{{ memberDetail.specialty_tasks || '-' }}</div>
+            </el-descriptions-item>
           </el-descriptions>
         </el-card>
 
@@ -95,6 +102,41 @@
         </el-card>
       </template>
     </el-card>
+
+    <el-dialog v-model="showProfileEditDialog" title="Edit Member Profile" width="640px">
+      <el-form :model="profileForm" label-width="150px">
+        <el-form-item :label="LT.profile.displayName">
+          <el-input v-model="profileForm.display_name" maxlength="100" show-word-limit />
+        </el-form-item>
+        <el-form-item :label="LT.profile.email">
+          <el-input v-model="profileForm.email" maxlength="120" show-word-limit />
+        </el-form-item>
+        <el-form-item :label="LT.profile.responsibilities">
+          <el-input
+            v-model="profileForm.responsibilities"
+            type="textarea"
+            :rows="4"
+            resize="none"
+            maxlength="2000"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item :label="LT.profile.specialtyTasks">
+          <el-input
+            v-model="profileForm.specialty_tasks"
+            type="textarea"
+            :rows="4"
+            resize="none"
+            maxlength="2000"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showProfileEditDialog = false">Cancel</el-button>
+        <el-button type="primary" :loading="savingProfile" @click="saveProfile">Save</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -102,10 +144,11 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getWorkloadByUser } from '../api/personnel'
+import { getWorkloadByUser, updateUser } from '../api/personnel'
 import { LabelText } from '../texts/LabelText'
 import { ButtonText } from '../texts/ButtonText'
 import { DescriptionText } from '../texts/DescriptionText'
+import { canEditPersonnelProfile } from '../stores/auth'
 
 const route = useRoute()
 const router = useRouter()
@@ -117,6 +160,14 @@ const DT = DescriptionText.personnelDetail
 
 const loading = ref(false)
 const memberDetail = ref(null)
+const showProfileEditDialog = ref(false)
+const savingProfile = ref(false)
+const profileForm = ref({
+  display_name: '',
+  email: '',
+  responsibilities: '',
+  specialty_tasks: ''
+})
 
 const completedTasks = computed(() => {
   return (memberDetail.value?.tasks || []).filter(task => String(task.status || '').toLowerCase() === 'completed').length
@@ -144,6 +195,39 @@ const taskRowKey = (task) => `${task?.task_kind || 'test'}-${task?.id || 'na'}`
 
 const goBack = () => {
   router.push('/personnel')
+}
+
+const openProfileEditDialog = () => {
+  if (!memberDetail.value) return
+  profileForm.value = {
+    display_name: memberDetail.value.display_name || '',
+    email: memberDetail.value.email || '',
+    responsibilities: memberDetail.value.responsibilities || '',
+    specialty_tasks: memberDetail.value.specialty_tasks || ''
+  }
+  showProfileEditDialog.value = true
+}
+
+const saveProfile = async () => {
+  if (!memberDetail.value?.user_id) return
+
+  savingProfile.value = true
+  try {
+    const payload = {
+      display_name: (profileForm.value.display_name || '').trim(),
+      email: (profileForm.value.email || '').trim(),
+      responsibilities: (profileForm.value.responsibilities || '').trim(),
+      specialty_tasks: (profileForm.value.specialty_tasks || '').trim()
+    }
+    await updateUser(Number(memberDetail.value.user_id), payload)
+    ElMessage.success('Member profile updated')
+    showProfileEditDialog.value = false
+    await loadDetail()
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.detail || 'Failed to update member profile')
+  } finally {
+    savingProfile.value = false
+  }
 }
 
 const goToTask = (task) => {
@@ -174,3 +258,24 @@ onMounted(() => {
 })
 </script>
 <style scoped src="../styles/detail-shared.css"></style>
+
+<style scoped>
+.profile-multiline {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+}
+
+:deep(.detail-info--ratio .el-descriptions__table) {
+  width: 100%;
+  table-layout: fixed;
+}
+
+:deep(.detail-info--ratio .el-descriptions__label.is-bordered-label) {
+  width: 25%;
+}
+
+:deep(.detail-info--ratio .el-descriptions__content.is-bordered-content) {
+  width: 75%;
+}
+</style>

@@ -1,0 +1,2 @@
+model_name,source,model_size,description,test_platform,test_version,test_condition,test_date,power_consumption,latency,accuracy_en_to_cn,accuracy_cn_to_en,accuracy_en_to_es,accuracy_es_to_en,accuracy_total
+example_model,Internal,100MB,Generated KPI template row,Windows,2026.03.19,lab,2026-03-19T10:00:00,0,0,0,0,0,0,0

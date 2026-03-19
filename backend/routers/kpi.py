@@ -7,81 +7,21 @@ from sqlalchemy.orm import Session
 
 import models
 import schemas
+from auth import require_manager
 from database import get_db
+from kpi_schema import (
+    canonical_category,
+    canonical_metric,
+    create_schema_category,
+    delete_schema_category,
+    get_category_metric_fields,
+    get_kpi_schema_payload,
+    get_metric_filter_aliases,
+    is_lower_better_metric,
+    update_schema_category,
+)
 
 router = APIRouter()
-
-CATEGORY_METRIC_FIELDS: Dict[str, List[str]] = {
-    "ASR": [
-        "power_consumption",
-        "latency",
-        "accuracy_en",
-        "accuracy_cn",
-        "accuracy_es",
-        "accuracy_total",
-    ],
-    "TTS": [
-        "power_consumption",
-        "latency",
-        "accuracy_en",
-        "accuracy_cn",
-        "accuracy_es",
-        "accuracy_total",
-    ],
-    "Translation": [
-        "power_consumption",
-        "latency",
-        "accuracy_en_to_cn",
-        "accuracy_cn_to_en",
-        "accuracy_en_to_es",
-        "accuracy_es_to_en",
-        "accuracy_total",
-    ],
-    "VoiceCallTranslation Solution": [
-        "power_consumption",
-        "e2e_latency",
-        "accuracy_en_to_cn",
-        "accuracy_cn_to_en",
-        "accuracy_total",
-    ],
-    "LPI Recording": ["power_consumption"],
-    "Multi Model Detection": ["power_consumption", "latency", "wakeup_rate"],
-}
-
-CATEGORY_TOKEN_ALIASES: Dict[str, str] = {
-    "voicecalltranslationsolution": "VoiceCallTranslation Solution",
-    "voicecalltranslation": "VoiceCallTranslation Solution",
-}
-
-METRIC_TOKEN_ALIASES: Dict[str, str] = {
-    "power": "power_consumption",
-    "powerconsumption": "power_consumption",
-    "latency": "latency",
-    "e2elatency": "e2e_latency",
-    "wakeuprate": "wakeup_rate",
-    "accuracytotal": "accuracy_total",
-    "accuracyoverall": "accuracy_total",
-    "accuracyen": "accuracy_en",
-    "accuracycn": "accuracy_cn",
-    "accuracyzh": "accuracy_cn",
-    "accuracyes": "accuracy_es",
-    "accuracyentocn": "accuracy_en_to_cn",
-    "accuracycntoen": "accuracy_cn_to_en",
-    "accuracyentoes": "accuracy_en_to_es",
-    "accuracyestoen": "accuracy_es_to_en",
-}
-
-METRIC_FILTER_ALIASES: Dict[str, List[str]] = {
-    "accuracy_total": ["accuracy_overall"],
-    "accuracy_cn": ["accuracy_zh"],
-    "e2e_latency": ["latency"],
-}
-
-LOWER_IS_BETTER_METRICS = {
-    "power_consumption",
-    "latency",
-    "e2e_latency",
-}
 
 
 def _normalize_text(value: Optional[str]) -> str:
@@ -94,26 +34,68 @@ def _normalize_token(value: Optional[str]) -> str:
 
 
 def _canonical_category(value: Optional[str]) -> str:
-    raw = _normalize_text(value)
-    token = _normalize_token(raw)
-    if not token:
-        return raw
-    for canonical_name in CATEGORY_METRIC_FIELDS.keys():
-        if _normalize_token(canonical_name) == token:
-            return canonical_name
-    return CATEGORY_TOKEN_ALIASES.get(token, raw)
+    return canonical_category(value)
 
 
 def _canonical_metric_name(value: Optional[str]) -> str:
-    raw = _normalize_text(value)
-    token = _normalize_token(raw)
-    if not token:
-        return raw
-    return METRIC_TOKEN_ALIASES.get(token, raw)
+    return canonical_metric(value)
 
 
 def _is_lower_better_metric(metric_name: Optional[str]) -> bool:
-    return _canonical_metric_name(metric_name) in LOWER_IS_BETTER_METRICS
+    return is_lower_better_metric(metric_name)
+
+
+@router.get("/schema")
+def get_kpi_schema():
+    return get_kpi_schema_payload()
+
+
+@router.post("/schema/categories")
+def create_kpi_schema_category(
+    payload: schemas.KPISchemaCategoryCreate,
+    identity: dict = Depends(require_manager),
+):
+    del identity
+    try:
+        return create_schema_category(payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.put("/schema/categories/{category_key}")
+def update_kpi_schema_category(
+    category_key: str,
+    payload: schemas.KPISchemaCategoryCreate,
+    identity: dict = Depends(require_manager),
+):
+    del identity
+    incoming_key = _normalize_text(payload.key)
+    if incoming_key and _normalize_token(incoming_key) != _normalize_token(category_key):
+        raise HTTPException(status_code=400, detail="Category key cannot be changed during edit")
+    try:
+        return update_schema_category(category_key, payload.model_dump())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.delete("/schema/categories/{category_key}")
+def delete_kpi_schema_category(
+    category_key: str,
+    db: Session = Depends(get_db),
+    identity: dict = Depends(require_manager),
+):
+    del identity
+    existing_count = _apply_category_filter(db.query(models.KPIMetric), category_key).count()
+    if existing_count > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot delete category {category_key} because {existing_count} KPI records still exist",
+        )
+    try:
+        delete_schema_category(category_key)
+        return {"deleted": True, "category_key": canonical_category(category_key)}
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 def _apply_category_filter(query, model_category: Optional[str]):
@@ -140,7 +122,7 @@ def _apply_category_filter(query, model_category: Optional[str]):
 def _metric_filter_tokens(metric_name: str) -> List[str]:
     canonical = _canonical_metric_name(metric_name)
     tokens = {_normalize_token(canonical)}
-    for alias in METRIC_FILTER_ALIASES.get(canonical, []):
+    for alias in get_metric_filter_aliases().get(canonical, []):
         tokens.add(_normalize_token(alias))
     return [token for token in tokens if token]
 
@@ -165,7 +147,7 @@ def _apply_metric_filter(query, metric_name: str):
 
 def _normalize_payload_metrics(metrics_map: Optional[dict], model_category: Optional[str]) -> Tuple[str, Dict[str, float]]:
     canonical_category = _canonical_category(model_category)
-    allowed_metrics = set(CATEGORY_METRIC_FIELDS.get(canonical_category, []))
+    allowed_metrics = set(get_category_metric_fields().get(canonical_category, []))
 
     normalized: Dict[str, float] = {}
     invalid_metrics: List[str] = []
@@ -423,7 +405,7 @@ def update_latest_model_run(model_name: str, payload: schemas.KPIModelUpsert, db
     incoming_version = _normalize_text(payload.test_version)
 
     target_test_date = payload.test_date or max(row.test_date or datetime.min for row in latest_rows)
-    allowed_metrics = set(CATEGORY_METRIC_FIELDS.get(canonical_category, []))
+    allowed_metrics = set(get_category_metric_fields().get(canonical_category, []))
 
     if incoming_version != latest_version:
         # Version changed: create a new run row set instead of mutating the latest run.

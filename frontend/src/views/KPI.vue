@@ -22,24 +22,87 @@
         </div>
       </div>
 
-      <div class="category-description-grid">
-        <article
-          v-for="(info, key) in MODEL_CATEGORY_INFO"
-          :key="key"
-          class="category-description-item"
-          :class="{ 'is-active': key === modelCategory }"
-          role="button"
-          tabindex="0"
-          @click="selectModelCategory(key)"
-          @keydown.enter="selectModelCategory(key)"
-          @keydown.space.prevent="selectModelCategory(key)"
-        >
-          <div class="category-description-item__header">
-            <span>{{ key }}</span>
-            <el-tag v-if="key === modelCategory" size="small" type="success">{{ LT.category.current }}</el-tag>
+      <div class="category-explorer">
+        <aside class="category-explorer__sidebar">
+          <div class="category-explorer__toolbar">
+            <div class="category-explorer__summary">
+              <span class="category-explorer__count">{{ filteredSchemaCategories.length }} / {{ MODEL_CATEGORY_KEYS.length }} model types</span>
+              <span class="category-explorer__hint">Compact navigator for future expansion</span>
+            </div>
+            <el-input
+              v-model="categoryKeyword"
+              clearable
+              placeholder="Search model type"
+              class="category-search-input"
+            />
           </div>
-          <p>{{ info }}</p>
-        </article>
+
+          <div v-if="filteredSchemaCategories.length" class="category-nav-list">
+            <button
+              v-for="category in filteredSchemaCategories"
+              :key="category.key"
+              type="button"
+              class="category-nav-item"
+              :class="{ 'is-active': category.key === modelCategory }"
+              @click="selectModelCategory(category.key)"
+            >
+              <span class="category-nav-item__title">{{ category.key }}</span>
+            </button>
+          </div>
+
+          <div v-else class="category-empty-state">
+            No model type matches "{{ categoryKeyword }}"
+          </div>
+        </aside>
+
+        <section v-if="activeCategoryMeta" class="category-detail-card">
+          <div class="category-detail-card__header">
+            <div>
+              <div class="category-detail-card__eyebrow">Current model type</div>
+              <h4 class="category-detail-card__title">{{ activeCategoryMeta.label || activeCategoryMeta.key }}</h4>
+            </div>
+            <div class="category-detail-card__header-actions">
+              <el-tag size="small" type="success">{{ LT.category.current }}</el-tag>
+              <div v-if="canCreateOrEditTest()" class="category-schema-actions">
+                <el-button size="small" type="primary" @click="openCreateCategoryDialog">New Type</el-button>
+                <el-button size="small" @click="openEditCategoryDialog(activeCategoryMeta)">Edit</el-button>
+                <el-button size="small" type="danger" plain @click="deleteCategoryDefinition(activeCategoryMeta)">Delete</el-button>
+              </div>
+            </div>
+          </div>
+
+          <p class="category-detail-card__desc">{{ activeCategoryMeta.description || MODEL_CATEGORY_INFO[activeCategoryMeta.key] }}</p>
+
+          <div class="category-detail-section">
+            <div class="category-detail-section__title">Typical implementation</div>
+            <p class="category-detail-section__body">
+              {{ activeCategoryMeta.implementation_notes || 'No implementation notes have been defined yet.' }}
+            </p>
+          </div>
+
+          <div class="category-detail-section">
+            <div class="category-detail-section__title">Parameter definitions</div>
+            <div class="category-parameter-list">
+              <article
+                v-for="metric in getMetricDefsForCategory(activeCategoryMeta.key)"
+                :key="`${activeCategoryMeta.key}-${metric.value}`"
+                class="category-parameter-item"
+              >
+                <div class="category-parameter-item__header">
+                  <div>
+                    <div class="category-parameter-item__title">{{ metric.label }}</div>
+                    <div class="category-parameter-item__meta">
+                      {{ metric.value }}
+                      <span v-if="metric.unit"> · {{ metric.unit }}</span>
+                      <span> · {{ getMetricPreferenceText(metric.value) }}</span>
+                    </div>
+                  </div>
+                </div>
+                <p class="category-parameter-item__desc">{{ metric.definition || 'No parameter definition has been defined yet.' }}</p>
+              </article>
+            </div>
+          </div>
+        </section>
       </div>
     </el-card>
 
@@ -156,7 +219,7 @@
           <el-col :span="12">
             <el-form-item label="Model Category">
               <el-select v-model="modelForm.model_category" style="width: 100%">
-                <el-option v-for="key in Object.keys(MODEL_CATEGORY_INFO)" :key="key" :label="key" :value="key" />
+                <el-option v-for="key in MODEL_CATEGORY_KEYS" :key="key" :label="key" :value="key" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -271,6 +334,95 @@
         <el-button type="primary" @click="confirmUpdateModelSelection">Update</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="showCategoryDialog" :title="isEditingCategory ? 'Edit Model Type' : 'New Model Type'" width="960px">
+      <el-form :model="categoryForm" label-width="170px" class="model-dialog-form">
+        <el-row :gutter="12">
+          <el-col :span="12">
+            <el-form-item label="Model Type Key">
+              <el-input v-model="categoryForm.key" :disabled="isEditingCategory" placeholder="For example: Noise Suppression" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="Display Label">
+              <el-input v-model="categoryForm.label" placeholder="Displayed title" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item label="Function Description">
+          <el-input v-model="categoryForm.description" type="textarea" :rows="3" placeholder="What this model type is used for" />
+        </el-form-item>
+
+        <el-form-item label="Typical Implementation">
+          <el-input v-model="categoryForm.implementation_notes" type="textarea" :rows="4" placeholder="How this model type is commonly implemented" />
+        </el-form-item>
+
+        <div class="category-editor-head">
+          <div>
+            <h4 class="category-editor-head__title">Parameters</h4>
+            <p class="category-editor-head__desc">Define the metrics shown in charts, forms, and descriptions.</p>
+          </div>
+          <el-button type="primary" plain @click="addCategoryMetricRow">Add Parameter</el-button>
+        </div>
+
+        <div class="category-editor-list">
+          <section v-for="(metric, index) in categoryForm.metrics" :key="`category-metric-${index}`" class="category-editor-item">
+            <div class="category-editor-item__toolbar">
+              <strong>Parameter {{ index + 1 }}</strong>
+              <el-button type="danger" link @click="removeCategoryMetricRow(index)">Remove</el-button>
+            </div>
+
+            <el-row :gutter="12">
+              <el-col :span="8">
+                <el-form-item label="Metric Key" label-width="120px">
+                  <el-input v-model="metric.key" placeholder="For example: snr_score" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="8">
+                <el-form-item label="Label" label-width="120px">
+                  <el-input v-model="metric.label" placeholder="Display name" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="8">
+                <el-form-item label="Unit" label-width="120px">
+                  <el-input v-model="metric.unit" placeholder="For example: ms / % / W" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+            <el-row :gutter="12">
+              <el-col :span="8">
+                <el-form-item label="Direction" label-width="120px">
+                  <el-select v-model="metric.direction" style="width: 100%">
+                    <el-option label="Higher is better" value="higher" />
+                    <el-option label="Lower is better" value="lower" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="16">
+                <el-form-item label="Chart Roles" label-width="120px">
+                  <el-select v-model="metric.chart_roles" multiple collapse-tags collapse-tags-tooltip style="width: 100%">
+                    <el-option label="ladder" value="ladder" />
+                    <el-option label="scatter" value="scatter" />
+                    <el-option label="table" value="table" />
+                    <el-option label="form" value="form" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+            <el-form-item label="Definition" label-width="120px">
+              <el-input v-model="metric.definition" type="textarea" :rows="3" placeholder="Explain what this parameter means" />
+            </el-form-item>
+          </section>
+        </div>
+      </el-form>
+      <template #footer>
+        <el-button @click="showCategoryDialog = false">Cancel</el-button>
+        <el-button type="primary" :loading="categoryDialogSaving" @click="saveCategoryDialog">Save</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -279,14 +431,19 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
+  createKPISchemaCategory,
+  deleteKPISchemaCategory,
+  getKPISchema,
   getKPIMetrics,
   getLadderChartData,
   getScatterChartData,
   getKPIModelLatestList,
   createKPIModel,
+  updateKPISchemaCategory,
   updateKPILatestModel,
   deleteKPIModel
 } from '../api/kpi'
+import { canCreateOrEditTest } from '../stores/auth'
 import { LabelText } from '../texts/LabelText'
 import { ButtonText } from '../texts/ButtonText'
 import { DescriptionText } from '../texts/DescriptionText'
@@ -298,86 +455,69 @@ const router = useRouter()
 
 const SCATTER_PALETTE = ['#22d3ee', '#60a5fa', '#a78bfa', '#f472b6', '#fb7185', '#f59e0b', '#34d399', '#facc15', '#38bdf8', '#818cf8']
 
-const METRIC_UNITS = {
-  power_consumption: 'W',
-  latency: 'ms',
-  e2e_latency: 'ms',
-  wakeup_rate: '%',
-  accuracy_total: '%',
-  accuracy_overall: '%',
-  accuracy_en: '%',
-  accuracy_cn: '%',
-  accuracy_zh: '%',
-  accuracy_es: '%',
-  accuracy_en_to_cn: '%',
-  accuracy_cn_to_en: '%',
-  accuracy_en_to_es: '%',
-  accuracy_es_to_en: '%'
-}
+const kpiSchema = ref({ categories: [] })
 
-const LOWER_IS_BETTER_METRICS = new Set([
-  'power_consumption',
-  'latency',
-  'e2e_latency'
-])
+const schemaCategories = computed(() => {
+  return Array.isArray(kpiSchema.value?.categories) ? kpiSchema.value.categories : []
+})
 
-const MODEL_CATEGORY_INFO = {
-  ASR: 'Automatic Speech Recognition. Focuses on recognition accuracy, real-time performance, and resource usage for speech-to-text scenarios.',
-  TTS: 'Text To Speech. Focuses on naturalness, latency, and power efficiency for spoken output scenarios.',
-  Translation: 'Text translation models. Focus on multilingual translation accuracy, end-to-end latency, and deployment cost.',
-  'VoiceCallTranslation Solution': 'Real-time voice call translation solutions. Focus on latency, stability, and overall translation quality in call scenarios.',
-  'LPI Recording': 'Low-power recording scenario focused on ultra-low power consumption.',
-  'Multi Model Detection': 'Multi-model trigger/detection scenario focused on wakeup quality and responsiveness.'
-}
+const MODEL_CATEGORY_INFO = computed(() => {
+  return Object.fromEntries(
+    schemaCategories.value.map((category) => [
+      category.key,
+      category.description || `${category.key} metrics`
+    ])
+  )
+})
 
-const CATEGORY_METRIC_DEFS = {
-  ASR: [
-    { label: 'Power', value: 'power_consumption' },
-    { label: 'Latency', value: 'latency' },
-    { label: 'Accuracy-en', value: 'accuracy_en' },
-    { label: 'Accuracy-cn', value: 'accuracy_cn' },
-    { label: 'Accuracy-es', value: 'accuracy_es' },
-    { label: 'Accuracy-total', value: 'accuracy_total' }
-  ],
-  TTS: [
-    { label: 'Power', value: 'power_consumption' },
-    { label: 'Latency', value: 'latency' },
-    { label: 'Accuracy-en', value: 'accuracy_en' },
-    { label: 'Accuracy-cn', value: 'accuracy_cn' },
-    { label: 'Accuracy-es', value: 'accuracy_es' },
-    { label: 'Accuracy-total', value: 'accuracy_total' }
-  ],
-  Translation: [
-    { label: 'Power', value: 'power_consumption' },
-    { label: 'Latency', value: 'latency' },
-    { label: 'Accuracy-en to cn', value: 'accuracy_en_to_cn' },
-    { label: 'Accuracy-cn to en', value: 'accuracy_cn_to_en' },
-    { label: 'Accuracy-en to es', value: 'accuracy_en_to_es' },
-    { label: 'Accuracy-es to en', value: 'accuracy_es_to_en' },
-    { label: 'Accuracy-total', value: 'accuracy_total' }
-  ],
-  'VoiceCallTranslation Solution': [
-    { label: 'Power', value: 'power_consumption' },
-    { label: 'E2E Latency', value: 'e2e_latency' },
-    { label: 'Accuracy-en to cn', value: 'accuracy_en_to_cn' },
-    { label: 'Accuracy-cn to en', value: 'accuracy_cn_to_en' },
-    { label: 'Accuracy-total', value: 'accuracy_total' }
-  ],
-  'LPI Recording': [
-    { label: 'Power', value: 'power_consumption' }
-  ],
-  'Multi Model Detection': [
-    { label: 'Power', value: 'power_consumption' },
-    { label: 'Latency', value: 'latency' },
-    { label: 'Wakeup Rate', value: 'wakeup_rate' }
-  ]
-}
+const MODEL_CATEGORY_KEYS = computed(() => schemaCategories.value.map((category) => category.key))
 
-const METRIC_LABEL_MAP = Object.fromEntries(
-  Object.values(CATEGORY_METRIC_DEFS)
+const CATEGORY_METRIC_DEFS = computed(() => {
+  const mapping = {}
+  schemaCategories.value.forEach((category) => {
+    mapping[category.key] = (category.metrics || []).map((metric) => ({
+      label: metric.label || metric.key,
+      value: metric.key,
+      unit: metric.unit || '',
+      direction: metric.direction || 'higher',
+      chart_roles: Array.isArray(metric.chart_roles) ? metric.chart_roles : [],
+      definition: metric.definition || ''
+    }))
+  })
+  return mapping
+})
+
+const METRIC_META_MAP = computed(() => {
+  const mapping = {}
+  Object.values(CATEGORY_METRIC_DEFS.value)
     .flat()
-    .map((item) => [item.value, item.label])
-)
+    .forEach((metric) => {
+      if (!mapping[metric.value]) {
+        mapping[metric.value] = metric
+      }
+    })
+  return mapping
+})
+
+const METRIC_LABEL_MAP = computed(() => {
+  return Object.fromEntries(
+    Object.entries(METRIC_META_MAP.value).map(([key, meta]) => [key, meta.label || key])
+  )
+})
+
+const METRIC_UNITS = computed(() => {
+  return Object.fromEntries(
+    Object.entries(METRIC_META_MAP.value).map(([key, meta]) => [key, meta.unit || ''])
+  )
+})
+
+const LOWER_IS_BETTER_METRICS = computed(() => {
+  return new Set(
+    Object.entries(METRIC_META_MAP.value)
+      .filter(([, meta]) => String(meta.direction || 'higher').toLowerCase() === 'lower')
+      .map(([key]) => key)
+  )
+})
 
 const LEGACY_METRIC_FALLBACKS = {
   accuracy_total: ['accuracy_overall'],
@@ -385,8 +525,17 @@ const LEGACY_METRIC_FALLBACKS = {
   e2e_latency: ['latency']
 }
 
-const getMetricDefsForCategory = (category) => {
-  return CATEGORY_METRIC_DEFS[category] || CATEGORY_METRIC_DEFS.ASR
+const getMetricDefsForCategory = (category, role = null) => {
+  const categoryMap = CATEGORY_METRIC_DEFS.value || {}
+  const fallbackCategory = schemaCategories.value[0]?.key
+  const defs = categoryMap[category] || (fallbackCategory ? categoryMap[fallbackCategory] : []) || []
+  if (!role) {
+    return defs
+  }
+  return defs.filter((metric) => {
+    const roles = Array.isArray(metric.chart_roles) ? metric.chart_roles : []
+    return roles.includes(role)
+  })
 }
 
 const getMetricValueByKey = (metrics = {}, metricKey = '') => {
@@ -448,11 +597,10 @@ const toDisplayMetricNumber = (value, metricName = '') => {
   if (!Number.isFinite(numeric)) {
     return null
   }
-  const converted = isAccuracyMetric(metricName) ? numeric * 100 : numeric
-  return roundToTwo(converted)
+  return roundToTwo(numeric)
 }
 
-const isLowerBetterMetric = (metricName = '') => LOWER_IS_BETTER_METRICS.has(String(metricName || '').trim())
+const isLowerBetterMetric = (metricName = '') => LOWER_IS_BETTER_METRICS.value.has(String(metricName || '').trim())
 
 const getMetricPreferenceText = (metricName = '') => (isLowerBetterMetric(metricName) ? 'lower is better' : 'higher is better')
 
@@ -528,11 +676,12 @@ const calcAxisRange = (values) => {
 
 const ladderLoading = ref(false)
 const scatterLoading = ref(false)
-const ladderMetric = ref('accuracy_total')
-const modelCategory = ref('ASR')
-const scatterMetricSelection = ref(['power_consumption', 'latency'])
-const scatterXMetric = ref('power_consumption')
-const scatterYMetric = ref('latency')
+const ladderMetric = ref('')
+const modelCategory = ref('')
+const categoryKeyword = ref('')
+const scatterMetricSelection = ref([])
+const scatterXMetric = ref('')
+const scatterYMetric = ref('')
 const selectedModelName = ref('')
 const showCompareDialog = ref(false)
 const compareModelA = ref('')
@@ -547,24 +696,78 @@ const modelDialogSaving = ref(false)
 const editingModelName = ref('')
 const showUpdatePickerDialog = ref(false)
 const selectedUpdateModelName = ref('')
+const showCategoryDialog = ref(false)
+const categoryDialogSaving = ref(false)
+const editingCategoryKey = ref('')
 
-const LADDER_METRIC_OPTIONS = computed(() => getMetricDefsForCategory(modelCategory.value))
+const LADDER_METRIC_OPTIONS = computed(() => getMetricDefsForCategory(modelCategory.value, 'ladder'))
 
-const SCATTER_METRIC_OPTIONS = computed(() => getMetricDefsForCategory(modelCategory.value))
+const SCATTER_METRIC_OPTIONS = computed(() => getMetricDefsForCategory(modelCategory.value, 'scatter'))
 
 const showScatterChart = computed(() => SCATTER_METRIC_OPTIONS.value.length > 1)
 
-const MODEL_FORM_METRICS = computed(() => getMetricDefsForCategory(modelForm.value.model_category || modelCategory.value))
+const MODEL_FORM_METRICS = computed(() => {
+  const preferred = getMetricDefsForCategory(modelForm.value.model_category || modelCategory.value, 'form')
+  return preferred.length ? preferred : getMetricDefsForCategory(modelForm.value.model_category || modelCategory.value)
+})
+
+const filteredSchemaCategories = computed(() => {
+  const keyword = String(categoryKeyword.value || '').trim().toLowerCase()
+  if (!keyword) {
+    return schemaCategories.value
+  }
+
+  const matched = schemaCategories.value.filter((category) => {
+    const haystack = [category.key, category.label, category.description]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+    return haystack.includes(keyword)
+  })
+
+  const current = schemaCategories.value.find((category) => category.key === modelCategory.value)
+  if (current && !matched.some((category) => category.key === current.key)) {
+    return [current, ...matched]
+  }
+
+  return matched
+})
+
+const activeCategoryMeta = computed(() => {
+  return schemaCategories.value.find((category) => category.key === modelCategory.value) || null
+})
+
+const createEmptyCategoryMetric = () => ({
+  key: '',
+  label: '',
+  unit: '',
+  direction: 'higher',
+  chart_roles: ['ladder', 'table', 'form'],
+  definition: ''
+})
+
+const createDefaultCategoryForm = () => ({
+  key: '',
+  label: '',
+  description: '',
+  implementation_notes: '',
+  metrics: [createEmptyCategoryMetric()]
+})
+
+const categoryForm = ref(createDefaultCategoryForm())
+const isEditingCategory = computed(() => Boolean(editingCategoryKey.value))
 
 const buildDefaultMetricsForCategory = (category) => {
   const defaults = {}
-  getMetricDefsForCategory(category).forEach((metric) => {
+  const defs = getMetricDefsForCategory(category, 'form')
+  const selectedDefs = defs.length ? defs : getMetricDefsForCategory(category)
+  selectedDefs.forEach((metric) => {
     defaults[metric.value] = 0
   })
   return defaults
 }
 
-const createDefaultModelForm = (category = modelCategory.value) => ({
+const createDefaultModelForm = (category = (modelCategory.value || schemaCategories.value[0]?.key || '')) => ({
   model_category: category,
   model_name: '',
   source: '',
@@ -852,6 +1055,205 @@ const buildModelInfo = (name) => {
   }
 }
 
+const getCategoryRoleCount = (categoryKey, role) => getMetricDefsForCategory(categoryKey, role).length
+
+const normalizeCategoryMetrics = (metrics = []) => {
+  return metrics.map((metric) => {
+    const roles = Array.isArray(metric.chart_roles) ? metric.chart_roles : []
+    const uniqueRoles = [...new Set(roles.map((role) => String(role || '').trim().toLowerCase()).filter(Boolean))]
+    return {
+      key: String(metric.key || '').trim(),
+      label: String(metric.label || '').trim(),
+      unit: String(metric.unit || '').trim(),
+      direction: String(metric.direction || 'higher').trim().toLowerCase() === 'lower' ? 'lower' : 'higher',
+      chart_roles: uniqueRoles,
+      definition: String(metric.definition || '').trim()
+    }
+  })
+}
+
+const openCreateCategoryDialog = () => {
+  editingCategoryKey.value = ''
+  categoryForm.value = createDefaultCategoryForm()
+  showCategoryDialog.value = true
+}
+
+const openEditCategoryDialog = (category) => {
+  if (!category) {
+    return
+  }
+  editingCategoryKey.value = category.key
+  categoryForm.value = {
+    key: category.key || '',
+    label: category.label || category.key || '',
+    description: category.description || '',
+    implementation_notes: category.implementation_notes || '',
+    metrics: normalizeCategoryMetrics(category.metrics || []).length
+      ? normalizeCategoryMetrics(category.metrics || [])
+      : [createEmptyCategoryMetric()]
+  }
+  showCategoryDialog.value = true
+}
+
+const addCategoryMetricRow = () => {
+  categoryForm.value.metrics.push(createEmptyCategoryMetric())
+}
+
+const removeCategoryMetricRow = (index) => {
+  if ((categoryForm.value.metrics || []).length <= 1) {
+    ElMessage.warning('At least one parameter is required')
+    return
+  }
+  categoryForm.value.metrics.splice(index, 1)
+}
+
+const reloadSchemaDrivenView = async (preferredCategory = '') => {
+  const ready = await loadKPISchema()
+  if (!ready) {
+    return
+  }
+
+  if (preferredCategory && MODEL_CATEGORY_KEYS.value.includes(preferredCategory)) {
+    modelCategory.value = preferredCategory
+    modelForm.value.model_category = preferredCategory
+    syncMetricSelectionsForCategory()
+  }
+
+  categoryKeyword.value = ''
+  const refreshTasks = [loadMetricDetails(), loadLadderData(), loadModelList()]
+  if (showScatterChart.value) {
+    refreshTasks.push(loadScatterData())
+  }
+  await Promise.all(refreshTasks)
+}
+
+const saveCategoryDialog = async () => {
+  const categoryKey = String(categoryForm.value.key || '').trim()
+  if (!categoryKey) {
+    ElMessage.warning('Model type key is required')
+    return
+  }
+
+  const metrics = normalizeCategoryMetrics(categoryForm.value.metrics || [])
+  if (!metrics.length) {
+    ElMessage.warning('At least one parameter is required')
+    return
+  }
+
+  const invalidMetric = metrics.find((metric) => !metric.key)
+  if (invalidMetric) {
+    ElMessage.warning('Every parameter must have a metric key')
+    return
+  }
+
+  const duplicateMetricKeys = new Set()
+  const seenMetricKeys = new Set()
+  metrics.forEach((metric) => {
+    const token = metric.key.toLowerCase()
+    if (seenMetricKeys.has(token)) {
+      duplicateMetricKeys.add(metric.key)
+    }
+    seenMetricKeys.add(token)
+  })
+  if (duplicateMetricKeys.size) {
+    ElMessage.warning(`Duplicate metric keys: ${[...duplicateMetricKeys].join(', ')}`)
+    return
+  }
+
+  const payload = {
+    key: categoryKey,
+    label: String(categoryForm.value.label || categoryKey).trim(),
+    description: String(categoryForm.value.description || '').trim(),
+    implementation_notes: String(categoryForm.value.implementation_notes || '').trim(),
+    metrics: metrics.map((metric) => ({
+      ...metric,
+      label: metric.label || metric.key,
+      chart_roles: metric.chart_roles.length ? metric.chart_roles : ['table', 'form']
+    }))
+  }
+
+  categoryDialogSaving.value = true
+  try {
+    if (isEditingCategory.value) {
+      await updateKPISchemaCategory(editingCategoryKey.value, payload)
+      ElMessage.success('Model type updated')
+    } else {
+      await createKPISchemaCategory(payload)
+      ElMessage.success('Model type created')
+    }
+    showCategoryDialog.value = false
+    editingCategoryKey.value = ''
+    await reloadSchemaDrivenView(payload.key)
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.detail || 'Failed to save model type')
+  } finally {
+    categoryDialogSaving.value = false
+  }
+}
+
+const deleteCategoryDefinition = async (category) => {
+  if (!category?.key) {
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `Delete model type ${category.key}? This only removes the schema definition and will be blocked if KPI data still exists.`,
+      'Delete Model Type',
+      {
+        confirmButtonText: 'Delete',
+        cancelButtonText: 'Cancel',
+        type: 'warning'
+      }
+    )
+  } catch {
+    return
+  }
+
+  try {
+    await deleteKPISchemaCategory(category.key)
+    ElMessage.success('Model type deleted')
+    await reloadSchemaDrivenView('')
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.detail || 'Failed to delete model type')
+  }
+}
+
+const ensureActiveCategory = () => {
+  const categories = schemaCategories.value.map((item) => item.key)
+  if (!categories.length) {
+    modelCategory.value = ''
+    return false
+  }
+
+  if (!modelCategory.value || !categories.includes(modelCategory.value)) {
+    modelCategory.value = categories[0]
+  }
+
+  if (!modelForm.value.model_category || !categories.includes(modelForm.value.model_category)) {
+    modelForm.value.model_category = modelCategory.value
+  }
+
+  return true
+}
+
+const loadKPISchema = async () => {
+  try {
+    const payload = await getKPISchema()
+    const categories = Array.isArray(payload?.categories) ? payload.categories : []
+    kpiSchema.value = { categories }
+  } catch (error) {
+    kpiSchema.value = { categories: [] }
+    ElMessage.error(error?.response?.data?.detail || 'Failed to load KPI schema')
+  }
+
+  const ready = ensureActiveCategory()
+  if (ready) {
+    syncMetricSelectionsForCategory()
+  }
+  return ready
+}
+
 const loadModelList = async () => {
   modelListLoading.value = true
   try {
@@ -876,7 +1278,7 @@ const getBestLatencyMetricName = (metrics = {}) => {
 
 const getMetricMin = (metricName) => (isAccuracyMetric(metricName) ? 0 : -Infinity)
 
-const getMetricMax = (metricName) => (isAccuracyMetric(metricName) ? 1 : Infinity)
+const getMetricMax = (metricName) => (isAccuracyMetric(metricName) ? 100 : Infinity)
 
 const loadMetricDetails = async () => {
   try {
@@ -1044,22 +1446,27 @@ const loadScatterData = async () => {
 }
 
 const syncMetricSelectionsForCategory = () => {
-  const available = SCATTER_METRIC_OPTIONS.value.map((item) => item.value)
-  if (!available.length) {
+  const ladderAvailable = LADDER_METRIC_OPTIONS.value.map((item) => item.value)
+  const scatterAvailable = SCATTER_METRIC_OPTIONS.value.map((item) => item.value)
+
+  if (!ladderAvailable.length) {
     ladderMetric.value = ''
+  } else {
+    const preferredLadder = ladderAvailable.includes('accuracy_total') ? 'accuracy_total' : ladderAvailable[0]
+    if (!ladderAvailable.includes(ladderMetric.value)) {
+      ladderMetric.value = preferredLadder
+    }
+  }
+
+  if (!scatterAvailable.length) {
     scatterMetricSelection.value = []
     scatterXMetric.value = ''
     scatterYMetric.value = ''
     return
   }
 
-  const preferredLadder = available.includes('accuracy_total') ? 'accuracy_total' : available[0]
-  if (!available.includes(ladderMetric.value)) {
-    ladderMetric.value = preferredLadder
-  }
-
-  const selected = scatterMetricSelection.value.filter((metric) => available.includes(metric))
-  for (const metric of available) {
+  const selected = scatterMetricSelection.value.filter((metric) => scatterAvailable.includes(metric))
+  for (const metric of scatterAvailable) {
     if (selected.length >= 2) break
     if (!selected.includes(metric)) {
       selected.push(metric)
@@ -1071,7 +1478,7 @@ const syncMetricSelectionsForCategory = () => {
   }
 
   scatterMetricSelection.value = selected.slice(0, 2)
-  scatterXMetric.value = scatterMetricSelection.value[0] || available[0]
+  scatterXMetric.value = scatterMetricSelection.value[0] || scatterAvailable[0]
   scatterYMetric.value = scatterMetricSelection.value[1] || scatterXMetric.value
 }
 
@@ -1261,10 +1668,10 @@ const saveModelDialog = async () => {
   }
 
   const outOfRangeAccuracyMetric = Object.keys(metrics).find(
-    (metricName) => isAccuracyMetric(metricName) && (metrics[metricName] < 0 || metrics[metricName] > 1)
+    (metricName) => isAccuracyMetric(metricName) && (metrics[metricName] < 0 || metrics[metricName] > 100)
   )
   if (outOfRangeAccuracyMetric) {
-    ElMessage.warning('Accuracy values must be between 0 and 1')
+    ElMessage.warning('Accuracy values must be between 0 and 100')
     return
   }
 
@@ -1312,11 +1719,9 @@ const formatMetricValue = (value, metricName = '', options = {}) => {
   const alreadyDisplay = options?.alreadyDisplay === true
   const numeric = Number(value)
   const hasNumeric = Number.isFinite(numeric)
-  const displayValue = hasNumeric
-    ? (alreadyDisplay ? numeric : (isAccuracyMetric(metricName) ? numeric * 100 : numeric))
-    : numeric
+  const displayValue = hasNumeric ? numeric : numeric
   const base = hasNumeric ? displayValue.toFixed(2) : String(value)
-  const unit = METRIC_UNITS[metricName] || ''
+  const unit = METRIC_UNITS.value[metricName] || ''
   if (!unit) {
     return base
   }
@@ -1352,16 +1757,20 @@ const formatDateTimeForEdit = (value) => {
 }
 
 const getMetricName = (metric) => {
-  const label = METRIC_LABEL_MAP[metric] || metric
-  const unit = METRIC_UNITS[metric]
+  const label = METRIC_LABEL_MAP.value[metric] || metric
+  const unit = METRIC_UNITS.value[metric]
   if (!unit) {
     return label
   }
   return `${label} (${unit})`
 }
 
-onMounted(() => {
-  syncMetricSelectionsForCategory()
+onMounted(async () => {
+  const ready = await loadKPISchema()
+  if (!ready) {
+    return
+  }
+
   loadMetricDetails()
   loadLadderData()
   if (showScatterChart.value) {
@@ -1519,35 +1928,288 @@ onMounted(() => {
   width: 320px;
 }
 
-.category-description-grid {
+.category-explorer {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 16px;
 }
 
-.category-description-item {
-  padding: 14px;
-  border-radius: 14px;
+.category-explorer__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.category-explorer__toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.category-explorer__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.category-explorer__count {
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.category-explorer__hint {
+  color: rgba(148, 163, 184, 0.78);
+  font-size: 12px;
+}
+
+.category-search-input :deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.18);
+}
+
+.category-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+  text-align: center;
+}
+
+.category-nav-item {
+  align-items: center;
+  appearance: none;
   border: 1px solid rgba(148, 163, 184, 0.14);
   background: rgba(255, 255, 255, 0.03);
+  color: #f8fafc;
+  border-radius: 14px;
+  padding: 12px 14px;
   cursor: pointer;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   transition: all 0.2s ease;
 }
 
-.category-description-item:hover {
+.category-nav-item:hover {
   border-color: rgba(96, 165, 250, 0.32);
   background: rgba(96, 165, 250, 0.09);
   transform: translateY(-1px);
 }
 
-.category-description-item.is-active {
+.category-nav-item.is-active {
   border-color: rgba(94, 234, 212, 0.36);
   background: rgba(94, 234, 212, 0.08);
 }
 
-.category-description-item:focus-visible {
+.category-nav-item:focus-visible {
   outline: 2px solid rgba(94, 234, 212, 0.8);
   outline-offset: 2px;
+}
+
+.category-nav-item__title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.category-empty-state {
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px dashed rgba(148, 163, 184, 0.22);
+  color: rgba(226, 232, 240, 0.72);
+  font-size: 13px;
+}
+
+.category-detail-card {
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background:
+    radial-gradient(circle at top right, rgba(34, 211, 238, 0.16), transparent 34%),
+    rgba(255, 255, 255, 0.03);
+  min-height: 100%;
+}
+
+.category-detail-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.category-detail-card__header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.category-schema-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.category-detail-card__eyebrow {
+  color: #5eead4;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.category-detail-card__title {
+  margin: 8px 0 0;
+  color: #f8fafc;
+  font-size: 24px;
+}
+
+.category-detail-card__desc {
+  margin: 14px 0 0;
+  color: rgba(226, 232, 240, 0.8);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.category-detail-section {
+  margin-top: 16px;
+}
+
+.category-detail-section__title {
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.category-detail-section__body {
+  margin: 8px 0 0;
+  color: rgba(226, 232, 240, 0.8);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.category-detail-card__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.category-detail-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.28);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.category-detail-stat__label {
+  color: rgba(148, 163, 184, 0.82);
+  font-size: 12px;
+}
+
+.category-detail-stat strong {
+  color: #f8fafc;
+  font-size: 14px;
+}
+
+.category-parameter-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.category-parameter-item {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.3);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.category-parameter-item__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.category-parameter-item__title {
+  color: #f8fafc;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.category-parameter-item__meta {
+  margin-top: 4px;
+  color: rgba(148, 163, 184, 0.82);
+  font-size: 12px;
+}
+
+.category-role-tag-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.category-parameter-item__desc {
+  margin: 10px 0 0;
+  color: rgba(226, 232, 240, 0.8);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.category-editor-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0 14px;
+}
+
+.category-editor-head__title {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 16px;
+}
+
+.category-editor-head__desc {
+  margin: 6px 0 0;
+  color: rgba(148, 163, 184, 0.82);
+  font-size: 13px;
+}
+
+.category-editor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.category-editor-item {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.category-editor-item__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .metric-tag-group {
@@ -1598,22 +2260,40 @@ onMounted(() => {
   font-size: 12px;
 }
 
-.category-description-item__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  font-weight: 700;
-}
-
-.category-description-item p {
-  margin: 8px 0 0;
-  color: rgba(226, 232, 240, 0.78);
-  font-size: 13px;
-  line-height: 1.65;
-}
-
 @media (max-width: 768px) {
+  .category-explorer {
+    grid-template-columns: 1fr;
+  }
+
+  .category-detail-card__header {
+    flex-direction: column;
+  }
+
+  .category-detail-card__header-actions {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .category-schema-actions {
+    justify-content: flex-start;
+  }
+
+  .category-nav-list {
+    max-height: 240px;
+  }
+
+  .category-detail-card__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .category-parameter-list {
+    grid-template-columns: 1fr;
+  }
+
+  .category-editor-head {
+    flex-direction: column;
+  }
+
   .scatter-selector-wrap {
     align-items: flex-start;
   }

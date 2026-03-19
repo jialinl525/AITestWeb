@@ -71,6 +71,32 @@ Open http://localhost:5173 in your browser.
 - Leaderboard: select metrics (accuracy, precision, etc.) to view model ranking
 - Scatter plot: select X-axis and Y-axis metrics to compare model performance
 
+## KPI Data Quick Ops (Schema-Driven)
+
+KPI category/metric config is centralized in:
+- `backend/kpi_schema.py`
+
+### 1) Generate KPI CSV templates
+
+```bash
+cd backend
+venv\Scripts\python generate_kpi_csv_templates.py --all --output-dir .\kpi_templates --include-example
+```
+
+### 2) Import KPI CSV files by category
+
+```bash
+cd backend
+venv\Scripts\python import_kpi_csv.py .\kpi_templates\kpi_asr.csv --category ASR --clear
+venv\Scripts\python import_kpi_csv.py .\kpi_templates\kpi_translation.csv --category Translation
+```
+
+### 3) Add new KPI model type
+
+1. Edit `backend/kpi_schema.py` and add category/metrics.
+2. Restart backend.
+3. Regenerate templates and import data.
+
 ## FAQ
 
 ### Backend Fails to Start

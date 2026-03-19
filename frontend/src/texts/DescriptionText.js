@@ -2,8 +2,8 @@ export const DescriptionText = {
   app: {
     miniCard: 'Unified business view for test management, issue tracking, and model evaluation.',
     login: {
-      usernamePlaceholder: 'manager (Admin)',
-      passwordPlaceholder: 'Default 123456'
+      usernamePlaceholder: 'Internal',
+      passwordPlaceholder: 'Please enter password'
     },
     password: {
       currentPlaceholder: 'Please enter current password',
@@ -136,7 +136,7 @@ export const DescriptionText = {
   personnelDetail: {
     hero: 'Review one member\'s assignments, schedule span, progress, and manday distribution.',
     sectionMeta: {
-      profile: 'Basic member identity and permission info.',
+      profile: 'Basic member identity, contact email, responsibilities, and specialty focus.',
       tasks: 'Unified task list including test tasks and work tasks.'
     },
     fallback: {

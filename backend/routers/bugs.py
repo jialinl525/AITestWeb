@@ -436,6 +436,7 @@ def _upsert_bug_from_csv_row(db: Session, row: Dict) -> str:
         if incoming_created_on is not None and (existing.cr_created_on is None or incoming_created_on < existing.cr_created_on):
             existing.cr_created_on = incoming_created_on
 
+        preserve_existing_build = _is_valid_image_value(existing.software_image_integration_build)
         merged_images = _merge_available_images(
             existing.available_images,
             existing.software_image_integration_build,
@@ -443,10 +444,11 @@ def _upsert_bug_from_csv_row(db: Session, row: Dict) -> str:
         )
         existing.available_images = _format_available_images(merged_images)
 
-        if len(merged_images) > 1:
-            existing.software_image_integration_build = PENDING_CONFIRMATION_BUILD
-        elif len(merged_images) == 1 and _normalize_token(existing.software_image_integration_build) in INVALID_IMAGE_TOKENS.union({_normalize_token(PENDING_CONFIRMATION_BUILD)}):
-            existing.software_image_integration_build = merged_images[0]
+        if not preserve_existing_build:
+            if len(merged_images) > 1:
+                existing.software_image_integration_build = PENDING_CONFIRMATION_BUILD
+            elif len(merged_images) == 1:
+                existing.software_image_integration_build = merged_images[0]
 
         return "updated"
 

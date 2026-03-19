@@ -152,6 +152,23 @@ class KPIModelUpsert(BaseModel):
     metrics: dict = Field(default_factory=dict)
 
 
+class KPISchemaMetricDefinition(BaseModel):
+    key: str
+    label: str = ""
+    unit: str = ""
+    direction: str = "higher"
+    chart_roles: List[str] = Field(default_factory=list)
+    definition: str = ""
+
+
+class KPISchemaCategoryCreate(BaseModel):
+    key: str
+    label: str = ""
+    description: str = ""
+    implementation_notes: str = ""
+    metrics: List[KPISchemaMetricDefinition] = Field(default_factory=list)
+
+
 class PermissionGroupBase(BaseModel):
     name: str
     description: str = ""
@@ -173,6 +190,9 @@ class PermissionGroup(PermissionGroupBase):
 class UserBase(BaseModel):
     username: str
     display_name: str = ""
+    email: str = ""
+    responsibilities: str = ""
+    specialty_tasks: str = ""
     role: str = "viewer"
     is_active: bool = True
 
@@ -184,6 +204,9 @@ class UserCreate(UserBase):
 
 class UserUpdate(BaseModel):
     display_name: Optional[str] = None
+    email: Optional[str] = None
+    responsibilities: Optional[str] = None
+    specialty_tasks: Optional[str] = None
     role: Optional[str] = None
     is_active: Optional[bool] = None
     password: Optional[str] = None
@@ -282,6 +305,9 @@ class PersonnelWorkload(BaseModel):
     user_id: int
     username: str
     display_name: str
+    email: str = ""
+    responsibilities: str = ""
+    specialty_tasks: str = ""
     can_edit_test: bool
     task_count: int
     total_cases: int

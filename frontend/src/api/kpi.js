@@ -8,6 +8,22 @@ export const createKPIMetric = (data) => {
   return api.post('/kpi/metrics', data)
 }
 
+export const getKPISchema = () => {
+  return api.get('/kpi/schema')
+}
+
+export const createKPISchemaCategory = (data) => {
+  return api.post('/kpi/schema/categories', data)
+}
+
+export const updateKPISchemaCategory = (categoryKey, data) => {
+  return api.put(`/kpi/schema/categories/${encodeURIComponent(categoryKey)}`, data)
+}
+
+export const deleteKPISchemaCategory = (categoryKey) => {
+  return api.delete(`/kpi/schema/categories/${encodeURIComponent(categoryKey)}`)
+}
+
 export const getKPIModelLatestList = (params = {}) => {
   return api.get('/kpi/models/latest', { params })
 }

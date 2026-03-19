@@ -119,3 +119,25 @@ export function canEditBug() {
 export function canDeleteBug() {
   return canEditTest.value
 }
+
+function normalizeGroupName(name) {
+  return String(name || '').trim().toLowerCase()
+}
+
+export function isInternalUser() {
+  const username = String(currentUsername.value || '').trim().toLowerCase()
+  if (username === 'internal') return true
+
+  return (userGroups.value || []).some(group => {
+    const groupName = normalizeGroupName(group?.name)
+    return groupName === 'internal-group' || groupName === 'internal'
+  })
+}
+
+export function canViewAllPages() {
+  return canEditTest.value || isInternalUser()
+}
+
+export function canEditPersonnelProfile() {
+  return String(currentUsername.value || '').trim().toLowerCase() === 'manager'
+}

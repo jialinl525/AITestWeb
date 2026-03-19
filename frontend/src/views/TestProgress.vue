@@ -129,50 +129,20 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="LT.table.l0" min-width="168">
+        <el-table-column :label="LT.table.currentStage" min-width="204">
           <template #default="{ row }">
             <div class="case-stats-wrap">
-              <div class="case-stats" :title="`Pass ${row.l0_passed_cases} / Fail ${getStageFailed(row, 'l0')} / Total ${row.l0_total_cases}`">
-                <span class="pass-count">{{ row.l0_passed_cases }}</span>
+              <div class="case-stats" :title="`Stage ${getCurrentStageKey(row).toUpperCase()} | Pass ${getCurrentStagePassed(row)} / Fail ${getCurrentStageFailed(row)} / Total ${getCurrentStageTotal(row)}`">
+                <span class="total-count">{{ getCurrentStageKey(row).toUpperCase() }}</span>
+                <span class="sep">:</span>
+                <span class="pass-count">{{ getCurrentStagePassed(row) }}</span>
                 <span class="sep">/</span>
-                <span class="fail-count">{{ getStageFailed(row, 'l0') }}</span>
+                <span class="fail-count">{{ getCurrentStageFailed(row) }}</span>
                 <span class="sep">/</span>
-                <span class="total-count">{{ row.l0_total_cases }}</span>
+                <span class="total-count">{{ getCurrentStageTotal(row) }}</span>
               </div>
-              <div class="due-date-text" :class="`due-date-text--${getStageDeadlineLevel(row, 'l0')}`">
-                {{ DT.helper.dueDatePrefix }} {{ formatDueDate(row.l0_due_date) }}
-              </div>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column :label="LT.table.l2" min-width="168">
-          <template #default="{ row }">
-            <div class="case-stats-wrap">
-              <div class="case-stats" :title="`Pass ${row.l2_passed_cases} / Fail ${getStageFailed(row, 'l2')} / Total ${row.l2_total_cases}`">
-                <span class="pass-count">{{ row.l2_passed_cases }}</span>
-                <span class="sep">/</span>
-                <span class="fail-count">{{ getStageFailed(row, 'l2') }}</span>
-                <span class="sep">/</span>
-                <span class="total-count">{{ row.l2_total_cases }}</span>
-              </div>
-              <div class="due-date-text" :class="`due-date-text--${getStageDeadlineLevel(row, 'l2')}`">
-                {{ DT.helper.dueDatePrefix }} {{ formatDueDate(row.l2_due_date) }}
-              </div>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column :label="LT.table.l4" min-width="168">
-          <template #default="{ row }">
-            <div class="case-stats-wrap">
-              <div class="case-stats" :title="`Pass ${row.l4_passed_cases} / Fail ${getStageFailed(row, 'l4')} / Total ${row.l4_total_cases}`">
-                <span class="pass-count">{{ row.l4_passed_cases }}</span>
-                <span class="sep">/</span>
-                <span class="fail-count">{{ getStageFailed(row, 'l4') }}</span>
-                <span class="sep">/</span>
-                <span class="total-count">{{ row.l4_total_cases }}</span>
-              </div>
-              <div class="due-date-text" :class="`due-date-text--${getStageDeadlineLevel(row, 'l4')}`">
-                {{ DT.helper.dueDatePrefix }} {{ formatDueDate(row.l4_due_date) }}
+              <div class="due-date-text" :class="`due-date-text--${getCurrentStageDeadlineLevel(row)}`">
+                {{ DT.helper.dueDatePrefix }} {{ formatDueDate(getCurrentStageDueDate(row)) }}
               </div>
             </div>
           </template>
@@ -527,6 +497,39 @@ const getStageFailed = (row, stage) => {
   return Math.max(0, total - passed)
 }
 
+const isStageCompleted = (row, stage) => {
+  const total = Number(row?.[`${stage}_total_cases`] ?? 0)
+  const passed = Number(row?.[`${stage}_passed_cases`] ?? 0)
+  if (total <= 0) return false
+  return passed >= total
+}
+
+const getCurrentStageKey = (row) => {
+  if (isStageCompleted(row, 'l2')) return 'l4'
+  if (isStageCompleted(row, 'l0')) return 'l2'
+  return 'l0'
+}
+
+const getCurrentStagePassed = (row) => {
+  const stage = getCurrentStageKey(row)
+  return Number(row?.[`${stage}_passed_cases`] ?? 0)
+}
+
+const getCurrentStageTotal = (row) => {
+  const stage = getCurrentStageKey(row)
+  return Number(row?.[`${stage}_total_cases`] ?? 0)
+}
+
+const getCurrentStageFailed = (row) => {
+  const stage = getCurrentStageKey(row)
+  return getStageFailed(row, stage)
+}
+
+const getCurrentStageDueDate = (row) => {
+  const stage = getCurrentStageKey(row)
+  return row?.[`${stage}_due_date`] ?? null
+}
+
 const getTotalFailed = (row) => {
   if (row?.failed_cases !== undefined && row?.failed_cases !== null) {
     return Number(row.failed_cases)
@@ -562,6 +565,11 @@ const getStageDeadlineLevel = (row, stage) => {
   if (daysDiff < 0) return 'danger'
   if (daysDiff <= DAYS_TO_WARNING) return 'warning'
   return 'normal'
+}
+
+const getCurrentStageDeadlineLevel = (row) => {
+  const stage = getCurrentStageKey(row)
+  return getStageDeadlineLevel(row, stage)
 }
 
 const getTaskRiskLevel = (row) => {

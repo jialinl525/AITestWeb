@@ -73,6 +73,15 @@ def _ensure_compat_columns():
             if "task_type" not in columns:
                 conn.execute(text("ALTER TABLE work_tasks ADD COLUMN task_type TEXT DEFAULT 'Other'"))
 
+        if "users" in table_names:
+            columns = {item["name"] for item in inspector.get_columns("users")}
+            if "email" not in columns:
+                conn.execute(text("ALTER TABLE users ADD COLUMN email TEXT DEFAULT ''"))
+            if "responsibilities" not in columns:
+                conn.execute(text("ALTER TABLE users ADD COLUMN responsibilities TEXT DEFAULT ''"))
+            if "specialty_tasks" not in columns:
+                conn.execute(text("ALTER TABLE users ADD COLUMN specialty_tasks TEXT DEFAULT ''"))
+
 
 @app.on_event("startup")
 def on_startup():

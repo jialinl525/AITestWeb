@@ -108,6 +108,23 @@
             <h3>{{ LT.section.listTitle }}</h3>
             <span class="section-title__meta">{{ pagination.total }} {{ DT.sectionMeta.list }}</span>
           </div>
+          <div v-if="canDeleteBug()" class="bug-list-toolbar">
+            <template v-if="!bulkDeleteMode">
+              <el-button class="btn-style-3" type="danger" plain @click="enterBulkDeleteMode">Delete Bugs</el-button>
+            </template>
+            <template v-else>
+              <el-button class="btn-style-3" @click="cancelBulkDeleteMode">Cancel</el-button>
+              <el-button
+                class="btn-style-2"
+                type="danger"
+                :disabled="!selectedBugIds.length"
+                :loading="bulkDeleting"
+                @click="confirmBulkDelete"
+              >
+                Confirm Delete ({{ selectedBugIds.length }})
+              </el-button>
+            </template>
+          </div>
         </div>
       </template>
       <BugTable
@@ -117,11 +134,16 @@
         :show-verify-action="canEditBug()"
         :editable="canEditBug()"
         :deletable="canDeleteBug()"
+        :hide-delete-action="canDeleteBug()"
+        :enable-selection="bulkDeleteMode && canDeleteBug()"
+        :clear-selection-key="bugTableSelectionResetKey"
         :is-verifying="isVerifying"
         :row-class-name="getTableRowClassName"
+        @selection-change="handleBugSelectionChange"
         @verify="markBugVerified"
         @edit="editBug"
         @delete="deleteBug"
+        @quick-pick-build="openQuickBuildDialog"
       />
 
       <div class="bugs-list-footer">
@@ -165,6 +187,40 @@
       <template #footer>
         <el-button class="btn-style-3" @click="showExportDialog = false">{{ BTCommon.cancel }}</el-button>
         <el-button class="btn-style-2" type="primary" :loading="exporting" @click="handleExportTopN">{{ BT.export }}</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog
+      v-model="showQuickBuildDialog"
+      title="Quick Select Build Image"
+      width="520px"
+    >
+      <el-form label-width="120px">
+        <el-form-item label="CR Number">
+          <span>{{ quickBuildTargetBug?.external_cr_number || '-' }}</span>
+        </el-form-item>
+        <el-form-item label="Title">
+          <span class="quick-build-title">{{ quickBuildTargetBug?.title || '-' }}</span>
+        </el-form-item>
+        <el-form-item label="Available Image">
+          <el-select
+            v-model="quickBuildSelection"
+            filterable
+            placeholder="Select image"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="image in quickBuildOptions"
+              :key="`quick-build-${image}`"
+              :label="image"
+              :value="image"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button class="btn-style-3" @click="closeQuickBuildDialog">{{ BTCommon.cancel }}</el-button>
+        <el-button class="btn-style-2" type="primary" :loading="quickBuildSaving" @click="saveQuickBuildSelection">{{ BTCommon.save }}</el-button>
       </template>
     </el-dialog>
 
@@ -283,6 +339,15 @@ const editingBug = ref(null)
 const importingCsv = ref(false)
 const exporting = ref(false)
 const verifyingMap = ref({})
+const showQuickBuildDialog = ref(false)
+const quickBuildSaving = ref(false)
+const quickBuildTargetBug = ref(null)
+const quickBuildOptions = ref([])
+const quickBuildSelection = ref('')
+const bulkDeleteMode = ref(false)
+const bulkDeleting = ref(false)
+const selectedBugIds = ref([])
+const bugTableSelectionResetKey = ref(0)
 const showExportDialog = ref(false)
 const exportTopN = ref(30)
 const exportArea = ref('all')
@@ -319,6 +384,8 @@ const createEmptyBugForm = () => ({
 
 const bugForm = ref(createEmptyBugForm())
 
+const isPendingConfirmationBuild = (value) => String(value || '').trim().toLowerCase() === 'pending confirmation'
+
 const parseAvailableImages = (value = '') => {
   return String(value || '')
     .split(',')
@@ -342,6 +409,70 @@ const getBugBuildOptions = (bug) => {
   parseAvailableImages(bug?.available_images).forEach(addOption)
   addOption(bug?.software_image_integration_build)
   return options
+}
+
+const getQuickBuildOptions = (bug) => {
+  const options = []
+  const seen = new Set()
+  parseAvailableImages(bug?.available_images).forEach((item) => {
+    const text = String(item || '').trim()
+    const key = text.toLowerCase()
+    if (!text || isPendingConfirmationBuild(text) || seen.has(key)) {
+      return
+    }
+    seen.add(key)
+    options.push(text)
+  })
+  return options
+}
+
+const closeQuickBuildDialog = () => {
+  showQuickBuildDialog.value = false
+  quickBuildTargetBug.value = null
+  quickBuildOptions.value = []
+  quickBuildSelection.value = ''
+}
+
+const openQuickBuildDialog = (bug) => {
+  if (!canEditBug()) {
+    return
+  }
+  if (!isPendingConfirmationBuild(bug?.software_image_integration_build)) {
+    return
+  }
+
+  const options = getQuickBuildOptions(bug)
+  if (!options.length) {
+    ElMessage.warning('No available image found for quick selection')
+    return
+  }
+
+  quickBuildTargetBug.value = bug
+  quickBuildOptions.value = options
+  quickBuildSelection.value = options[0]
+  showQuickBuildDialog.value = true
+}
+
+const saveQuickBuildSelection = async () => {
+  const target = quickBuildTargetBug.value
+  const selectedImage = String(quickBuildSelection.value || '').trim()
+  if (!target?.id || !selectedImage) {
+    ElMessage.warning('Please select an image')
+    return
+  }
+
+  quickBuildSaving.value = true
+  try {
+    await updateBug(target.id, toBugUpdatePayload(target, { software_image_integration_build: selectedImage }))
+    ElMessage.success('Software Image Integration Build updated')
+    closeQuickBuildDialog()
+    await loadFilterOptions()
+    await loadData()
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.detail || DT.toast.saveFailed)
+  } finally {
+    quickBuildSaving.value = false
+  }
 }
 
 const buildQueryParams = (override = {}) => {
@@ -369,6 +500,11 @@ const loadData = async () => {
     const data = await queryBugs(buildQueryParams())
     bugsList.value = data?.items || []
     pagination.value.total = Number(data?.total || 0)
+
+    if (bulkDeleteMode.value) {
+      const currentIds = new Set((bugsList.value || []).map((item) => Number(item.id)))
+      selectedBugIds.value = selectedBugIds.value.filter((id) => currentIds.has(Number(id)))
+    }
     
     // Load summary stats.
     const stats = await getBugStats()
@@ -398,6 +534,69 @@ const handlePageSizeChange = (size) => {
 const handlePageChange = (page) => {
   pagination.value.page = page
   loadData()
+}
+
+const enterBulkDeleteMode = () => {
+  bulkDeleteMode.value = true
+  selectedBugIds.value = []
+  bugTableSelectionResetKey.value += 1
+}
+
+const cancelBulkDeleteMode = () => {
+  bulkDeleteMode.value = false
+  selectedBugIds.value = []
+  bugTableSelectionResetKey.value += 1
+}
+
+const handleBugSelectionChange = (rows) => {
+  if (!bulkDeleteMode.value) {
+    return
+  }
+  selectedBugIds.value = (rows || [])
+    .map((row) => Number(row.id))
+    .filter((id) => Number.isFinite(id))
+}
+
+const confirmBulkDelete = async () => {
+  const ids = [...selectedBugIds.value]
+  if (!ids.length) {
+    ElMessage.warning('Please select bugs to delete')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `Delete ${ids.length} selected bugs?`,
+      'Confirm Bulk Delete',
+      {
+        confirmButtonText: BTCommon.confirm,
+        cancelButtonText: BTCommon.cancel,
+        type: 'warning'
+      }
+    )
+  } catch {
+    return
+  }
+
+  bulkDeleting.value = true
+  try {
+    const results = await Promise.allSettled(ids.map((id) => deleteBugApi(id)))
+    const successCount = results.filter((item) => item.status === 'fulfilled').length
+    const failedCount = results.length - successCount
+
+    if (successCount > 0) {
+      ElMessage.success(`Deleted ${successCount} bugs`)
+    }
+    if (failedCount > 0) {
+      ElMessage.error(`Failed to delete ${failedCount} bugs`)
+    }
+
+    await loadFilterOptions()
+    await loadData()
+    cancelBulkDeleteMode()
+  } finally {
+    bulkDeleting.value = false
+  }
 }
 
 const loadFilterOptions = async () => {
@@ -686,6 +885,18 @@ watch(
 
 .bugs-container :deep(.stale-cr-row > td.el-table__cell) {
   background: rgba(239, 68, 68, 0.14) !important;
+}
+
+.bug-list-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.quick-build-title {
+  line-height: 1.6;
+  word-break: break-word;
 }
 
 @media (max-width: 768px) {

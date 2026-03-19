@@ -1,0 +1,448 @@
+{
+  "version": 2,
+  "categories": [
+    {
+      "key": "ASR",
+      "label": "ASR Model",
+      "description": "Speech-to-text model family used for command recognition, dictation, and conversational transcription.",
+      "implementation_notes": "Common implementations combine front-end audio preprocessing, acoustic modeling, language modeling, and post-processing tuned for streaming or offline scenarios.",
+      "metrics": [
+        {
+          "key": "power_consumption",
+          "label": "Power",
+          "unit": "W",
+          "direction": "lower",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Average platform power draw during the ASR test run."
+        },
+        {
+          "key": "latency",
+          "label": "Latency",
+          "unit": "ms",
+          "direction": "lower",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Recognition response delay from audio input to final result."
+        },
+        {
+          "key": "accuracy_en",
+          "label": "Accuracy-en",
+          "unit": "%",
+          "direction": "higher",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "English recognition accuracy under the current benchmark set."
+        },
+        {
+          "key": "accuracy_cn",
+          "label": "Accuracy-cn",
+          "unit": "%",
+          "direction": "higher",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Chinese recognition accuracy under the current benchmark set."
+        },
+        {
+          "key": "accuracy_es",
+          "label": "Accuracy-es",
+          "unit": "%",
+          "direction": "higher",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Spanish recognition accuracy under the current benchmark set."
+        },
+        {
+          "key": "accuracy_total",
+          "label": "Accuracy-total",
+          "unit": "%",
+          "direction": "higher",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Overall aggregated ASR accuracy across supported evaluation sets."
+        }
+      ]
+    },
+    {
+      "key": "TTS",
+      "label": "TTS",
+      "description": "Text-to-speech model family used for voice playback, assistant prompts, and spoken UI output.",
+      "implementation_notes": "Typical stacks combine text normalization, acoustic generation, and neural vocoder components, with tuning between naturalness, throughput, and on-device resource usage.",
+      "metrics": [
+        {
+          "key": "power_consumption",
+          "label": "Power",
+          "unit": "W",
+          "direction": "lower",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Average platform power draw during TTS inference."
+        },
+        {
+          "key": "latency",
+          "label": "Latency",
+          "unit": "ms",
+          "direction": "lower",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Speech synthesis delay from text request to audible output start."
+        },
+        {
+          "key": "accuracy_en",
+          "label": "Accuracy-en",
+          "unit": "%",
+          "direction": "higher",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "English synthesis quality score or proxy benchmark score."
+        },
+        {
+          "key": "accuracy_cn",
+          "label": "Accuracy-cn",
+          "unit": "%",
+          "direction": "higher",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Chinese synthesis quality score or proxy benchmark score."
+        },
+        {
+          "key": "accuracy_es",
+          "label": "Accuracy-es",
+          "unit": "%",
+          "direction": "higher",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Spanish synthesis quality score or proxy benchmark score."
+        },
+        {
+          "key": "accuracy_total",
+          "label": "Accuracy-total",
+          "unit": "%",
+          "direction": "higher",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Overall aggregated TTS quality score across supported evaluation sets."
+        }
+      ]
+    },
+    {
+      "key": "Translation",
+      "label": "Translation",
+      "description": "Text translation model family for multilingual translation quality and throughput comparison.",
+      "implementation_notes": "Implementations usually rely on multilingual encoders and decoders with domain tuning, terminology constraints, and serving optimizations for batch or real-time translation.",
+      "metrics": [
+        {
+          "key": "power_consumption",
+          "label": "Power",
+          "unit": "W",
+          "direction": "lower",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Average platform power draw during translation inference."
+        },
+        {
+          "key": "latency",
+          "label": "Latency",
+          "unit": "ms",
+          "direction": "lower",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "End-to-end translation response delay for the configured test case."
+        },
+        {
+          "key": "accuracy_en_to_cn",
+          "label": "Accuracy-en to cn",
+          "unit": "%",
+          "direction": "higher",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "English to Chinese translation accuracy or quality score."
+        },
+        {
+          "key": "accuracy_cn_to_en",
+          "label": "Accuracy-cn to en",
+          "unit": "%",
+          "direction": "higher",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Chinese to English translation accuracy or quality score."
+        },
+        {
+          "key": "accuracy_en_to_es",
+          "label": "Accuracy-en to es",
+          "unit": "%",
+          "direction": "higher",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "English to Spanish translation accuracy or quality score."
+        },
+        {
+          "key": "accuracy_es_to_en",
+          "label": "Accuracy-es to en",
+          "unit": "%",
+          "direction": "higher",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Spanish to English translation accuracy or quality score."
+        },
+        {
+          "key": "accuracy_total",
+          "label": "Accuracy-total",
+          "unit": "%",
+          "direction": "higher",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Overall aggregated translation quality across configured language directions."
+        }
+      ]
+    },
+    {
+      "key": "VoiceCallTranslation Solution",
+      "label": "VoiceCallTranslation Solution",
+      "description": "Full voice-call translation solution integrating ASR, translation, and TTS in one streaming workflow.",
+      "implementation_notes": "These solutions typically orchestrate multiple model stages in real time, so pipeline coordination, buffering strategy, and stage latency balancing strongly affect user experience.",
+      "metrics": [
+        {
+          "key": "power_consumption",
+          "label": "Power",
+          "unit": "W",
+          "direction": "lower",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Average platform power draw across the end-to-end voice call translation workflow."
+        },
+        {
+          "key": "e2e_latency",
+          "label": "E2E Latency",
+          "unit": "ms",
+          "direction": "lower",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Total pipeline latency from source speech input to translated speech output."
+        },
+        {
+          "key": "accuracy_en_to_cn",
+          "label": "Accuracy-en to cn",
+          "unit": "%",
+          "direction": "higher",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "English to Chinese translation quality within the full voice-call solution."
+        },
+        {
+          "key": "accuracy_cn_to_en",
+          "label": "Accuracy-cn to en",
+          "unit": "%",
+          "direction": "higher",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Chinese to English translation quality within the full voice-call solution."
+        },
+        {
+          "key": "accuracy_total",
+          "label": "Accuracy-total",
+          "unit": "%",
+          "direction": "higher",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Overall user-facing quality score for the full voice-call translation pipeline."
+        }
+      ]
+    },
+    {
+      "key": "LPI Recording",
+      "label": "LPI Recording",
+      "description": "Low-power idle or always-on audio recording scenario focused on battery-sensitive capture workloads.",
+      "implementation_notes": "Implementations usually emphasize DSP offload, low-duty-cycle wakeups, and data path simplification to minimize steady-state energy cost.",
+      "metrics": [
+        {
+          "key": "power_consumption",
+          "label": "Power",
+          "unit": "W",
+          "direction": "lower",
+          "chart_roles": [
+            "ladder",
+            "table",
+            "form"
+          ],
+          "definition": "Average platform power draw while the low-power recording pipeline remains active."
+        }
+      ]
+    },
+    {
+      "key": "Multi Model Detection",
+      "label": "Multi Model Detection",
+      "description": "Multi-trigger or multi-model detection stack for wake word, event detection, or front-end sensing workloads.",
+      "implementation_notes": "Common implementations chain lightweight detectors with policy logic to balance responsiveness, false accept rate, and compute cost under continuous listening constraints.",
+      "metrics": [
+        {
+          "key": "power_consumption",
+          "label": "Power",
+          "unit": "W",
+          "direction": "lower",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Average platform power draw while all detection models are active."
+        },
+        {
+          "key": "latency",
+          "label": "Latency",
+          "unit": "ms",
+          "direction": "lower",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Detection response delay from trigger condition to final decision."
+        },
+        {
+          "key": "wakeup_rate",
+          "label": "Wakeup Rate",
+          "unit": "%",
+          "direction": "higher",
+          "chart_roles": [
+            "ladder",
+            "scatter",
+            "table",
+            "form"
+          ],
+          "definition": "Successful wakeup or detection rate under the configured benchmark."
+        }
+      ]
+    }
+  ],
+  "category_aliases": {
+    "voicecalltranslationsolution": "VoiceCallTranslation Solution",
+    "voicecalltranslation": "VoiceCallTranslation Solution"
+  },
+  "metric_aliases": {
+    "power": "power_consumption",
+    "powerconsumption": "power_consumption",
+    "latency": "latency",
+    "e2elatency": "e2e_latency",
+    "wakeuprate": "wakeup_rate",
+    "accuracytotal": "accuracy_total",
+    "accuracyoverall": "accuracy_total",
+    "accuracyen": "accuracy_en",
+    "accuracycn": "accuracy_cn",
+    "accuracyzh": "accuracy_cn",
+    "accuracyes": "accuracy_es",
+    "accuracyentocn": "accuracy_en_to_cn",
+    "accuracycntoen": "accuracy_cn_to_en",
+    "accuracyentoes": "accuracy_en_to_es",
+    "accuracyestoen": "accuracy_es_to_en"
+  },
+  "metric_filter_aliases": {
+    "accuracy_total": [
+      "accuracy_overall"
+    ],
+    "accuracy_cn": [
+      "accuracy_zh"
+    ],
+    "e2e_latency": [
+      "latency"
+    ]
+  }
+}
