@@ -48,6 +48,46 @@
       </article>
     </div>
 
+    <el-card class="section-card bug-chart-card">
+      <template #header>
+        <div class="section-title">
+          <div class="section-title__main">
+            <h3>Bug Distribution</h3>
+            <span class="section-title__meta">Bugs with CR created date >= today - 365 days</span>
+          </div>
+        </div>
+      </template>
+      <div class="bug-chart-grid">
+        <v-chart class="bug-pie-chart" :option="bugPieOption" autoresize />
+        <div class="bug-chart-summary">
+          <div class="bug-chart-summary__item">
+            <span class="bug-chart-summary__dot bug-chart-summary__dot--analysis"></span>
+            <span>Analysis {{ bugStats.by_status?.analysis || 0 }}</span>
+          </div>
+          <div class="bug-chart-summary__item">
+            <span class="bug-chart-summary__dot bug-chart-summary__dot--other"></span>
+            <span>Other {{ bugStats.by_status?.other || 0 }}</span>
+          </div>
+          <div class="bug-chart-summary__item">
+            <span class="bug-chart-summary__dot bug-chart-summary__dot--fixed"></span>
+            <span>Fixed {{ bugStats.by_status?.fixed || 0 }}</span>
+          </div>
+        </div>
+      </div>
+    </el-card>
+
+    <el-card class="section-card bug-chart-card">
+      <template #header>
+        <div class="section-title">
+          <div class="section-title__main">
+            <h3>Monthly Bug Trend</h3>
+            <span class="section-title__meta">Monthly CR and Fixed CR trend by whole month</span>
+          </div>
+        </div>
+      </template>
+      <v-chart class="bug-line-chart" :option="bugTrendOption" autoresize />
+    </el-card>
+
     <el-card class="section-card">
       <template #header>
         <div class="section-title">
@@ -303,7 +343,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
@@ -395,6 +435,148 @@ const createEmptyBugForm = () => ({
 })
 
 const bugForm = ref(createEmptyBugForm())
+
+const bugPieOption = computed(() => ({
+  backgroundColor: 'transparent',
+  tooltip: {
+    trigger: 'item',
+    formatter: '{b}: {c} ({d}%)'
+  },
+  legend: {
+    bottom: 0,
+    left: 'center',
+    icon: 'circle',
+    textStyle: {
+      color: 'rgba(226, 232, 240, 0.9)'
+    }
+  },
+  series: [
+    {
+      type: 'pie',
+      radius: ['48%', '72%'],
+      center: ['50%', '42%'],
+      label: {
+        show: true,
+        color: '#f8fafc',
+        formatter: '{b}\n{d}%'
+      },
+      itemStyle: {
+        borderColor: 'rgba(8, 15, 33, 0.92)',
+        borderWidth: 4
+      },
+      data: [
+        {
+          value: bugStats.value.by_status?.analysis || 0,
+          name: 'Analysis',
+          itemStyle: { color: '#f97316' }
+        },
+        {
+          value: bugStats.value.by_status?.other || 0,
+          name: 'Other',
+          itemStyle: { color: '#60a5fa' }
+        },
+        {
+          value: bugStats.value.by_status?.fixed || 0,
+          name: 'Fixed',
+          itemStyle: { color: '#34d399' }
+        }
+      ]
+    }
+  ]
+}))
+
+const bugTrendOption = computed(() => {
+  const monthlyTrend = Array.isArray(bugStats.value.monthly_trend) ? bugStats.value.monthly_trend : []
+  return {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis'
+    },
+    legend: {
+      top: 0,
+      textStyle: {
+        color: 'rgba(226, 232, 240, 0.9)'
+      }
+    },
+    grid: {
+      left: 24,
+      right: 24,
+      top: 48,
+      bottom: 24,
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: monthlyTrend.map(item => item.month),
+      axisLine: {
+        lineStyle: {
+          color: 'rgba(148, 163, 184, 0.4)'
+        }
+      },
+      axisLabel: {
+        color: 'rgba(226, 232, 240, 0.9)'
+      }
+    },
+    yAxis: {
+      type: 'value',
+      minInterval: 1,
+      axisLine: {
+        lineStyle: {
+          color: 'rgba(148, 163, 184, 0.4)'
+        }
+      },
+      splitLine: {
+        lineStyle: {
+          color: 'rgba(148, 163, 184, 0.12)'
+        }
+      },
+      axisLabel: {
+        color: 'rgba(226, 232, 240, 0.9)'
+      }
+    },
+    series: [
+      {
+        name: 'Total CR',
+        type: 'line',
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 8,
+        showSymbol: true,
+        data: monthlyTrend.map(item => item.total || 0),
+        lineStyle: {
+          width: 3,
+          color: '#60a5fa'
+        },
+        itemStyle: {
+          color: '#60a5fa'
+        },
+        areaStyle: {
+          color: 'rgba(96, 165, 250, 0.12)'
+        }
+      },
+      {
+        name: 'Fixed CR',
+        type: 'line',
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 8,
+        showSymbol: true,
+        data: monthlyTrend.map(item => item.fixed || 0),
+        lineStyle: {
+          width: 3,
+          color: '#34d399'
+        },
+        itemStyle: {
+          color: '#34d399'
+        },
+        areaStyle: {
+          color: 'rgba(52, 211, 153, 0.1)'
+        }
+      }
+    ]
+  }
+})
 
 const isPendingConfirmationBuild = (value) => String(value || '').trim().toLowerCase() === 'pending confirmation'
 
@@ -490,7 +672,8 @@ const buildQueryParams = (override = {}) => {
   const pageSize = override.pageSize ?? pagination.value.pageSize
   const params = {
     skip: Math.max(0, (page - 1) * pageSize),
-    limit: pageSize
+    limit: pageSize,
+    recent_days: 365
   }
 
   if (filters.value.verification_zone) params.verification_zone = filters.value.verification_zone
@@ -516,7 +699,7 @@ const loadData = async () => {
     }
     
     // Load summary stats.
-    const stats = await getBugStats()
+    const stats = await getBugStats({ recent_days: 365 })
     bugStats.value = stats
   }, {
     loadingRef: loading,
@@ -900,6 +1083,63 @@ watch(
   flex-wrap: wrap;
 }
 
+.bug-chart-card {
+  margin-bottom: 24px;
+}
+
+.bug-chart-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.1fr) minmax(220px, 0.9fr);
+  gap: 24px;
+  align-items: center;
+}
+
+.bug-pie-chart {
+  width: 100%;
+  height: 320px;
+}
+
+.bug-line-chart {
+  width: 100%;
+  height: 360px;
+}
+
+.bug-chart-summary {
+  display: grid;
+  gap: 14px;
+}
+
+.bug-chart-summary__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+.bug-chart-summary__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.bug-chart-summary__dot--analysis {
+  background: #f97316;
+}
+
+.bug-chart-summary__dot--other {
+  background: #60a5fa;
+}
+
+.bug-chart-summary__dot--fixed {
+  background: #34d399;
+}
+
 .quick-build-title {
   line-height: 1.6;
   word-break: break-word;
@@ -909,6 +1149,15 @@ watch(
   .filter-form :deep(.el-form-item) {
     margin-right: 0;
     width: 100%;
+  }
+
+  .bug-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bug-pie-chart,
+  .bug-line-chart {
+    height: 280px;
   }
 }
 </style>

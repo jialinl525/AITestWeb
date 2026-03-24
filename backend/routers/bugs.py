@@ -1,7 +1,7 @@
 import csv
 import io
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
@@ -328,6 +328,11 @@ def _apply_bug_filters(query, status: Optional[str] = None, severity: Optional[s
     return query
 
 
+def _apply_recent_bug_date_filter(query, recent_days: int = 365):
+    threshold = datetime.now() - timedelta(days=recent_days)
+    return query.filter(models.Bug.cr_created_on.isnot(None), models.Bug.cr_created_on >= threshold)
+
+
 def _apply_verification_zone_filter(query, verification_zone: Optional[str] = None):
     zone = (verification_zone or "all").strip().lower()
     if zone in {"", "all"}:
@@ -546,12 +551,14 @@ def query_bugs(
     created_by: str = None,
     verification_zone: str = "all",
     test_id: Optional[int] = None,
+    recent_days: int = 365,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
 ):
     """Query bugs with filters, CR-number-desc ordering, and pagination metadata."""
     base_query = db.query(models.Bug)
+    base_query = _apply_recent_bug_date_filter(base_query, recent_days=recent_days)
     base_query = _apply_bug_filters(base_query, status=status, severity=severity, created_by=created_by)
     base_query = _apply_verification_zone_filter(base_query, verification_zone=verification_zone)
     if test_id is not None:
@@ -655,11 +662,13 @@ def get_bugs_by_test(test_id: int, db: Session = Depends(get_db)):
     return [_serialize_bug(row) for row in bugs]
 
 @router.get("/stats/summary")
-def get_bug_stats(db: Session = Depends(get_db)):
+def get_bug_stats(recent_days: int = 365, db: Session = Depends(get_db)):
     """Get bug summary statistics."""
-    total_bugs = db.query(models.Bug).count()
+    base_query = _apply_recent_bug_date_filter(db.query(models.Bug), recent_days=recent_days)
+
+    total_bugs = base_query.count()
     status_rows = (
-        db.query(models.Bug.status, func.count(models.Bug.id))
+        base_query.with_entities(models.Bug.status, func.count(models.Bug.id))
         .group_by(models.Bug.status)
         .all()
     )
@@ -671,12 +680,34 @@ def get_bug_stats(db: Session = Depends(get_db)):
     for raw_status, count in status_rows:
         bucket = _normalize_status(raw_status)
         status_summary[bucket] += count
-    
-    critical_bugs = db.query(models.Bug).filter(models.Bug.severity == "critical").count()
-    high_bugs = db.query(models.Bug).filter(models.Bug.severity == "high").count()
-    medium_bugs = db.query(models.Bug).filter(models.Bug.severity == "medium").count()
-    low_bugs = db.query(models.Bug).filter(models.Bug.severity == "low").count()
-    
+
+    critical_bugs = base_query.filter(models.Bug.severity == "critical").count()
+    high_bugs = base_query.filter(models.Bug.severity == "high").count()
+    medium_bugs = base_query.filter(models.Bug.severity == "medium").count()
+    low_bugs = base_query.filter(models.Bug.severity == "low").count()
+
+    trend_rows = (
+        base_query.with_entities(models.Bug.cr_created_on, models.Bug.status)
+        .all()
+    )
+
+    monthly_map = {}
+    for created_on, raw_status in trend_rows:
+        if created_on is None:
+            continue
+        month_key = created_on.strftime("%Y-%m")
+        if month_key not in monthly_map:
+            monthly_map[month_key] = {
+                "month": month_key,
+                "total": 0,
+                "fixed": 0,
+            }
+        monthly_map[month_key]["total"] += 1
+        if _normalize_status(raw_status) == "fixed":
+            monthly_map[month_key]["fixed"] += 1
+
+    monthly_trend = [monthly_map[key] for key in sorted(monthly_map.keys())]
+
     return {
         "total": total_bugs,
         "by_status": {
@@ -689,5 +720,6 @@ def get_bug_stats(db: Session = Depends(get_db)):
             "high": high_bugs,
             "medium": medium_bugs,
             "low": low_bugs
-        }
+        },
+        "monthly_trend": monthly_trend
     }
