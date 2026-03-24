@@ -166,6 +166,17 @@
               <template #default="{ row }">{{ formatManday(row.estimated_hours) }}</template>
             </el-table-column>
           </el-table>
+          <div class="task-pagination">
+            <el-pagination
+              v-if="totalTaskCount > pageSize"
+              background
+              layout="prev, pager, next"
+              :page-size="pageSize"
+              :total="totalTaskCount"
+              :current-page="currentPage"
+              @current-change="handlePageChange"
+            />
+          </div>
         </el-card>
       </template>
     </el-card>
@@ -230,6 +241,8 @@ const DT = DescriptionText.personnelDetail
 
 const loading = ref(false)
 const memberDetail = ref(null)
+const currentPage = ref(1)
+const pageSize = 10
 const showProfileEditDialog = ref(false)
 const savingProfile = ref(false)
 const profileForm = ref({
@@ -243,19 +256,35 @@ const completedTasks = computed(() => {
   return (memberDetail.value?.tasks || []).filter(task => String(task.status || '').toLowerCase() === 'completed').length
 })
 
-const visibleTasks = computed(() => {
+const getTaskSortTime = (task) => {
+  const rawValue = task?.end_date || task?.period_end || task?.start_date || task?.period_start
+  if (!rawValue) return 0
+  const normalized = typeof rawValue === 'string' && rawValue.length <= 10 ? `${rawValue}T23:59:59` : rawValue
+  const date = new Date(normalized)
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime()
+}
+
+const sortedTasks = computed(() => {
   const tasks = Array.isArray(memberDetail.value?.tasks) ? [...memberDetail.value.tasks] : []
-  return tasks
-    .sort((first, second) => {
-      if ((first.task_kind || '') !== (second.task_kind || '')) {
-        return first.task_kind === 'test' ? -1 : 1
-      }
-      const firstStart = first?.start_date || first?.period_start || '9999-12-31'
-      const secondStart = second?.start_date || second?.period_start || '9999-12-31'
-      if (firstStart !== secondStart) return String(firstStart).localeCompare(String(secondStart))
-      return String(first?.task_label || first?.test_name || '').localeCompare(String(second?.task_label || second?.test_name || ''))
-    })
-    .slice(0, 10)
+  return tasks.sort((first, second) => {
+    const secondTime = getTaskSortTime(second)
+    const firstTime = getTaskSortTime(first)
+    if (secondTime !== firstTime) return secondTime - firstTime
+
+    const secondStart = String(second?.start_date || second?.period_start || '')
+    const firstStart = String(first?.start_date || first?.period_start || '')
+    if (secondStart !== firstStart) return secondStart.localeCompare(firstStart)
+
+    return String(second?.task_label || second?.test_name || '').localeCompare(String(first?.task_label || first?.test_name || ''))
+  })
+})
+
+const totalTaskCount = computed(() => sortedTasks.value.length)
+
+const visibleTasks = computed(() => {
+  const startIndex = (currentPage.value - 1) * pageSize
+  const endIndex = startIndex + pageSize
+  return sortedTasks.value.slice(startIndex, endIndex)
 })
 
 const overlapSummaryList = computed(() => {
@@ -325,6 +354,10 @@ const formatTaskName = (task) => {
 
 const taskRowKey = (task) => `${task?.task_kind || 'test'}-${task?.id || 'na'}`
 
+const handlePageChange = (page) => {
+  currentPage.value = page
+}
+
 const goBack = () => {
   router.push('/personnel')
 }
@@ -383,6 +416,7 @@ const loadDetail = async () => {
   loading.value = true
   try {
     memberDetail.value = await getWorkloadByUser(userId)
+    currentPage.value = 1
   } catch (error) {
     ElMessage.error(error?.response?.data?.detail || DT.toast.loadFailed)
   } finally {

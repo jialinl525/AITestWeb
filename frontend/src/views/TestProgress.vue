@@ -85,12 +85,12 @@
             <h3>{{ LT.listTitle }}</h3>
             <span class="section-title__meta">{{ DT.sectionMeta.list }}</span>
           </div>
-          <div class="inline-stats muted-text">{{ testProgressList.length }} {{ LT.inline.records }}</div>
+          <div class="inline-stats muted-text">{{ filteredTestProgressList.length }} {{ LT.inline.records }}</div>
         </div>
       </template>
 
       <el-table
-        :data="testProgressList"
+        :data="paginatedTestProgressList"
         v-loading="loading"
         stripe
         class="test-progress-table"
@@ -178,6 +178,17 @@
           </template>
         </el-table-column>
       </el-table>
+      <div class="list-pagination">
+        <el-pagination
+          v-if="filteredTestProgressList.length > pageSize"
+          background
+          layout="prev, pager, next"
+          :page-size="pageSize"
+          :total="filteredTestProgressList.length"
+          :current-page="currentPage"
+          @current-change="handlePageChange"
+        />
+      </div>
     </el-card>
 
     <el-dialog
@@ -318,6 +329,8 @@ const DT = DescriptionText.testProgress
 const loading = ref(false)
 const testProgressList = ref([])
 const members = ref([])
+const currentPage = ref(1)
+const pageSize = 10
 const showCreateDialog = ref(false)
 const editingTest = ref(null)
 const DAYS_TO_WARNING = 3
@@ -373,16 +386,47 @@ const calcProgress = computed(() => {
   return Math.round(Math.min(100, (passed / total) * 100))
 })
 
+const parseRecentDate = (value) => {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  date.setHours(0, 0, 0, 0)
+  return date
+}
+
+const filteredTestProgressList = computed(() => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const startDate = new Date(today)
+  startDate.setDate(startDate.getDate() - 365)
+
+  return testProgressList.value.filter(item => {
+    const candidateDates = [
+      parseRecentDate(item?.l4_due_date),
+      parseRecentDate(item?.l2_due_date),
+      parseRecentDate(item?.l0_due_date)
+    ].filter(Boolean)
+
+    return candidateDates.some(date => date >= startDate)
+  })
+})
+
+const paginatedTestProgressList = computed(() => {
+  const startIndex = (currentPage.value - 1) * pageSize
+  return filteredTestProgressList.value.slice(startIndex, startIndex + pageSize)
+})
+
 const overviewStats = computed(() => {
-  const total = testProgressList.value.length
-  const inprogress = testProgressList.value.filter(item => normalizeTaskStatus(item.status) === 'Inprogress').length
-  const completed = testProgressList.value.filter(item => normalizeTaskStatus(item.status) === 'Completed').length
-  const totalCases = testProgressList.value.reduce((sum, item) => sum + (item.total_cases || 0), 0)
-  const passedCases = testProgressList.value.reduce((sum, item) => sum + (item.passed_cases || 0), 0)
-  const failedCases = testProgressList.value.reduce((sum, item) => sum + getTotalFailed(item), 0)
+  const total = filteredTestProgressList.value.length
+  const inprogress = filteredTestProgressList.value.filter(item => normalizeTaskStatus(item.status) === 'Inprogress').length
+  const completed = filteredTestProgressList.value.filter(item => normalizeTaskStatus(item.status) === 'Completed').length
+  const totalCases = filteredTestProgressList.value.reduce((sum, item) => sum + (item.total_cases || 0), 0)
+  const passedCases = filteredTestProgressList.value.reduce((sum, item) => sum + (item.passed_cases || 0), 0)
+  const failedCases = filteredTestProgressList.value.reduce((sum, item) => sum + getTotalFailed(item), 0)
   const untestedCases = Math.max(0, totalCases - passedCases - failedCases)
   const avgProgress = total
-    ? Math.round(testProgressList.value.reduce((sum, item) => sum + (item.progress || 0), 0) / total)
+    ? Math.round(filteredTestProgressList.value.reduce((sum, item) => sum + (item.progress || 0), 0) / total)
     : 0
 
   return {
@@ -458,6 +502,7 @@ const loadData = async () => {
     async () => {
       const data = await getTestProgressList()
       testProgressList.value = data
+      currentPage.value = 1
     },
     {
       loadingRef: loading,
@@ -589,6 +634,10 @@ const getTableRowClassName = ({ row }) => {
 
 const formatDueDate = (dateString) => {
   return formatDate(dateString)
+}
+
+const handlePageChange = (page) => {
+  currentPage.value = page
 }
 
 const viewDetail = (testId) => {
@@ -867,6 +916,12 @@ onMounted(() => {
 
 .test-progress-container :deep(.risk-row-danger > td.el-table__cell) {
   background: rgba(239, 68, 68, 0.12) !important;
+}
+
+.list-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 
 @media (max-width: 960px) {

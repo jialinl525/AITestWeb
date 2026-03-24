@@ -102,7 +102,7 @@
           <template #default="{ row }">
             <div class="member-task-grid">
               <div class="member-task-grid__head" :class="{ 'member-task-grid__head--readonly': !canCreateOrEditTest() }">
-                <div>{{ LT.table.task }}</div>
+                <div>Current Task</div>
                 <div>{{ LT.table.partDescription }}</div>
                 <div>{{ LT.table.startDate }}</div>
                 <div>{{ LT.table.endDate }}</div>
@@ -175,25 +175,6 @@
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
-
-    <el-card class="section-card runtime-card">
-      <template #header>
-        <div class="section-title">
-          <div class="section-title__main">
-            <h3>Runtime Diagnostics</h3>
-            <span class="section-title__meta">Captured frontend errors and expand events for debugging</span>
-          </div>
-          <el-button size="small" @click="clearDiagnostics">Clear Logs</el-button>
-        </div>
-      </template>
-      <div v-if="runtimeDiagnostics.length" class="runtime-log-list">
-        <div v-for="item in runtimeDiagnostics" :key="item.id" class="runtime-log-item">
-          <div class="runtime-log-item__meta">{{ item.ts }} | {{ item.type }}</div>
-          <pre class="runtime-log-item__content">{{ item.message }}</pre>
-        </div>
-      </div>
-      <div v-else class="muted-text">No runtime logs yet. Trigger dropdown interaction to capture events.</div>
     </el-card>
 
     <el-dialog v-model="showAllocationDialog" :title="`${LT.dialog.taskMandayAllocation} - ${allocationTask.test_name || ''}`" width="980px">
@@ -300,9 +281,7 @@ const members = ref([])
 const workload = ref([])
 const workloadTableRef = ref(null)
 const expandedUserIds = ref([])
-const runtimeDiagnostics = ref([])
 const managedUsers = ref([])
-let runtimeSeed = 0
 
 const showAllocationDialog = ref(false)
 const savingAllocation = ref(false)
@@ -391,22 +370,50 @@ const normalizeTaskRows = (tasks) => {
       ...task,
       _row_key: `${task?.task_kind || 'test'}-${task?.id ?? 'na'}-${index}`
     }))
-  } catch (error) {
-    pushRuntimeLog('normalizeTaskRows', formatError(error))
+  } catch (_error) {
     return []
   }
+}
+
+const toDateTime = (value, endOfDay = false) => {
+  if (!value) return null
+  const normalized = typeof value === 'string' && value.length <= 10
+    ? `${value}${endOfDay ? 'T23:59:59' : 'T00:00:00'}`
+    : value
+  const date = new Date(normalized)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+const isTaskVisibleInPersonnelList = (task) => {
+  const now = new Date()
+  const windowStart = new Date(now)
+  windowStart.setDate(windowStart.getDate() - 14)
+  windowStart.setHours(0, 0, 0, 0)
+
+  const windowEnd = new Date(now)
+  windowEnd.setDate(windowEnd.getDate() + 14)
+  windowEnd.setHours(23, 59, 59, 999)
+
+  const startDate = toDateTime(task?.start_date || task?.period_start, false)
+  const endDate = toDateTime(task?.end_date || task?.period_end || task?.start_date || task?.period_start, true)
+
+  const isOngoing = startDate && endDate && startDate <= now && endDate >= now
+  const startsSoon = startDate && startDate >= windowStart && startDate <= windowEnd
+  const endsSoon = endDate && endDate >= windowStart && endDate <= windowEnd
+
+  return Boolean(isOngoing || startsSoon || endsSoon)
 }
 
 const getVisibleTaskRows = (row) => {
   const normalized = normalizeTaskRows(row?.tasks)
   return normalized
+    .filter(isTaskVisibleInPersonnelList)
     .sort((first, second) => {
       const firstStart = first?.start_date || first?.period_start || '9999-12-31'
       const secondStart = second?.start_date || second?.period_start || '9999-12-31'
       if (firstStart !== secondStart) return String(firstStart).localeCompare(String(secondStart))
       return String(first?.task_label || first?.test_name || '').localeCompare(String(second?.task_label || second?.test_name || ''))
     })
-    .slice(0, 10)
 }
 
 const getTaskGroups = (row) => {
@@ -425,71 +432,20 @@ const getTaskGroups = (row) => {
   ]
 }
 
-const formatError = (error) => {
-  if (!error) return 'Unknown error'
-  if (typeof error === 'string') return error
-  const name = error?.name ? `${error.name}: ` : ''
-  const message = error?.message || String(error)
-  const stack = error?.stack ? `\n${error.stack}` : ''
-  return `${name}${message}${stack}`
-}
-
-const pushRuntimeLog = (type, message) => {
-  runtimeSeed += 1
-  runtimeDiagnostics.value.unshift({
-    id: `${Date.now()}-${runtimeSeed}`,
-    ts: new Date().toLocaleString('en-CA'),
-    type,
-    message: String(message || '')
-  })
-  if (runtimeDiagnostics.value.length > 30) {
-    runtimeDiagnostics.value = runtimeDiagnostics.value.slice(0, 30)
-  }
-}
-
 const isExpanded = (userId) => expandedUserIds.value.includes(Number(userId))
 
-const handleExpandChange = (row, expandedRows) => {
+const handleExpandChange = (_row, expandedRows) => {
   expandedUserIds.value = (expandedRows || []).map(item => Number(item?.user_id)).filter(Number.isFinite)
-  pushRuntimeLog(
-    'expand-change',
-    `user_id=${row?.user_id ?? 'unknown'}, expandedCount=${(expandedRows || []).length}, taskCount=${(row?.tasks || []).length}`
-  )
 }
 
-const handleRowClickDebug = (row, column) => {
-  pushRuntimeLog('row-click', `user_id=${row?.user_id ?? 'unknown'}, column=${column?.label || column?.type || 'unknown'}`)
-}
+const handleRowClickDebug = () => {}
 
 const toggleExpand = (row) => {
-  try {
-    if (!workloadTableRef.value || !row) return
-    const target = Number(row.user_id)
-    const expanded = isExpanded(target)
-    workloadTableRef.value.toggleRowExpansion(row, !expanded)
-    pushRuntimeLog('toggleExpand', `user_id=${target}, next=${!expanded}`)
-  } catch (error) {
-    pushRuntimeLog('toggleExpand-error', formatError(error))
-  }
+  if (!workloadTableRef.value || !row) return
+  const target = Number(row.user_id)
+  const expanded = isExpanded(target)
+  workloadTableRef.value.toggleRowExpansion(row, !expanded)
 }
-
-const clearDiagnostics = () => {
-  runtimeDiagnostics.value = []
-}
-
-const onGlobalError = (event) => {
-  const err = event?.error || event?.message || event
-  pushRuntimeLog('window.error', formatError(err))
-}
-
-const onUnhandledRejection = (event) => {
-  pushRuntimeLog('unhandledrejection', formatError(event?.reason || event))
-}
-
-onErrorCaptured((error, _instance, info) => {
-  pushRuntimeLog('vue.errorCaptured', `${info || 'no-info'}\n${formatError(error)}`)
-  return false
-})
 
 const viewMemberDetail = (userId) => {
   router.push({ path: `/personnel/${userId}` })
@@ -641,15 +597,10 @@ const saveAllocation = async () => {
 }
 
 onMounted(() => {
-  window.addEventListener('error', onGlobalError)
-  window.addEventListener('unhandledrejection', onUnhandledRejection)
   loadData()
 })
 
-onBeforeUnmount(() => {
-  window.removeEventListener('error', onGlobalError)
-  window.removeEventListener('unhandledrejection', onUnhandledRejection)
-})
+onBeforeUnmount(() => {})
 </script>
 
 <style scoped>
@@ -791,43 +742,11 @@ onBeforeUnmount(() => {
   margin-top: 10px;
 }
 
-.runtime-card {
-  margin-top: 16px;
-}
-
 .user-admin-actions {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.runtime-log-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-height: 360px;
-  overflow: auto;
-}
 
-.runtime-log-item {
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 10px;
-  padding: 10px;
-  background: rgba(15, 23, 42, 0.55);
-}
-
-.runtime-log-item__meta {
-  font-size: 12px;
-  color: rgba(148, 163, 184, 0.9);
-  margin-bottom: 6px;
-}
-
-.runtime-log-item__content {
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  color: rgba(226, 232, 240, 0.94);
-  font-size: 12px;
-  line-height: 1.5;
-}
 </style>

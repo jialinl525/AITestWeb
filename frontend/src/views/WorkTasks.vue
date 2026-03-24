@@ -9,7 +9,7 @@
         </p>
       </div>
       <div class="page-hero__actions">
-        <div class="glass-pill">{{ LT.pills.totalTasks }} {{ tasks.length }}</div>
+        <div class="glass-pill">{{ LT.pills.totalTasks }} {{ filteredTasks.length }}</div>
         <div class="glass-pill">{{ LT.pills.totalManday }} {{ totalEstimatedHours }} manday</div>
         <div class="glass-pill">{{ LT.pills.inProgress }} {{ inProgressCount }}</div>
         <el-button @click="loadTasks">{{ BTCommon.refresh }}</el-button>
@@ -71,7 +71,7 @@
         <el-button v-if="canCreateOrEditTest()" type="primary" @click="openCreateTaskDialog">{{ BT.newTask }}</el-button>
       </div>
 
-      <el-table :data="tasks" v-loading="loading" stripe class="full-width-table" style="width: 100%" table-layout="auto">
+      <el-table :data="paginatedTasks" v-loading="loading" stripe class="full-width-table" style="width: 100%" table-layout="auto">
         <el-table-column prop="task_name" :label="LT.table.taskName" min-width="220" show-overflow-tooltip>
           <template #default="{ row }">
             <button
@@ -110,6 +110,17 @@
           </template>
         </el-table-column>
       </el-table>
+      <div class="list-pagination">
+        <el-pagination
+          v-if="filteredTasks.length > pageSize"
+          background
+          layout="prev, pager, next"
+          :page-size="pageSize"
+          :total="filteredTasks.length"
+          :current-page="currentPage"
+          @current-change="handlePageChange"
+        />
+      </div>
     </el-card>
 
     <el-dialog v-model="showDialog" :title="editingId ? LT.dialog.editTitle : LT.dialog.newTitle" width="760px">
@@ -208,6 +219,8 @@ const DT = DescriptionText.workTasks
 
 const tasks = ref([])
 const members = ref([])
+const currentPage = ref(1)
+const pageSize = 10
 
 const taskTypeOptions = ref(['Customer Support', 'Automation Development', 'Other'])
 const statusOptions = ref(['Planned', 'In Progress', 'Completed', 'Paused'])
@@ -259,11 +272,41 @@ const {
   closeDialog
 } = useCrudDialog(createDefaultTaskForm, mapTaskRowToForm)
 
-const totalEstimatedHours = computed(() => Number(tasks.value.reduce((sum, item) => sum + Number(item.estimated_hours || 0), 0).toFixed(1)))
-const planCount = computed(() => tasks.value.filter(item => item.status === 'Planned').length)
-const inProgressCount = computed(() => tasks.value.filter(item => item.status === 'In Progress').length)
-const doneCount = computed(() => tasks.value.filter(item => item.status === 'Completed').length)
-const pausedCount = computed(() => tasks.value.filter(item => item.status === 'Paused').length)
+const parseRecentTaskDate = (value) => {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  date.setHours(0, 0, 0, 0)
+  return date
+}
+
+const filteredTasks = computed(() => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const startDate = new Date(today)
+  startDate.setDate(startDate.getDate() - 365)
+
+  return tasks.value.filter(item => {
+    const candidateDates = [
+      parseRecentTaskDate(item?.end_date),
+      parseRecentTaskDate(item?.start_date)
+    ].filter(Boolean)
+
+    return candidateDates.some(date => date >= startDate)
+  })
+})
+
+const paginatedTasks = computed(() => {
+  const startIndex = (currentPage.value - 1) * pageSize
+  return filteredTasks.value.slice(startIndex, startIndex + pageSize)
+})
+
+const totalEstimatedHours = computed(() => Number(filteredTasks.value.reduce((sum, item) => sum + Number(item.estimated_hours || 0), 0).toFixed(1)))
+const planCount = computed(() => filteredTasks.value.filter(item => item.status === 'Planned').length)
+const inProgressCount = computed(() => filteredTasks.value.filter(item => item.status === 'In Progress').length)
+const doneCount = computed(() => filteredTasks.value.filter(item => item.status === 'Completed').length)
+const pausedCount = computed(() => filteredTasks.value.filter(item => item.status === 'Paused').length)
 
 const statusTagType = (status) => {
   if (status === 'Completed') return 'success'
@@ -314,6 +357,7 @@ const loadTasks = async () => {
   loading.value = true
   try {
     tasks.value = await getWorkTasks(normalizeParams())
+    currentPage.value = 1
   } catch (error) {
     ElMessage.error(error?.response?.data?.detail || DT.toast.loadFailed)
   } finally {
@@ -394,6 +438,10 @@ const handleDelete = async (row) => {
   }
 }
 
+const handlePageChange = (page) => {
+  currentPage.value = page
+}
+
 const resetFilters = async () => {
   resetFilterState()
   await loadTasks()
@@ -440,5 +488,11 @@ onMounted(async () => {
   outline: 2px solid rgba(125, 211, 252, 0.7);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+.list-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 </style>
