@@ -246,14 +246,20 @@ class TaskAllocationDetail(BaseModel):
     allocations: List[TaskOwnerAllocationView] = Field(default_factory=list)
 
 
+class PersonnelOverlapTaskItem(BaseModel):
+    id: int
+    fr_number: str = ""
+    task_name: str = ""
+
+
 class PersonnelOverlapItem(BaseModel):
-    task_id_1: int
-    task_name_1: str
-    task_id_2: int
-    task_name_2: str
     overlap_start: date
     overlap_end: date
     overlap_days: int
+    concurrent_task_count: int
+    task_ids: List[int] = Field(default_factory=list)
+    task_names: List[str] = Field(default_factory=list)
+    tasks: List[PersonnelOverlapTaskItem] = Field(default_factory=list)
 
 
 class PersonnelTaskItem(BaseModel):
@@ -288,6 +294,8 @@ class PersonnelWorkload(BaseModel):
     specialty_tasks: str = ""
     can_edit_test: bool
     task_count: int
+    test_task_count: int = 0
+    other_task_count: int = 0
     total_cases: int
     passed_cases: int
     failed_cases: int
@@ -383,4 +391,3 @@ class AuditAdminActionItem(BaseModel):
 class AuditAdminActionPage(BaseModel):
     total: int
     items: List[AuditAdminActionItem] = Field(default_factory=list)
-

@@ -182,37 +182,108 @@ def _get_task_allocations(
 
 
 def _build_overlaps(tasks: List[Dict]) -> List[Dict]:
-    overlaps: List[Dict] = []
-    sized = [item for item in tasks if item.get("period_start") and item.get("period_end")]
-    for i in range(len(sized)):
-        for j in range(i + 1, len(sized)):
-            first = sized[i]
-            second = sized[j]
-            overlap_start = max(first["period_start"], second["period_start"])
-            overlap_end = min(first["period_end"], second["period_end"])
-            if overlap_start <= overlap_end:
-                overlaps.append(
+    test_tasks = [
+        item
+        for item in tasks
+        if item.get("task_kind") == "test"
+        and item.get("period_start")
+        and item.get("period_end")
+        and str(item.get("status") or "").strip().lower() != "completed"
+    ]
+    if len(test_tasks) < 2:
+        return []
+
+    boundary_dates = sorted(
+        {item["period_start"] for item in test_tasks}
+        | {item["period_end"] for item in test_tasks}
+        | {(item["period_end"]).fromordinal(item["period_end"].toordinal() + 1) for item in test_tasks}
+    )
+
+    overlap_segments: List[Dict] = []
+    for index in range(len(boundary_dates) - 1):
+        segment_start = boundary_dates[index]
+        next_boundary = boundary_dates[index + 1]
+        segment_end = date.fromordinal(next_boundary.toordinal() - 1)
+        if segment_start > segment_end:
+            continue
+
+        active_tasks = [
+            item
+            for item in test_tasks
+            if item["period_start"] <= segment_start <= item["period_end"]
+        ]
+        if len(active_tasks) < 2:
+            continue
+
+        active_task_ids = sorted({int(item["id"]) for item in active_tasks})
+        active_task_names = []
+        overlap_tasks = []
+        seen_names = set()
+        seen_task_ids = set()
+        for item in sorted(active_tasks, key=lambda task: (task["period_start"], task["period_end"], task["id"])):
+            task_id = int(item["id"])
+            task_name = item.get("task_label") or item.get("test_name") or ""
+            if task_name not in seen_names:
+                active_task_names.append(task_name)
+                seen_names.add(task_name)
+            if task_id not in seen_task_ids:
+                overlap_tasks.append(
                     {
-                        "task_id_1": first["id"],
-                        "task_name_1": first.get("task_label") or first.get("test_name") or "",
-                        "task_id_2": second["id"],
-                        "task_name_2": second.get("task_label") or second.get("test_name") or "",
-                        "overlap_start": overlap_start,
-                        "overlap_end": overlap_end,
-                        "overlap_days": (overlap_end - overlap_start).days + 1,
+                        "id": task_id,
+                        "fr_number": (item.get("fr_number") or "").strip(),
+                        "task_name": (item.get("test_name") or item.get("task_label") or "").strip(),
                     }
                 )
-    return overlaps
+                seen_task_ids.add(task_id)
+
+        signature = tuple(active_task_ids)
+        if overlap_segments and tuple(overlap_segments[-1]["task_ids"]) == signature:
+            overlap_segments[-1]["overlap_end"] = segment_end
+            overlap_segments[-1]["overlap_days"] = (
+                overlap_segments[-1]["overlap_end"] - overlap_segments[-1]["overlap_start"]
+            ).days + 1
+            continue
+
+        overlap_segments.append(
+            {
+                "overlap_start": segment_start,
+                "overlap_end": segment_end,
+                "overlap_days": (segment_end - segment_start).days + 1,
+                "concurrent_task_count": len(active_task_ids),
+                "task_ids": active_task_ids,
+                "task_names": active_task_names,
+                "tasks": overlap_tasks,
+            }
+        )
+
+    return overlap_segments
+
+
+def _normalize_task_status(status: str) -> str:
+    raw = (status or "").strip().lower()
+    if raw in {"planning", "planned", "plan", "pending"}:
+        return "Planning"
+    if raw in {"in progress", "inprogress", "running", "ongoing"}:
+        return "Inprogress"
+    if raw in {"completed", "complete", "done"}:
+        return "Completed"
+    if raw in {"paused", "pause", "hold", "on hold"}:
+        return "Paused"
+    if raw in {"failed", "fail"}:
+        return "Failed"
+    return (status or "").strip()
 
 
 def _get_work_task_progress(status: str) -> float:
+    normalized = _normalize_task_status(status)
     mapping = {
-        "planned": 0.0,
-        "in progress": 50.0,
-        "completed": 100.0,
-        "paused": 20.0,
+        "Planning": 0.0,
+        "Inprogress": 50.0,
+        "Completed": 100.0,
+        "Paused": 20.0,
+        "Failed": 0.0,
     }
-    return mapping.get((status or "").strip().lower(), 0.0)
+    return mapping.get(normalized, 0.0)
 
 
 def _build_test_task_label(task: models.TestProgress) -> str:
@@ -529,6 +600,8 @@ def get_workload(db: Session = Depends(get_db)):
             "specialty_tasks": user.specialty_tasks or "",
             "can_edit_test": user_can_edit_test(user),
             "task_count": 0,
+            "test_task_count": 0,
+            "other_task_count": 0,
             "total_cases": 0,
             "passed_cases": 0,
             "failed_cases": 0,
@@ -557,7 +630,7 @@ def get_workload(db: Session = Depends(get_db)):
                 "fr_number": task.fr_number or "",
                 "test_name": (task.test_name or "").strip() or task_label,
                 "model_name": task.model_name,
-                "status": task.status,
+                "status": _normalize_task_status(task.status),
                 "progress": float(task.progress or 0.0),
                 "estimated_hours": round(max(0.0, hours), 2),
                 "start_date": task.l0_due_date,
@@ -573,6 +646,7 @@ def get_workload(db: Session = Depends(get_db)):
                 "part_description": (item.get("part_description") or "").strip(),
             }
             row["task_count"] += 1
+            row["test_task_count"] += 1
             row["total_cases"] += int(task.total_cases or 0)
             row["passed_cases"] += int(task.passed_cases or 0)
             row["failed_cases"] += failed_cases
@@ -592,7 +666,7 @@ def get_workload(db: Session = Depends(get_db)):
             "fr_number": "",
             "test_name": task_label,
             "model_name": work_task.task_type,
-            "status": work_task.status,
+            "status": _normalize_task_status(work_task.status),
             "progress": float(work_task.progress) if work_task.progress is not None else _get_work_task_progress(work_task.status),
             "estimated_hours": round(max(0.0, float(work_task.estimated_hours or 0.0)), 2),
             "start_date": work_task.start_date,
@@ -608,13 +682,14 @@ def get_workload(db: Session = Depends(get_db)):
             "part_description": (work_task.task_summary or "").strip(),
         }
         row["task_count"] += 1
+        row["other_task_count"] += 1
         row["total_estimated_hours"] = round(row["total_estimated_hours"] + task_item["estimated_hours"], 2)
         row["tasks"].append(task_item)
 
     for row in workload_map.values():
         row["tasks"].sort(key=lambda item: ((item["period_start"] or date.max), item["id"]))
         overlaps = _build_overlaps(row["tasks"])
-        row["overlap_count"] = len(overlaps)
+        row["overlap_count"] = max([item.get("concurrent_task_count", 0) for item in overlaps], default=0)
         row["overlaps"] = overlaps
 
     return list(workload_map.values())

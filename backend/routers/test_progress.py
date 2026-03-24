@@ -8,6 +8,35 @@ import schemas, models
 
 router = APIRouter()
 
+TEST_STATUS_ALIASES = {
+    "pending": "Planning",
+    "plan": "Planning",
+    "planned": "Planning",
+    "planning": "Planning",
+    "running": "Inprogress",
+    "ongoing": "Inprogress",
+    "in progress": "Inprogress",
+    "inprogress": "Inprogress",
+    "completed": "Completed",
+    "complete": "Completed",
+    "done": "Completed",
+    "paused": "Paused",
+    "pause": "Paused",
+    "on hold": "Paused",
+    "hold": "Paused",
+    "failed": "Failed",
+    "fail": "Failed",
+}
+TEST_STATUS_OPTIONS = {"Planning", "Inprogress", "Completed", "Paused", "Failed"}
+
+
+def _normalize_status(status: Optional[str]) -> str:
+    raw = (status or "").strip()
+    normalized = TEST_STATUS_ALIASES.get(raw.lower(), raw)
+    if normalized not in TEST_STATUS_OPTIONS:
+        raise HTTPException(status_code=400, detail="Invalid test task status")
+    return normalized
+
 
 def _calc_totals_and_progress(data: dict) -> tuple:
     """Calculate totals and progress from the L0/L2/L4 stages."""
@@ -39,7 +68,8 @@ def _calc_totals_and_progress(data: dict) -> tuple:
 
 def _apply_lifecycle_dates(data: dict, existing: Optional[models.TestProgress] = None) -> None:
     """Maintain independent lifecycle dates for start/completion without deriving from timestamps."""
-    status = data.get("status")
+    status = _normalize_status(data.get("status"))
+    data["status"] = status
     today = date.today()
 
     current_start = existing.start_date if existing else None
@@ -48,9 +78,9 @@ def _apply_lifecycle_dates(data: dict, existing: Optional[models.TestProgress] =
     start_date = data.get("start_date", current_start)
     completion_date = data.get("completion_date", current_completion)
 
-    if status in {"running", "completed"} and not start_date:
+    if status in {"Inprogress", "Completed"} and not start_date:
         start_date = today
-    if status == "completed" and not completion_date:
+    if status == "Completed" and not completion_date:
         completion_date = today
 
     data["start_date"] = start_date

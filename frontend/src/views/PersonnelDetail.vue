@@ -36,6 +36,7 @@
           <article class="metric-card accent-red">
             <div class="metric-card__label">{{ LT.metrics.overlapGroups }}</div>
             <div class="metric-card__value">{{ memberDetail.overlap_count || 0 }}</div>
+            <div class="metric-card__meta">Max concurrent test FR periods</div>
           </article>
           <article class="metric-card accent-purple">
             <div class="metric-card__label">{{ LT.metrics.totalManday }}</div>
@@ -57,6 +58,9 @@
             <el-descriptions-item :label="LT.profile.username">{{ memberDetail.username || '-' }}</el-descriptions-item>
             <el-descriptions-item :label="LT.profile.email">{{ memberDetail.email || '-' }}</el-descriptions-item>
             <el-descriptions-item :label="LT.metrics.overlapGroups">{{ memberDetail.overlap_count || 0 }}</el-descriptions-item>
+            <el-descriptions-item label="Task Breakdown">
+              FR {{ memberDetail.test_task_count || 0 }} / Other {{ memberDetail.other_task_count || 0 }}
+            </el-descriptions-item>
             <el-descriptions-item :label="LT.profile.responsibilities">
               <div class="profile-multiline">{{ memberDetail.responsibilities || '-' }}</div>
             </el-descriptions-item>
@@ -76,7 +80,66 @@
             </div>
           </template>
 
-          <el-table :data="memberDetail.tasks || []" :row-key="taskRowKey" stripe>
+          <div v-if="timelineSegments.length" class="overlap-timeline-card">
+            <div class="overlap-timeline-card__header">
+              <div>
+                <div class="overlap-timeline-card__title">Overlap Timeline</div>
+                <div class="overlap-timeline-card__meta">
+                  {{ formatDate(timelineRange.start) }} ~ {{ formatDate(timelineRange.end) }}
+                </div>
+              </div>
+              <div class="overlap-timeline-card__badge">
+                Max {{ memberDetail.overlap_count || 0 }} FR
+              </div>
+            </div>
+
+            <div class="overlap-timeline">
+              <div class="overlap-timeline__axis"></div>
+              <el-tooltip
+                v-for="(segment, index) in timelineSegments"
+                :key="`${segment.overlap_start}-${segment.overlap_end}-${index}`"
+                placement="top"
+                effect="dark"
+              >
+                <template #content>
+                  <div class="overlap-tooltip">
+                    <div class="overlap-tooltip__date">
+                      {{ formatDate(segment.overlap_start) }} ~ {{ formatDate(segment.overlap_end) }}
+                    </div>
+                    <div
+                      v-for="task in segment.tasks"
+                      :key="task.id"
+                      class="overlap-tooltip__item"
+                    >
+                      {{ task.fr_number || 'FR' }} | {{ task.task_name || '-' }}
+                    </div>
+                  </div>
+                </template>
+                <div
+                  class="overlap-timeline__segment"
+                  :class="segment.colorClass"
+                  :style="segment.style"
+                ></div>
+              </el-tooltip>
+            </div>
+
+            <div class="overlap-timeline__scale">
+              <span>{{ formatDate(timelineRange.start) }}</span>
+              <span>{{ formatDate(timelineRange.end) }}</span>
+            </div>
+
+            <div class="overlap-timeline__legend">
+              <span class="legend-chip legend-chip--level-2">2 FR</span>
+              <span class="legend-chip legend-chip--level-3">3 FR</span>
+              <span class="legend-chip legend-chip--level-4">4+ FR</span>
+            </div>
+
+          </div>
+          <div v-else class="detail-overlap-empty">
+            No overlapping test FR found
+          </div>
+
+          <el-table :data="visibleTasks" :row-key="taskRowKey" stripe>
             <el-table-column :label="LTP.table.task" min-width="280" show-overflow-tooltip>
               <template #default="{ row }">
                 <button type="button" class="task-link" @click="goToTask(row)">{{ formatTaskName(row) }}</button>
@@ -91,7 +154,11 @@
             <el-table-column :label="LTP.table.endDate" min-width="140">
               <template #default="{ row }">{{ formatDate(row.end_date) }}</template>
             </el-table-column>
-            <el-table-column prop="status" :label="LTP.table.status" min-width="120" />
+            <el-table-column :label="LTP.table.status" min-width="140">
+              <template #default="{ row }">
+                <el-tag size="small" :type="getTaskStatusTagType(row.status)">{{ getTaskStatusText(row.status) }}</el-tag>
+              </template>
+            </el-table-column>
             <el-table-column prop="progress" :label="LTP.table.progress" min-width="120">
               <template #default="{ row }">{{ formatPercent(row.progress) }}</template>
             </el-table-column>
@@ -150,6 +217,7 @@ import { ButtonText } from '../texts/ButtonText'
 import { DescriptionText } from '../texts/DescriptionText'
 import { canEditPersonnelProfile } from '../stores/auth'
 import { formatDate, formatManday, formatPercent } from '../utils/formatters'
+import { getTaskStatusTagType, getTaskStatusText } from '../utils/taskStatus'
 import { formatTaskLabel } from '../utils/taskDisplay'
 
 const route = useRoute()
@@ -173,6 +241,82 @@ const profileForm = ref({
 
 const completedTasks = computed(() => {
   return (memberDetail.value?.tasks || []).filter(task => String(task.status || '').toLowerCase() === 'completed').length
+})
+
+const visibleTasks = computed(() => {
+  const tasks = Array.isArray(memberDetail.value?.tasks) ? [...memberDetail.value.tasks] : []
+  return tasks
+    .sort((first, second) => {
+      if ((first.task_kind || '') !== (second.task_kind || '')) {
+        return first.task_kind === 'test' ? -1 : 1
+      }
+      const firstStart = first?.start_date || first?.period_start || '9999-12-31'
+      const secondStart = second?.start_date || second?.period_start || '9999-12-31'
+      if (firstStart !== secondStart) return String(firstStart).localeCompare(String(secondStart))
+      return String(first?.task_label || first?.test_name || '').localeCompare(String(second?.task_label || second?.test_name || ''))
+    })
+    .slice(0, 10)
+})
+
+const overlapSummaryList = computed(() => {
+  return Array.isArray(memberDetail.value?.overlaps) ? memberDetail.value.overlaps : []
+})
+
+const timelineRange = computed(() => {
+  const segments = overlapSummaryList.value
+  if (!segments.length) {
+    return {
+      start: null,
+      end: null,
+      totalDays: 0
+    }
+  }
+
+  const starts = segments.map(item => new Date(item.overlap_start))
+  const ends = segments.map(item => new Date(item.overlap_end))
+  const start = new Date(Math.min(...starts))
+  const end = new Date(Math.max(...ends))
+  const totalDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1)
+
+  return {
+    start,
+    end,
+    totalDays
+  }
+})
+
+const getSegmentColorClass = (count) => {
+  if (count >= 4) return 'overlap-timeline__segment--level-4'
+  if (count >= 3) return 'overlap-timeline__segment--level-3'
+  return 'overlap-timeline__segment--level-2'
+}
+
+const timelineSegments = computed(() => {
+  if (!timelineRange.value.start || !timelineRange.value.end || !timelineRange.value.totalDays) {
+    return []
+  }
+
+  const rangeStartTime = timelineRange.value.start.getTime()
+  const dayMs = 1000 * 60 * 60 * 24
+
+  return overlapSummaryList.value.map(item => {
+    const segmentStart = new Date(item.overlap_start)
+    const segmentEnd = new Date(item.overlap_end)
+    const startOffset = Math.max(0, Math.round((segmentStart.getTime() - rangeStartTime) / dayMs))
+    const segmentDays = Math.max(1, Math.round((segmentEnd.getTime() - segmentStart.getTime()) / dayMs) + 1)
+    const left = (startOffset / timelineRange.value.totalDays) * 100
+    const width = (segmentDays / timelineRange.value.totalDays) * 100
+
+    return {
+      ...item,
+      colorClass: getSegmentColorClass(Number(item.concurrent_task_count || 0)),
+      style: {
+        left: `${left}%`,
+        width: `${Math.max(width, 1.5)}%`
+      },
+      tasks: Array.isArray(item.tasks) ? item.tasks : []
+    }
+  })
 })
 
 const formatTaskName = (task) => {
@@ -257,6 +401,137 @@ onMounted(() => {
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.6;
+}
+
+.overlap-timeline-card {
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid rgba(248, 113, 113, 0.18);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.overlap-timeline-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.overlap-timeline-card__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(248, 250, 252, 0.96);
+}
+
+.overlap-timeline-card__meta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.overlap-timeline-card__badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(127, 29, 29, 0.35);
+  color: rgba(254, 202, 202, 0.96);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.overlap-timeline {
+  position: relative;
+  height: 24px;
+  margin-bottom: 8px;
+}
+
+.overlap-timeline__axis {
+  position: absolute;
+  inset: 7px 0;
+  border-radius: 999px;
+  background: rgba(51, 65, 85, 0.9);
+}
+
+.overlap-timeline__segment {
+  position: absolute;
+  top: 2px;
+  height: 20px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.45);
+}
+
+.overlap-timeline__segment--level-2 {
+  background: linear-gradient(90deg, rgba(250, 204, 21, 0.92), rgba(249, 115, 22, 0.92));
+}
+
+.overlap-timeline__segment--level-3 {
+  background: linear-gradient(90deg, rgba(249, 115, 22, 0.96), rgba(239, 68, 68, 0.96));
+}
+
+.overlap-timeline__segment--level-4 {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.96), rgba(127, 29, 29, 0.96));
+}
+
+.overlap-timeline__scale {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: rgba(148, 163, 184, 0.9);
+  margin-bottom: 12px;
+}
+
+.overlap-timeline__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(248, 250, 252, 0.96);
+}
+
+.legend-chip--level-2 {
+  background: rgba(245, 158, 11, 0.85);
+}
+
+.legend-chip--level-3 {
+  background: rgba(249, 115, 22, 0.88);
+}
+
+.legend-chip--level-4 {
+  background: rgba(220, 38, 38, 0.88);
+}
+
+.detail-overlap-empty {
+  color: rgba(148, 163, 184, 0.92);
+}
+
+.overlap-tooltip {
+  max-width: 420px;
+}
+
+.overlap-tooltip__date {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(253, 230, 138, 0.96);
+}
+
+.overlap-tooltip__item {
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(248, 250, 252, 0.96);
+  word-break: break-word;
 }
 
 :deep(.detail-info--ratio .el-descriptions__table) {

@@ -315,6 +315,7 @@ import { ButtonText } from '../texts/ButtonText'
 import { DescriptionText } from '../texts/DescriptionText'
 import { getStatusBucket, getVerificationZone } from '../utils/bugDisplay'
 import { formatDate, formatDateTime, formatManday } from '../utils/formatters'
+import { getTaskProgressStatus, getTaskStatusTagType, getTaskStatusText } from '../utils/taskStatus'
 import { useAsyncAction } from '../composables/useAsyncAction'
 
 const route = useRoute()
@@ -398,21 +399,11 @@ const goToBugs = () => {
   router.push({ path: '/bugs', query: { testId: route.params.id } })
 }
 
-const getStatusType = (status) => {
-  const map = { pending: 'info', running: 'warning', completed: 'success', failed: 'danger' }
-  return map[status] || 'info'
-}
+const getStatusType = (status) => getTaskStatusTagType(status)
 
-const getStatusText = (status) => {
-  const map = LT.statusText
-  return map[status] || status
-}
+const getStatusText = (status) => getTaskStatusText(status)
 
-const getProgressStatus = (status) => {
-  if (status === 'completed') return 'success'
-  if (status === 'failed') return 'exception'
-  return null
-}
+const getProgressStatus = (status) => getTaskProgressStatus(status)
 
 const getStageFailed = (row, stage) => {
   const explicit = row?.[`${stage}_failed_cases`]

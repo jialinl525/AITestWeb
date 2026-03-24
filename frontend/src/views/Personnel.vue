@@ -11,6 +11,8 @@
       <div class="page-hero__actions">
         <div class="glass-pill">{{ LT.pills.members }} {{ members.length }}</div>
         <div class="glass-pill">{{ LT.pills.tasks }} {{ totalTasks }}</div>
+        <div class="glass-pill">Test FR {{ totalTestTasks }}</div>
+        <div class="glass-pill">Other Tasks {{ totalOtherTasks }}</div>
         <div class="glass-pill">{{ LT.pills.mandays }} {{ totalHours }} manday</div>
         <div class="glass-pill">{{ LT.pills.overlaps }} {{ totalOverlaps }}</div>
         <el-button @click="loadData">{{ BTCommon.refresh }}</el-button>
@@ -110,25 +112,30 @@
                 <div v-if="canCreateOrEditTest()">{{ LT.table.actions }}</div>
               </div>
 
-              <div v-if="!normalizeTaskRows(row.tasks).length" class="member-task-grid__empty">No tasks</div>
+              <div v-if="!getVisibleTaskRows(row).length" class="member-task-grid__empty">No tasks</div>
 
-              <div
-                v-for="task in normalizeTaskRows(row.tasks)"
-                :key="task._row_key"
-                class="member-task-grid__row"
-                :class="{ 'member-task-grid__row--readonly': !canCreateOrEditTest() }"
-              >
-                <div class="member-task-grid__cell member-task-grid__cell--task" :title="formatTaskName(task)">{{ formatTaskName(task) }}</div>
-                <div class="member-task-grid__cell" :title="getPartDescription(task)">{{ getPartDescription(task) }}</div>
-                <div class="member-task-grid__cell">{{ formatDate(task.start_date) }}</div>
-                <div class="member-task-grid__cell">{{ formatDate(task.end_date) }}</div>
-                <div class="member-task-grid__cell">{{ formatStatus(task.status) }}</div>
-                <div class="member-task-grid__cell">{{ formatProgress(task.progress) }}</div>
-                <div class="member-task-grid__cell">{{ formatManday(task.estimated_hours) }}</div>
-                <div v-if="canCreateOrEditTest()" class="member-task-grid__cell member-task-grid__cell--actions">
-                  <el-button v-if="task.task_kind === 'test'" size="small" @click="openAllocationDialog(task)">{{ BT.allocateManday }}</el-button>
+              <template v-for="group in getTaskGroups(row)" :key="group.key">
+                <div v-if="group.tasks.length" class="member-task-group-title">{{ group.label }}</div>
+                <div
+                  v-for="task in group.tasks"
+                  :key="task._row_key"
+                  class="member-task-grid__row"
+                  :class="{ 'member-task-grid__row--readonly': !canCreateOrEditTest() }"
+                >
+                  <div class="member-task-grid__cell member-task-grid__cell--task" :title="formatTaskName(task)">{{ formatTaskName(task) }}</div>
+                  <div class="member-task-grid__cell" :title="getPartDescription(task)">{{ getPartDescription(task) }}</div>
+                  <div class="member-task-grid__cell">{{ formatDate(task.start_date) }}</div>
+                  <div class="member-task-grid__cell">{{ formatDate(task.end_date) }}</div>
+                  <div class="member-task-grid__cell">
+                    <el-tag size="small" :type="getTaskStatusTagType(task.status)">{{ getTaskStatusText(task.status) }}</el-tag>
+                  </div>
+                  <div class="member-task-grid__cell">{{ formatProgress(task.progress) }}</div>
+                  <div class="member-task-grid__cell">{{ formatManday(task.estimated_hours) }}</div>
+                  <div v-if="canCreateOrEditTest()" class="member-task-grid__cell member-task-grid__cell--actions">
+                    <el-button v-if="task.task_kind === 'test'" size="small" @click="openAllocationDialog(task)">{{ BT.allocateManday }}</el-button>
+                  </div>
                 </div>
-              </div>
+              </template>
             </div>
           </template>
         </el-table-column>
@@ -145,7 +152,12 @@
           </template>
         </el-table-column>
         <el-table-column prop="username" :label="LT.table.username" min-width="180" />
-        <el-table-column prop="task_count" :label="LT.table.taskCount" min-width="120" />
+        <el-table-column :label="LT.table.taskCount" min-width="180">
+          <template #default="{ row }">
+            <div>{{ row.task_count }}</div>
+            <div class="task-count-breakdown">FR {{ row.test_task_count || 0 }} / Other {{ row.other_task_count || 0 }}</div>
+          </template>
+        </el-table-column>
         <el-table-column :label="LT.table.completedTasks" min-width="120">
           <template #default="{ row }">{{ getCompletedTasks(row) }}</template>
         </el-table-column>
@@ -266,6 +278,7 @@ import { LabelText } from '../texts/LabelText'
 import { ButtonText } from '../texts/ButtonText'
 import { DescriptionText } from '../texts/DescriptionText'
 import { formatDate, formatManday as formatMandayValue, formatPercent } from '../utils/formatters'
+import { getTaskStatusTagType, getTaskStatusText } from '../utils/taskStatus'
 import { formatTaskLabel } from '../utils/taskDisplay'
 import {
   getMembers,
@@ -322,6 +335,14 @@ const totalTasks = computed(() => {
   return taskIds.size
 })
 
+const totalTestTasks = computed(() => {
+  return workload.value.reduce((sum, item) => sum + Number(item.test_task_count || 0), 0)
+})
+
+const totalOtherTasks = computed(() => {
+  return workload.value.reduce((sum, item) => sum + Number(item.other_task_count || 0), 0)
+})
+
 const totalOverlaps = computed(() => {
   return workload.value.reduce((sum, item) => sum + Number(item.overlap_count || 0), 0)
 })
@@ -343,11 +364,6 @@ const getOverlapTagType = (count) => {
   if (num >= 5) return 'danger'
   if (num >= 3) return 'warning'
   return 'success'
-}
-
-const formatStatus = (value) => {
-  const text = String(value || '').trim()
-  return text || '-'
 }
 
 const formatProgress = (value) => {
@@ -379,6 +395,34 @@ const normalizeTaskRows = (tasks) => {
     pushRuntimeLog('normalizeTaskRows', formatError(error))
     return []
   }
+}
+
+const getVisibleTaskRows = (row) => {
+  const normalized = normalizeTaskRows(row?.tasks)
+  return normalized
+    .sort((first, second) => {
+      const firstStart = first?.start_date || first?.period_start || '9999-12-31'
+      const secondStart = second?.start_date || second?.period_start || '9999-12-31'
+      if (firstStart !== secondStart) return String(firstStart).localeCompare(String(secondStart))
+      return String(first?.task_label || first?.test_name || '').localeCompare(String(second?.task_label || second?.test_name || ''))
+    })
+    .slice(0, 10)
+}
+
+const getTaskGroups = (row) => {
+  const visibleTasks = getVisibleTaskRows(row)
+  return [
+    {
+      key: 'test',
+      label: 'Test FR',
+      tasks: visibleTasks.filter(task => task.task_kind === 'test')
+    },
+    {
+      key: 'other',
+      label: 'Other Tasks',
+      tasks: visibleTasks.filter(task => task.task_kind !== 'test')
+    }
+  ]
 }
 
 const formatError = (error) => {
@@ -649,6 +693,16 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid rgba(148, 163, 184, 0.18);
 }
 
+.member-task-group-title {
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(125, 211, 252, 0.96);
+  background: rgba(59, 130, 246, 0.08);
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
 .member-task-grid__head > div {
   padding: 10px 8px;
   font-size: 12px;
@@ -698,6 +752,12 @@ onBeforeUnmount(() => {
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+.task-count-breakdown {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(148, 163, 184, 0.9);
 }
 
 .member-link:hover {

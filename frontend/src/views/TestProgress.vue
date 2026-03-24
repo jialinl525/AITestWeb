@@ -34,12 +34,12 @@
           <div class="metric-card__meta">{{ DT.metricsMeta.total }}</div>
         </article>
         <article class="metric-card accent-orange">
-          <div class="metric-card__label">{{ LT.metrics.running }}</div>
-          <div class="metric-card__value">{{ overviewStats.running }}</div>
+          <div class="metric-card__label">Inprogress</div>
+          <div class="metric-card__value">{{ overviewStats.inprogress }}</div>
           <div class="metric-card__meta">{{ DT.metricsMeta.running }}</div>
         </article>
         <article class="metric-card accent-green">
-          <div class="metric-card__label">{{ LT.metrics.completed }}</div>
+          <div class="metric-card__label">Completed</div>
           <div class="metric-card__value">{{ overviewStats.completed }}</div>
           <div class="metric-card__meta">{{ DT.metricsMeta.completed }}</div>
         </article>
@@ -124,8 +124,8 @@
         </el-table-column>
         <el-table-column prop="status" :label="LT.table.status" width="104">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)" size="small">
-              {{ getStatusText(row.status) }}
+            <el-tag :type="getTaskStatusTagType(row.status)" size="small">
+              {{ getTaskStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -160,7 +160,7 @@
         </el-table-column>
         <el-table-column :label="LT.table.progress" min-width="132">
           <template #default="{ row }">
-            <el-progress :percentage="row.progress" :status="getProgressStatus(row.status)" :stroke-width="10" />
+            <el-progress :percentage="row.progress" :status="getTaskProgressStatus(row.status)" :stroke-width="10" />
           </template>
         </el-table-column>
         <el-table-column :label="LT.table.testers" min-width="128">
@@ -180,7 +180,6 @@
       </el-table>
     </el-card>
 
-    <!-- Create/Edit Dialog -->
     <el-dialog
       v-model="showCreateDialog"
       :title="editingTest ? LT.dialog.editTitle : LT.dialog.newTitle"
@@ -225,10 +224,12 @@
         </el-form-item>
         <el-form-item :label="LT.form.status">
           <el-select v-model="testForm.status" style="width: 100%">
-            <el-option :label="LT.statusText.pending" value="pending" />
-            <el-option :label="LT.statusText.running" value="running" />
-            <el-option :label="LT.statusText.completed" value="completed" />
-            <el-option :label="LT.statusText.failed" value="failed" />
+            <el-option
+              v-for="status in TASK_STATUS_OPTIONS"
+              :key="status"
+              :label="status"
+              :value="status"
+            />
           </el-select>
         </el-form-item>
         <el-form-item :label="LT.form.l0Cases">
@@ -304,6 +305,7 @@ import { ButtonText } from '../texts/ButtonText'
 import { DescriptionText } from '../texts/DescriptionText'
 import { useAsyncAction } from '../composables/useAsyncAction'
 import { formatDate } from '../utils/formatters'
+import { getTaskProgressStatus, getTaskStatusTagType, getTaskStatusText, normalizeTaskStatus, TASK_STATUS_OPTIONS } from '../utils/taskStatus'
 import { getTestProgressList, createTestProgress, updateTestProgress } from '../api/testProgress'
 import { getMembers } from '../api/personnel'
 import { canCreateOrEditTest } from '../stores/auth'
@@ -327,7 +329,7 @@ const createDefaultTestForm = () => ({
   fr_number: '',
   description: '',
   config_method: '',
-  status: 'pending',
+  status: 'Planning',
   l0_total_cases: 0,
   l0_passed_cases: 0,
   l0_failed_cases: 0,
@@ -373,8 +375,8 @@ const calcProgress = computed(() => {
 
 const overviewStats = computed(() => {
   const total = testProgressList.value.length
-  const running = testProgressList.value.filter(item => item.status === 'running').length
-  const completed = testProgressList.value.filter(item => item.status === 'completed').length
+  const inprogress = testProgressList.value.filter(item => normalizeTaskStatus(item.status) === 'Inprogress').length
+  const completed = testProgressList.value.filter(item => normalizeTaskStatus(item.status) === 'Completed').length
   const totalCases = testProgressList.value.reduce((sum, item) => sum + (item.total_cases || 0), 0)
   const passedCases = testProgressList.value.reduce((sum, item) => sum + (item.passed_cases || 0), 0)
   const failedCases = testProgressList.value.reduce((sum, item) => sum + getTotalFailed(item), 0)
@@ -385,7 +387,7 @@ const overviewStats = computed(() => {
 
   return {
     total,
-    running,
+    inprogress,
     completed,
     totalCases,
     passedCases,
@@ -470,27 +472,6 @@ const loadMembers = async () => {
   } catch {
     members.value = []
   }
-}
-
-const getStatusType = (status) => {
-  const map = {
-    pending: 'info',
-    running: 'warning',
-    completed: 'success',
-    failed: 'danger'
-  }
-  return map[status] || 'info'
-}
-
-const getStatusText = (status) => {
-  const map = LT.statusText
-  return map[status] || status
-}
-
-const getProgressStatus = (status) => {
-  if (status === 'completed') return 'success'
-  if (status === 'failed') return 'exception'
-  return null
 }
 
 const getStageFailed = (row, stage) => {
@@ -626,7 +607,7 @@ const editTest = (test) => {
     fr_number: test.fr_number || '',
     description: test.description || '',
     config_method: test.config_method || '',
-    status: test.status,
+    status: normalizeTaskStatus(test.status),
     l0_total_cases: test.l0_total_cases ?? 0,
     l0_passed_cases: test.l0_passed_cases ?? 0,
     l0_failed_cases: test.l0_failed_cases ?? 0,
