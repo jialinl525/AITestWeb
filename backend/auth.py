@@ -1,5 +1,5 @@
 """
-Permission management with support for both user roles and permission groups.
+Permission management based on user roles.
 
 - If the request header includes X-User-Name, permissions are validated against the database user.
 - If no username is provided, fall back to the legacy X-User-Role behavior.
@@ -7,7 +7,7 @@ Permission management with support for both user roles and permission groups.
 from typing import Optional, Dict, Any
 
 from fastapi import HTTPException, Header, Depends
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from database import get_db
 import models
@@ -21,12 +21,7 @@ def _normalize_role(role: Optional[str]) -> str:
 
 
 def user_can_edit_test(user: models.User) -> bool:
-    if (user.role or "").lower() == "manager":
-        return True
-    for membership in user.memberships:
-        if membership.group and membership.group.can_edit_test:
-            return True
-    return False
+    return _normalize_role(getattr(user, "role", None)) == "manager"
 
 
 def get_request_identity(
@@ -47,7 +42,6 @@ def get_request_identity(
 
     user = (
         db.query(models.User)
-        .options(joinedload(models.User.memberships).joinedload(models.UserGroupMembership.group))
         .filter(models.User.username == username, models.User.is_active.is_(True))
         .first()
     )
@@ -59,8 +53,8 @@ def get_request_identity(
             "user": None,
         }
 
-    can_edit = user_can_edit_test(user)
-    role = "manager" if can_edit else _normalize_role(user.role)
+    role = _normalize_role(user.role)
+    can_edit = role == "manager"
     return {
         "username": user.username,
         "role": role,

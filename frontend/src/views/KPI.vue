@@ -182,8 +182,10 @@
           </div>
           <div class="compare-toolbar">
             <el-button type="primary" @click="openCompareDialog">{{ BT.compareModels }}</el-button>
-            <el-button type="warning" @click="openUpdatePickerDialog">Update Model</el-button>
-            <el-button type="success" @click="openCreateModelDialog">New Model</el-button>
+            <template v-if="canManageKPI">
+              <el-button type="warning" @click="openUpdatePickerDialog">Update Model</el-button>
+              <el-button type="success" @click="openCreateModelDialog">New Model</el-button>
+            </template>
           </div>
         </div>
       </template>
@@ -202,7 +204,7 @@
         <el-table-column prop="test_date" label="Test Time" align="center" header-align="center">
           <template #default="{ row }">{{ formatDateTime(row.test_date) }}</template>
         </el-table-column>
-        <el-table-column label="Actions" align="center" header-align="center">
+        <el-table-column v-if="canManageKPI" label="Actions" align="center" header-align="center">
           <template #default="{ row }">
             <div class="row-actions">
               <el-button size="small" @click="openEditModelDialog(row)">Update</el-button>
@@ -295,7 +297,7 @@
       </el-form>
       <template #footer>
         <el-button @click="showModelDialog = false">Cancel</el-button>
-        <el-button type="primary" :loading="modelDialogSaving" @click="saveModelDialog">Save</el-button>
+        <el-button v-if="canManageKPI" type="primary" :loading="modelDialogSaving" @click="saveModelDialog">Save</el-button>
       </template>
     </el-dialog>
 
@@ -331,7 +333,7 @@
       </el-form>
       <template #footer>
         <el-button @click="showUpdatePickerDialog = false">Cancel</el-button>
-        <el-button type="primary" @click="confirmUpdateModelSelection">Update</el-button>
+        <el-button v-if="canManageKPI" type="primary" @click="confirmUpdateModelSelection">Update</el-button>
       </template>
     </el-dialog>
 
@@ -452,6 +454,7 @@ const LT = LabelText.kpi
 const BT = ButtonText.kpi
 const DT = DescriptionText.kpi
 const router = useRouter()
+const canManageKPI = computed(() => canCreateOrEditTest())
 
 const SCATTER_PALETTE = ['#22d3ee', '#60a5fa', '#a78bfa', '#f472b6', '#fb7185', '#f59e0b', '#34d399', '#facc15', '#38bdf8', '#818cf8']
 
@@ -1564,12 +1567,20 @@ const openCompareDialog = () => {
 }
 
 const openCreateModelDialog = () => {
+  if (!canManageKPI.value) {
+    ElMessage.warning('Only manager users can modify KPI models')
+    return
+  }
   editingModelName.value = ''
   modelForm.value = createDefaultModelForm(modelCategory.value)
   showModelDialog.value = true
 }
 
 const openUpdatePickerDialog = () => {
+  if (!canManageKPI.value) {
+    ElMessage.warning('Only manager users can modify KPI models')
+    return
+  }
   if (!modelList.value.length) {
     ElMessage.warning('No existing model available for update')
     return
@@ -1589,6 +1600,10 @@ const confirmUpdateModelSelection = () => {
 }
 
 const deleteModelRow = async (row) => {
+  if (!canManageKPI.value) {
+    ElMessage.warning('Only manager users can modify KPI models')
+    return
+  }
   const targetName = row?.model_name
   if (!targetName) {
     return
@@ -1623,6 +1638,10 @@ const deleteModelRow = async (row) => {
 }
 
 const openEditModelDialog = (row) => {
+  if (!canManageKPI.value) {
+    ElMessage.warning('Only manager users can modify KPI models')
+    return
+  }
   const targetCategory = row.model_category || modelCategory.value
   const metricDefs = getMetricDefsForCategory(targetCategory)
   const dynamicMetrics = {}
@@ -1647,6 +1666,10 @@ const openEditModelDialog = (row) => {
 }
 
 const saveModelDialog = async () => {
+  if (!canManageKPI.value) {
+    ElMessage.warning('Only manager users can modify KPI models')
+    return
+  }
   if (!modelForm.value.model_name?.trim()) {
     ElMessage.warning('Model name is required')
     return

@@ -45,7 +45,7 @@
         <div class="section-title">
           <div class="section-title__main">
             <h3>Personnel Management</h3>
-            <span class="section-title__meta">Administrator can create or delete user accounts</span>
+            <span class="section-title__meta">Only the admin account can create or delete users</span>
           </div>
           <div class="user-admin-actions">
             <el-button @click="loadManagementData">Refresh Users</el-button>
@@ -58,11 +58,6 @@
         <el-table-column prop="username" label="Username" min-width="160" />
         <el-table-column prop="display_name" label="Display Name" min-width="180" />
         <el-table-column prop="role" label="Role" min-width="120" />
-        <el-table-column label="Groups" min-width="260">
-          <template #default="{ row }">
-            <span>{{ formatUserGroups(row) }}</span>
-          </template>
-        </el-table-column>
         <el-table-column label="Status" min-width="120">
           <template #default="{ row }">
             <el-tag :type="row.is_active ? 'success' : 'info'">{{ row.is_active ? 'Active' : 'Inactive' }}</el-tag>
@@ -254,16 +249,6 @@
             <el-option label="Manager" value="manager" />
           </el-select>
         </el-form-item>
-        <el-form-item label="Groups">
-          <el-select v-model="createUserForm.group_ids" multiple filterable style="width: 100%" collapse-tags>
-            <el-option
-              v-for="group in permissionGroups"
-              :key="group.id"
-              :label="group.name"
-              :value="group.id"
-            />
-          </el-select>
-        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showCreateUserDialog = false">Cancel</el-button>
@@ -288,11 +273,10 @@ import {
   getTaskAllocations,
   updateTaskAllocations,
   getUsers,
-  getGroups,
   createUser,
   deleteUser
 } from '../api/personnel'
-import { canCreateOrEditTest, canEditPersonnelProfile } from '../stores/auth'
+import { canCreateOrEditTest, canManagePersonnelUsers } from '../stores/auth'
 
 const router = useRouter()
 const LT = LabelText.personnel
@@ -305,7 +289,6 @@ const workloadTableRef = ref(null)
 const expandedUserIds = ref([])
 const runtimeDiagnostics = ref([])
 const managedUsers = ref([])
-const permissionGroups = ref([])
 let runtimeSeed = 0
 
 const showAllocationDialog = ref(false)
@@ -316,8 +299,7 @@ const createUserForm = ref({
   username: '',
   display_name: '',
   password: '123456',
-  role: 'viewer',
-  group_ids: []
+  role: 'viewer'
 })
 
 const allocationTask = ref({
@@ -344,7 +326,7 @@ const totalOverlaps = computed(() => {
   return workload.value.reduce((sum, item) => sum + Number(item.overlap_count || 0), 0)
 })
 
-const canManagePersonnel = computed(() => canEditPersonnelProfile())
+const canManagePersonnel = computed(() => canManagePersonnelUsers())
 
 const averageTasks = computed(() => {
   if (!members.value.length) return 0
@@ -469,27 +451,20 @@ const viewMemberDetail = (userId) => {
   router.push({ path: `/personnel/${userId}` })
 }
 
-const formatUserGroups = (user) => {
-  const names = (user?.groups || []).map(item => String(item?.name || '').trim()).filter(Boolean)
-  return names.length ? names.join(', ') : '-'
-}
-
 const resetCreateUserForm = () => {
   createUserForm.value = {
     username: '',
     display_name: '',
     password: '123456',
-    role: 'viewer',
-    group_ids: []
+    role: 'viewer'
   }
 }
 
 const loadManagementData = async () => {
   if (!canManagePersonnel.value) return
   try {
-    const [users, groups] = await Promise.all([getUsers(), getGroups()])
+    const users = await getUsers()
     managedUsers.value = users
-    permissionGroups.value = groups
   } catch (error) {
     ElMessage.error(error?.response?.data?.detail || 'Failed to load personnel management data')
   }
@@ -519,8 +494,7 @@ const handleCreateUser = async () => {
       display_name: (createUserForm.value.display_name || '').trim() || username,
       password,
       role: createUserForm.value.role || 'viewer',
-      is_active: true,
-      group_ids: Array.isArray(createUserForm.value.group_ids) ? createUserForm.value.group_ids : []
+      is_active: true
     })
     ElMessage.success('User created successfully')
     showCreateUserDialog.value = false
@@ -553,7 +527,6 @@ const loadData = async () => {
       await loadManagementData()
     } else {
       managedUsers.value = []
-      permissionGroups.value = []
     }
   } catch (error) {
     ElMessage.error(error?.response?.data?.detail || DT.toast.loadFailed)

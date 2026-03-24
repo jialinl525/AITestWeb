@@ -2,7 +2,7 @@ export const DescriptionText = {
   app: {
     miniCard: 'Unified business view for test management, issue tracking, and model evaluation.',
     login: {
-      usernamePlaceholder: 'Internal',
+      usernamePlaceholder: 'Please enter username',
       passwordPlaceholder: 'Please enter password'
     },
     password: {
@@ -229,6 +229,24 @@ export const DescriptionText = {
     },
     toast: {
       loadFailed: 'Failed to load task details'
+    }
+  },
+  audit: {
+    hero: 'Monitor day-level access patterns, login sources, and administrator write operations for traceability and security review.',
+    sectionMeta: {
+      dailyTrend: 'Click a row to switch the selected day and refresh detail panels.',
+      loginIpStats: 'Per-day login attempts split by source IP.',
+      accessTop: 'Most frequently called API endpoints for the selected day.',
+      adminActions: 'Detailed write operations performed by admin users.'
+    },
+    metricsMeta: {
+      uniqueIps: 'Distinct client sources observed in logs.',
+      managerWrites: 'Successful write operations from manager-authorized accounts.'
+    },
+    toast: {
+      loadSummaryFailed: 'Failed to load audit daily summary',
+      loadDetailFailed: 'Failed to load audit detail statistics',
+      loadActionsFailed: 'Failed to load admin action logs'
     }
   }
 }

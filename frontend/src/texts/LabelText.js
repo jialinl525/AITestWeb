@@ -20,7 +20,8 @@ export const LabelText = {
       workTasks: 'Task',
       bugs: 'CR Tracking',
       personnel: 'Personnel',
-      kpi: 'Model Ladder'
+      kpi: 'Model Ladder',
+      audit: 'Audit'
     },
     form: {
       username: 'Username',
@@ -414,6 +415,55 @@ export const LabelText = {
       createdAt: 'Created At',
       updatedAt: 'Updated At',
       taskDetail: 'Task Detail'
+    }
+  },
+  audit: {
+    heroEyebrow: 'Security Audit',
+    heroTitle: 'Access and Behavior Audit Dashboard',
+    selectedDay: 'Selected Day',
+    section: {
+      dailyTrend: 'Daily Access Trend',
+      loginIpStats: 'Login IP Statistics',
+      accessTop: 'Top Accessed APIs',
+      adminActions: 'Admin Write Actions'
+    },
+    filters: {
+      startDate: 'Start Date',
+      endDate: 'End Date',
+      adminUsername: 'Filter by username'
+    },
+    metrics: {
+      totalAccess: 'Total Access',
+      uniqueIps: 'Unique IPs',
+      loginSuccessRate: 'Login Success Rate',
+      loginAttempts: 'Login Attempts',
+      managerWrites: 'Manager Write Actions'
+    },
+    table: {
+      day: 'Day',
+      totalAccess: 'Total Access',
+      uniqueIps: 'Unique IPs',
+      logins: 'Logins',
+      managerWrites: 'Manager Writes',
+      clientIp: 'Client IP',
+      loginAttempts: 'Login Attempts',
+      loginSuccess: 'Success',
+      loginFailed: 'Failed',
+      method: 'Method',
+      path: 'Path',
+      accessCount: 'Access Count',
+      time: 'Time',
+      username: 'Username',
+      action: 'Action',
+      status: 'Status',
+      payload: 'Payload'
+    },
+    chart: {
+      totalAccess: 'Total Access',
+      managerWrites: 'Manager Writes'
+    },
+    fallback: {
+      unknownIp: 'Unknown IP'
     }
   }
 }

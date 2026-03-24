@@ -8,7 +8,8 @@ import Personnel from '../views/Personnel.vue'
 import PersonnelDetail from '../views/PersonnelDetail.vue'
 import WorkTasks from '../views/WorkTasks.vue'
 import WorkTaskDetail from '../views/WorkTaskDetail.vue'
-import { canViewAllPages } from '../stores/auth'
+import AuditDashboard from '../views/AuditDashboard.vue'
+import { canAccessAuditDashboard } from '../stores/auth'
 
 const routes = [
   {
@@ -59,6 +60,12 @@ const routes = [
     path: '/work-tasks/:id',
     name: 'WorkTaskDetail',
     component: WorkTaskDetail
+  },
+  {
+    path: '/audit',
+    name: 'AuditDashboard',
+    component: AuditDashboard,
+    meta: { adminOnly: true }
   }
 ]
 
@@ -67,16 +74,11 @@ const router = createRouter({
   routes
 })
 
-const VIEWER_ALLOWED_ROUTES = new Set(['TestProgress', 'TestProgressDetail', 'KPI', 'KPIModelDetail'])
-
 router.beforeEach((to) => {
-  if (canViewAllPages()) {
-    return true
+  if (to.meta?.adminOnly && !canAccessAuditDashboard()) {
+    return { path: '/test-progress' }
   }
-  if (VIEWER_ALLOWED_ROUTES.has(String(to.name || ''))) {
-    return true
-  }
-  return { path: '/test-progress' }
+  return true
 })
 
 export default router

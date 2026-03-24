@@ -7,7 +7,7 @@
         <p class="page-hero__desc">{{ DT.hero }}</p>
       </div>
       <div class="page-hero__actions">
-        <el-button v-if="canEditPersonnelProfile() && memberDetail" type="primary" @click="openProfileEditDialog">
+        <el-button v-if="memberDetail && canEditPersonnelProfile(memberDetail.username)" type="primary" @click="openProfileEditDialog">
           Edit Profile
         </el-button>
         <el-button @click="goBack">{{ BT.backToList }}</el-button>
@@ -186,6 +186,7 @@ const goBack = () => {
 }
 
 const openProfileEditDialog = () => {
+  if (!memberDetail.value || !canEditPersonnelProfile(memberDetail.value.username)) return
   if (!memberDetail.value) return
   profileForm.value = {
     display_name: memberDetail.value.display_name || '',
@@ -198,6 +199,10 @@ const openProfileEditDialog = () => {
 
 const saveProfile = async () => {
   if (!memberDetail.value?.user_id) return
+  if (!canEditPersonnelProfile(memberDetail.value.username)) {
+    ElMessage.warning('You can only update your own profile')
+    return
+  }
 
   savingProfile.value = true
   try {

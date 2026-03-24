@@ -165,3 +165,24 @@ class WorkTask(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     assignee = relationship("User", back_populates="work_tasks")
+
+
+class ApiActivityLog(Base):
+    __tablename__ = "api_activity_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    activity_date = Column(Date, index=True, nullable=False)
+    username = Column(String, index=True, default="")
+    role = Column(String, default="viewer")
+    client_ip = Column(String, index=True, default="")
+    method = Column(String, index=True)
+    path = Column(String, index=True)
+    query_string = Column(Text, default="")
+    status_code = Column(Integer, default=0)
+    user_agent = Column(Text, default="")
+    is_login_attempt = Column(Boolean, default=False, index=True)
+    is_login_success = Column(Boolean, default=False, index=True)
+    is_manager_write = Column(Boolean, default=False, index=True)
+    action_summary = Column(Text, default="")
+    action_payload = Column(Text, default="")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

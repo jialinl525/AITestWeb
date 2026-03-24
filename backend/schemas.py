@@ -169,24 +169,6 @@ class KPISchemaCategoryCreate(BaseModel):
     metrics: List[KPISchemaMetricDefinition] = Field(default_factory=list)
 
 
-class PermissionGroupBase(BaseModel):
-    name: str
-    description: str = ""
-    can_edit_test: bool = False
-
-
-class PermissionGroupCreate(PermissionGroupBase):
-    pass
-
-
-class PermissionGroup(PermissionGroupBase):
-    id: int
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
 class UserBase(BaseModel):
     username: str
     display_name: str = ""
@@ -199,7 +181,6 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str = "123456"
-    group_ids: List[int] = Field(default_factory=list)
 
 
 class UserUpdate(BaseModel):
@@ -210,7 +191,6 @@ class UserUpdate(BaseModel):
     role: Optional[str] = None
     is_active: Optional[bool] = None
     password: Optional[str] = None
-    group_ids: Optional[List[int]] = None
 
 
 class UserLogin(BaseModel):
@@ -222,7 +202,6 @@ class User(UserBase):
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
-    groups: List[PermissionGroup] = Field(default_factory=list)
     can_edit_test: bool = False
 
     class Config:
@@ -235,7 +214,6 @@ class UserLoginResponse(BaseModel):
     display_name: str
     role: str
     can_edit_test: bool
-    groups: List[PermissionGroup] = Field(default_factory=list)
 
 
 class PasswordChange(BaseModel):
@@ -365,4 +343,44 @@ class WorkTask(WorkTaskBase):
 
     class Config:
         from_attributes = True
+
+
+class AuditDailySummary(BaseModel):
+    day: date
+    total_access: int
+    unique_ips: int
+    login_attempts: int
+    login_success: int
+    login_failed: int
+    manager_write_actions: int
+
+
+class AuditLoginIpStat(BaseModel):
+    client_ip: str
+    total_logins: int
+    successful_logins: int
+    failed_logins: int
+
+
+class AuditAccessStat(BaseModel):
+    method: str
+    path: str
+    access_count: int
+
+
+class AuditAdminActionItem(BaseModel):
+    id: int
+    created_at: datetime
+    username: str
+    client_ip: str
+    method: str
+    path: str
+    status_code: int
+    action_summary: str
+    action_payload: str
+
+
+class AuditAdminActionPage(BaseModel):
+    total: int
+    items: List[AuditAdminActionItem] = Field(default_factory=list)
 

@@ -5,37 +5,27 @@ const ROLE_KEY = 'user_role'
 const USER_KEY = 'user_name'
 const USERNAME_KEY = 'auth_username'
 const CAN_EDIT_KEY = 'can_edit_test'
-const GROUPS_KEY = 'auth_groups'
 
 export const userRole = ref(localStorage.getItem(ROLE_KEY) || 'viewer')
 export const userName = ref(localStorage.getItem(USER_KEY) || '')
 export const currentUsername = ref(localStorage.getItem(USERNAME_KEY) || '')
 export const canEditTest = ref(localStorage.getItem(CAN_EDIT_KEY) === '1')
-export const userGroups = ref([])
-
-try {
-  const raw = localStorage.getItem(GROUPS_KEY)
-  userGroups.value = raw ? JSON.parse(raw) : []
-} catch {
-  userGroups.value = []
-}
 
 function applySession(data) {
   const role = (data?.role || 'viewer').toLowerCase()
-  const isEditable = Boolean(data?.can_edit_test || role === 'manager')
+  const isEditable = role === 'manager'
   const username = (data?.username || '').trim().toLowerCase()
 
   userRole.value = role
   userName.value = data?.display_name || username || ''
   currentUsername.value = username
   canEditTest.value = isEditable
-  userGroups.value = data?.groups || []
 
   localStorage.setItem(ROLE_KEY, userRole.value)
   localStorage.setItem(USER_KEY, userName.value)
   localStorage.setItem(USERNAME_KEY, currentUsername.value)
   localStorage.setItem(CAN_EDIT_KEY, canEditTest.value ? '1' : '0')
-  localStorage.setItem(GROUPS_KEY, JSON.stringify(userGroups.value))
+  localStorage.removeItem('auth_groups')
 }
 
 function authHeaders() {
@@ -95,13 +85,12 @@ export function logout() {
   userName.value = ''
   currentUsername.value = ''
   canEditTest.value = false
-  userGroups.value = []
 
   localStorage.setItem(ROLE_KEY, 'viewer')
   localStorage.removeItem(USER_KEY)
   localStorage.removeItem(USERNAME_KEY)
   localStorage.setItem(CAN_EDIT_KEY, '0')
-  localStorage.removeItem(GROUPS_KEY)
+  localStorage.removeItem('auth_groups')
 }
 
 export function canCreateOrEditTest() {
@@ -120,24 +109,29 @@ export function canDeleteBug() {
   return canEditTest.value
 }
 
-function normalizeGroupName(name) {
-  return String(name || '').trim().toLowerCase()
-}
-
-export function isInternalUser() {
-  const username = String(currentUsername.value || '').trim().toLowerCase()
-  if (username === 'internal') return true
-
-  return (userGroups.value || []).some(group => {
-    const groupName = normalizeGroupName(group?.name)
-    return groupName === 'internal-group' || groupName === 'internal'
-  })
+export function isAdminAccount() {
+  return String(currentUsername.value || '').trim().toLowerCase() === 'manager'
 }
 
 export function canViewAllPages() {
-  return canEditTest.value || isInternalUser()
+  return true
 }
 
-export function canEditPersonnelProfile() {
-  return String(currentUsername.value || '').trim().toLowerCase() === 'manager'
+export function canManagePersonnelUsers() {
+  return isAdminAccount()
+}
+
+export function canEditPersonnelProfile(targetUsername = '') {
+  const normalizedTarget = String(targetUsername || '').trim().toLowerCase()
+  if (!normalizedTarget) {
+    return false
+  }
+  if (isAdminAccount()) {
+    return true
+  }
+  return canEditTest.value && normalizedTarget === String(currentUsername.value || '').trim().toLowerCase()
+}
+
+export function canAccessAuditDashboard() {
+  return isAdminAccount()
 }

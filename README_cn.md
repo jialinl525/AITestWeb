@@ -104,10 +104,10 @@ python migrate_db.py
 
 5. 启动服务：
 ```bash
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 6000
 ```
 
-后端服务将在 http://localhost:8000 启动
+后端服务将在 http://localhost:6000 启动
 
 ### 前端启动
 
@@ -132,8 +132,8 @@ npm run dev
 
 启动后端服务后，可以访问以下地址查看API文档：
 
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+- Swagger UI: http://localhost:6000/docs
+- ReDoc: http://localhost:6000/redoc
 
 ## 使用说明
 
@@ -251,7 +251,7 @@ venv\Scripts\python import_kpi_csv.py .\kpi_data_sample_5models.csv --clear
 #### 快速校验是否导入成功
 
 ```bash
-curl "http://localhost:8000/api/kpi/metrics?model_name=Model-A"
+curl "http://localhost:6000/api/kpi/metrics?model_name=Model-A"
 ```
 
 ## 开发说明

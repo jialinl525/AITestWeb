@@ -1,11 +1,5 @@
 import api from './index'
 
-export const getGroups = () => api.get('/personnel/groups')
-
-export const createGroup = (data) => api.post('/personnel/groups', data)
-
-export const updateGroup = (id, data) => api.put(`/personnel/groups/${id}`, data)
-
 export const getUsers = () => api.get('/personnel/users')
 
 export const getMembers = () => api.get('/personnel/members')

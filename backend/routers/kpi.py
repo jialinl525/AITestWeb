@@ -260,8 +260,13 @@ def get_kpi_metrics(
 
 
 @router.post("/metrics", response_model=schemas.KPIMetric)
-def create_kpi_metric(metric: schemas.KPIMetricCreate, db: Session = Depends(get_db)):
+def create_kpi_metric(
+    metric: schemas.KPIMetricCreate,
+    db: Session = Depends(get_db),
+    identity: dict = Depends(require_manager),
+):
     """Create a new KPI metric."""
+    del identity
     db_metric = models.KPIMetric(**metric.model_dump())
     db.add(db_metric)
     db.commit()
@@ -349,7 +354,12 @@ def get_model_detail(
 
 
 @router.post("/models", response_model=schemas.KPIModelRecord)
-def create_model_run(payload: schemas.KPIModelUpsert, db: Session = Depends(get_db)):
+def create_model_run(
+    payload: schemas.KPIModelUpsert,
+    db: Session = Depends(get_db),
+    identity: dict = Depends(require_manager),
+):
+    del identity
     canonical_category, metrics_map = _normalize_payload_metrics(payload.metrics or {}, payload.model_category)
     if not metrics_map:
         raise HTTPException(status_code=400, detail="metrics cannot be empty")
@@ -383,7 +393,13 @@ def create_model_run(payload: schemas.KPIModelUpsert, db: Session = Depends(get_
 
 
 @router.put("/models/{model_name}/latest", response_model=schemas.KPIModelRecord)
-def update_latest_model_run(model_name: str, payload: schemas.KPIModelUpsert, db: Session = Depends(get_db)):
+def update_latest_model_run(
+    model_name: str,
+    payload: schemas.KPIModelUpsert,
+    db: Session = Depends(get_db),
+    identity: dict = Depends(require_manager),
+):
+    del identity
     route_model_name = _normalize_text(model_name)
     payload_model_name = _normalize_text(payload.model_name)
     if payload_model_name and payload_model_name != route_model_name:
@@ -495,7 +511,9 @@ def delete_model_runs(
     model_name: str,
     model_category: Optional[str] = None,
     db: Session = Depends(get_db),
+    identity: dict = Depends(require_manager),
 ):
+    del identity
     normalized_model_name = _normalize_text(model_name)
     if not normalized_model_name:
         raise HTTPException(status_code=400, detail="model_name is required")

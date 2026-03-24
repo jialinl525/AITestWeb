@@ -38,6 +38,10 @@
             <el-icon><DataAnalysis /></el-icon>
             <span>{{ LT.menu.kpi }}</span>
           </el-menu-item>
+          <el-menu-item v-if="canAccessAuditMenu" index="/audit">
+            <el-icon><Histogram /></el-icon>
+            <span>{{ LT.menu.audit }}</span>
+          </el-menu-item>
         </el-menu>
       </div>
     </el-aside>
@@ -118,7 +122,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { Document, Warning, DataAnalysis, UserFilled } from '@element-plus/icons-vue'
+import { Document, Warning, DataAnalysis, UserFilled, Histogram } from '@element-plus/icons-vue'
 import voiceAiLogo from './assets/voiceai-logo.svg'
 import { LabelText } from './texts/LabelText'
 import { ButtonText } from './texts/ButtonText'
@@ -128,8 +132,8 @@ import {
   userName,
   canEditTest,
   currentUsername,
+  canAccessAuditDashboard,
   canViewAllPages,
-  isInternalUser,
   login,
   logout,
   changePassword,
@@ -140,7 +144,7 @@ import { ElMessage } from 'element-plus'
 const route = useRoute()
 const showLoginDialog = ref(false)
 const showPasswordDialog = ref(false)
-const loginForm = ref({ username: 'Internal', password: '' })
+const loginForm = ref({ username: '', password: '' })
 const passwordForm = ref({ oldPassword: '', newPassword: '', confirmPassword: '' })
 const LT = LabelText.app
 const BT = ButtonText.app
@@ -154,15 +158,16 @@ const activeMenu = computed(() => {
   if (p.startsWith('/kpi')) return '/kpi'
   if (p.startsWith('/personnel')) return '/personnel'
   if (p.startsWith('/work-tasks')) return '/work-tasks'
+  if (p.startsWith('/audit')) return '/audit'
   return p
 })
 
 const isLoggedIn = computed(() => Boolean(currentUsername.value))
 const canViewAllMenu = computed(() => canViewAllPages())
+const canAccessAuditMenu = computed(() => canAccessAuditDashboard())
 
 const getRoleLabel = (role) => {
   const map = LT.roleMap
-  if (isInternalUser()) return 'Internal'
   return map[role] || role
 }
 
@@ -170,7 +175,7 @@ const handleLogin = async () => {
   const ok = await login(loginForm.value.username, loginForm.value.password)
   if (ok) {
     showLoginDialog.value = false
-    loginForm.value = { username: 'Internal', password: '' }
+    loginForm.value = { username: '', password: '' }
     ElMessage.success(DT.toast.loginSuccess)
   } else {
     ElMessage.error(DT.toast.loginFailed)

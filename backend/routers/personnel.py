@@ -2,7 +2,7 @@ from typing import List, Dict, Tuple
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 import models
 import schemas
@@ -11,16 +11,8 @@ from database import get_db
 
 router = APIRouter()
 
-DEFAULT_MANAGER_GROUP = "manager-group"
-DEFAULT_MANAGER_GROUP_DESC = "Personnel group allowed to edit test progress and bugs"
-LEGACY_MANAGER_GROUP_DESC = "\u53ef\u7f16\u8f91\u6d4b\u8bd5\u8fdb\u5ea6\u4e0eBug\u7684\u4eba\u5458\u7ec4"
 DEFAULT_MANAGER_DISPLAY_NAME = "Administrator"
 LEGACY_MANAGER_DISPLAY_NAME = "\u7ba1\u7406\u5458"
-DEFAULT_INTERNAL_GROUP = "internal-group"
-DEFAULT_INTERNAL_GROUP_DESC = "Read-only internal visibility group"
-DEFAULT_INTERNAL_DISPLAY_NAME = "Internal"
-DEFAULT_INTERNAL_USERNAME = "internal"
-DEFAULT_INTERNAL_PASSWORD = "qualcommvoiceai"
 PROTECTED_USERNAMES = {"manager"}
 
 
@@ -40,7 +32,20 @@ def _is_protected_user(user: models.User) -> bool:
 def _require_primary_manager(identity: Dict):
     username = _normalize_username(identity.get("username", ""))
     if username != "manager":
-        raise HTTPException(status_code=403, detail="Only the manager account can edit personnel settings")
+        raise HTTPException(status_code=403, detail="Only the admin account can manage personnel users")
+
+
+def _can_manage_personnel_users(identity: Dict) -> bool:
+    return _normalize_username(identity.get("username", "")) == "manager"
+
+
+def _can_edit_user_profile(identity: Dict, user: models.User) -> bool:
+    username = _normalize_username(identity.get("username", ""))
+    if username == "manager":
+        return True
+    if not user_can_edit_test(user):
+        return False
+    return username == _normalize_username(user.username)
 
 
 def _split_people(raw_names: str) -> List[str]:
@@ -51,18 +56,6 @@ def _split_people(raw_names: str) -> List[str]:
 
 
 def bootstrap_security_data(db: Session):
-    group = db.query(models.PermissionGroup).filter(models.PermissionGroup.name == DEFAULT_MANAGER_GROUP).first()
-    if not group:
-        group = models.PermissionGroup(
-            name=DEFAULT_MANAGER_GROUP,
-            description=DEFAULT_MANAGER_GROUP_DESC,
-            can_edit_test=True,
-        )
-        db.add(group)
-        db.flush()
-    elif (group.description or "").strip() in {"", LEGACY_MANAGER_GROUP_DESC}:
-        group.description = DEFAULT_MANAGER_GROUP_DESC
-
     manager_user = db.query(models.User).filter(models.User.username == "manager").first()
     if not manager_user:
         manager_user = models.User(
@@ -77,79 +70,14 @@ def bootstrap_security_data(db: Session):
     elif (manager_user.display_name or "").strip() in {"", LEGACY_MANAGER_DISPLAY_NAME}:
         manager_user.display_name = DEFAULT_MANAGER_DISPLAY_NAME
 
-    exists = (
-        db.query(models.UserGroupMembership)
-        .filter(
-            models.UserGroupMembership.user_id == manager_user.id,
-            models.UserGroupMembership.group_id == group.id,
-        )
-        .first()
-    )
-    if not exists:
-        db.add(models.UserGroupMembership(user_id=manager_user.id, group_id=group.id))
-
-    internal_group = (
-        db.query(models.PermissionGroup)
-        .filter(models.PermissionGroup.name == DEFAULT_INTERNAL_GROUP)
-        .first()
-    )
-    if not internal_group:
-        internal_group = models.PermissionGroup(
-            name=DEFAULT_INTERNAL_GROUP,
-            description=DEFAULT_INTERNAL_GROUP_DESC,
-            can_edit_test=False,
-        )
-        db.add(internal_group)
-        db.flush()
-    elif (internal_group.description or "").strip() == "":
-        internal_group.description = DEFAULT_INTERNAL_GROUP_DESC
-
-    internal_user = db.query(models.User).filter(models.User.username == DEFAULT_INTERNAL_USERNAME).first()
-    if not internal_user:
-        internal_user = models.User(
-            username=DEFAULT_INTERNAL_USERNAME,
-            display_name=DEFAULT_INTERNAL_DISPLAY_NAME,
-            password=DEFAULT_INTERNAL_PASSWORD,
-            role="viewer",
-            is_active=True,
-        )
-        db.add(internal_user)
-        db.flush()
-    elif (internal_user.display_name or "").strip() == "":
-        internal_user.display_name = DEFAULT_INTERNAL_DISPLAY_NAME
-
-    internal_exists = (
-        db.query(models.UserGroupMembership)
-        .filter(
-            models.UserGroupMembership.user_id == internal_user.id,
-            models.UserGroupMembership.group_id == internal_group.id,
-        )
-        .first()
-    )
-    if not internal_exists:
-        db.add(models.UserGroupMembership(user_id=internal_user.id, group_id=internal_group.id))
-
     db.commit()
 
 
 def _get_user_query(db: Session):
-    return db.query(models.User).options(
-        joinedload(models.User.memberships).joinedload(models.UserGroupMembership.group)
-    )
-
-
-def _serialize_group(group: models.PermissionGroup) -> Dict:
-    return {
-        "id": group.id,
-        "name": group.name,
-        "description": group.description or "",
-        "can_edit_test": bool(group.can_edit_test),
-        "created_at": group.created_at,
-    }
+    return db.query(models.User)
 
 
 def _serialize_user(user: models.User) -> Dict:
-    groups = [m.group for m in user.memberships if m.group is not None]
     return {
         "id": user.id,
         "username": user.username,
@@ -161,19 +89,8 @@ def _serialize_user(user: models.User) -> Dict:
         "is_active": bool(user.is_active),
         "created_at": user.created_at,
         "updated_at": user.updated_at,
-        "groups": [_serialize_group(group) for group in groups],
         "can_edit_test": user_can_edit_test(user),
     }
-
-
-def _replace_user_groups(db: Session, user_id: int, group_ids: List[int]):
-    db.query(models.UserGroupMembership).filter(models.UserGroupMembership.user_id == user_id).delete()
-    valid_ids = set()
-    if group_ids:
-        rows = db.query(models.PermissionGroup.id).filter(models.PermissionGroup.id.in_(group_ids)).all()
-        valid_ids = {item[0] for item in rows}
-    for gid in valid_ids:
-        db.add(models.UserGroupMembership(user_id=user_id, group_id=gid))
 
 
 def _get_visible_users(db: Session, only_active: bool = True) -> List[models.User]:
@@ -181,16 +98,6 @@ def _get_visible_users(db: Session, only_active: bool = True) -> List[models.Use
     if only_active:
         query = query.filter(models.User.is_active.is_(True))
     return query.order_by(models.User.id.asc()).all()
-
-
-def _is_manager_group_member(user: models.User) -> bool:
-    for membership in user.memberships:
-        group = membership.group
-        if not group:
-            continue
-        if (group.name or "").strip().lower() == DEFAULT_MANAGER_GROUP:
-            return True
-    return False
 
 
 def _is_administrator_user(user: models.User) -> bool:
@@ -204,8 +111,6 @@ def _get_personnel_statistics_users(db: Session) -> List[models.User]:
     result = []
     for user in users:
         if _is_administrator_user(user):
-            continue
-        if not _is_manager_group_member(user):
             continue
         result.append(user)
     return result
@@ -349,7 +254,6 @@ def login(payload: schemas.UserLogin, db: Session = Depends(get_db)):
         "display_name": serialized["display_name"],
         "role": serialized["role"],
         "can_edit_test": serialized["can_edit_test"],
-        "groups": serialized["groups"],
     }
 
 
@@ -391,76 +295,15 @@ def get_me(identity: Dict = Depends(get_request_identity), db: Session = Depends
         "display_name": serialized["display_name"],
         "role": serialized["role"],
         "can_edit_test": serialized["can_edit_test"],
-        "groups": serialized["groups"],
     }
 
 
-@router.get("/groups", response_model=List[schemas.PermissionGroup])
-def list_groups(db: Session = Depends(get_db)):
-    groups = db.query(models.PermissionGroup).order_by(models.PermissionGroup.id.asc()).all()
-    return [_serialize_group(group) for group in groups]
-
-
-@router.post("/groups", response_model=schemas.PermissionGroup)
-def create_group(
-    payload: schemas.PermissionGroupCreate,
-    db: Session = Depends(get_db),
-    identity: Dict = Depends(require_manager),
-):
-    _require_primary_manager(identity)
-    name = (payload.name or "").strip()
-    if not name:
-        raise HTTPException(status_code=400, detail="Group name cannot be empty")
-
-    exists = db.query(models.PermissionGroup).filter(models.PermissionGroup.name == name).first()
-    if exists:
-        raise HTTPException(status_code=400, detail="Group name already exists")
-
-    group = models.PermissionGroup(
-        name=name,
-        description=payload.description or "",
-        can_edit_test=payload.can_edit_test,
-    )
-    db.add(group)
-    db.commit()
-    db.refresh(group)
-    return _serialize_group(group)
-
-
-@router.put("/groups/{group_id}", response_model=schemas.PermissionGroup)
-def update_group(
-    group_id: int,
-    payload: schemas.PermissionGroupCreate,
-    db: Session = Depends(get_db),
-    identity: Dict = Depends(require_manager),
-):
-    _require_primary_manager(identity)
-    group = db.query(models.PermissionGroup).filter(models.PermissionGroup.id == group_id).first()
-    if not group:
-        raise HTTPException(status_code=404, detail="User group not found")
-
-    name = (payload.name or "").strip()
-    if not name:
-        raise HTTPException(status_code=400, detail="Group name cannot be empty")
-
-    duplicate = (
-        db.query(models.PermissionGroup)
-        .filter(models.PermissionGroup.name == name, models.PermissionGroup.id != group_id)
-        .first()
-    )
-    if duplicate:
-        raise HTTPException(status_code=400, detail="Group name already exists")
-
-    group.name = name
-    group.description = payload.description or ""
-    group.can_edit_test = payload.can_edit_test
-    db.commit()
-    db.refresh(group)
-    return _serialize_group(group)
-
-
 @router.get("/users", response_model=List[schemas.User])
-def list_users(db: Session = Depends(get_db)):
+def list_users(
+    db: Session = Depends(get_db),
+    identity: Dict = Depends(require_manager),
+):
+    _require_primary_manager(identity)
     users = (
         _get_user_query(db)
         .filter(~models.User.username.in_(PROTECTED_USERNAMES))
@@ -496,8 +339,6 @@ def create_user(
         is_active=payload.is_active,
     )
     db.add(user)
-    db.flush()
-    _replace_user_groups(db, user.id, payload.group_ids)
     db.commit()
 
     created_user = _get_user_query(db).filter(models.User.id == user.id).first()
@@ -511,12 +352,15 @@ def update_user(
     db: Session = Depends(get_db),
     identity: Dict = Depends(require_manager),
 ):
-    _require_primary_manager(identity)
     user = _get_user_query(db).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    if _is_protected_user(user):
-        raise HTTPException(status_code=403, detail="The default system administrator cannot be modified")
+
+    admin_account = _can_manage_personnel_users(identity)
+    if _is_protected_user(user) and not admin_account:
+        raise HTTPException(status_code=403, detail="Only the admin account can modify the admin profile")
+    if not _can_edit_user_profile(identity, user):
+        raise HTTPException(status_code=403, detail="You can only update your own profile")
 
     if payload.display_name is not None:
         user.display_name = payload.display_name.strip()
@@ -527,13 +371,17 @@ def update_user(
     if payload.specialty_tasks is not None:
         user.specialty_tasks = payload.specialty_tasks.strip()
     if payload.role is not None:
+        if not admin_account:
+            raise HTTPException(status_code=403, detail="Only the admin account can change roles")
         user.role = _normalize_role(payload.role)
     if payload.is_active is not None:
+        if not admin_account:
+            raise HTTPException(status_code=403, detail="Only the admin account can change activation status")
         user.is_active = payload.is_active
     if payload.password is not None:
+        if not admin_account:
+            raise HTTPException(status_code=403, detail="Use change password to update your password")
         user.password = payload.password
-    if payload.group_ids is not None:
-        _replace_user_groups(db, user.id, payload.group_ids)
 
     db.commit()
     updated_user = _get_user_query(db).filter(models.User.id == user_id).first()
