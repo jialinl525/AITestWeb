@@ -470,7 +470,7 @@ CR Number,Title,Severity,CR Type,CR Status,Created By,CR Assignee,Created On,Par
 4459993,[FR115315][Life Logger][Phase 0.4]No ASR content display in UI in live recording mode,Medium,Bug,InProgress,mincyao,qihexu,3/5/2026 7:55,NA,NA,COMPUTE.AL.1.0
 4459993,[FR115315][Life Logger][Phase 0.4]No ASR content display in UI in live recording mode,Medium,Bug,InProgress,mincyao,qihexu,3/5/2026 7:55,NA,NA,COMPUTE.AL.2.0
 4459993,[FR115315][Life Logger][Phase 0.4]No ASR content display in UI in live recording mode,Medium,Bug,InProgress,mincyao,qihexu,3/5/2026 7:55,NA,NA,LA.QSSI.18.0
-4460008,[FR115315][Life Logger][Phase 0.3]The RX recording pcm is clipped during voip call,Medium,Bug,Analysis,jialinl,shikmath,3/5/2026 8:05,NA,NA,LA.VENDOR.16.2.0
+4480808,[FR115315][Life Logger][Phase 0.3]The RX recording pcm is clipped during voip call,Medium,Bug,Analysis,jialinl,shikmath,3/5/2026 8:05,NA,NA,LA.VENDOR.16.2.0
 4461487,FR109404:Speakerdiarizationdetect device owner,NA,Requirement,InProgress,jialinl,haozh,3/6/2026 8:38,NA,NA,COMPUTE.AL.1.0
 4461487,FR109404:Speakerdiarizationdetect device owner,NA,Requirement,InProgress,jialinl,haozh,3/6/2026 8:38,NA,NA,COMPUTE.AL.2.0
 4461487,FR109404:Speakerdiarizationdetect device owner,NA,Requirement,InProgress,jialinl,haozh,3/6/2026 8:38,NA,NA,LA.QSSI.18.0

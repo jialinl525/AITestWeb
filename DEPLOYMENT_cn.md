@@ -7,7 +7,7 @@
 推荐在同一台服务器部署：
 
 - Nginx：对外提供 Web 入口（80/443）
-- FastAPI(Uvicorn)：仅监听本机端口（127.0.0.1:6000）
+- FastAPI(Uvicorn)：仅监听本机端口（127.0.0.1:8080）
 - 前端静态文件：由 Nginx 托管（frontend/dist）
 - 数据库：SQLite（默认）或 PostgreSQL（可选）
 
@@ -72,13 +72,13 @@ $env:DATABASE_URL = "sqlite:///C:/apps/AITestWeb/data/test_management.db"
 ```powershell
 cd C:\apps\AITestWeb\backend
 $env:DATABASE_URL = "sqlite:///C:/apps/AITestWeb/data/test_management.db"
-.\.venv\Scripts\python -m uvicorn main:app --host 127.0.0.1 --port 6000 --workers 2
+.\.venv\Scripts\python -m uvicorn main:app --host 127.0.0.1 --port 8080 --workers 2
 ```
 
 验证接口：
 
 ```powershell
-curl http://127.0.0.1:6000/api/health
+curl http://127.0.0.1:8080/api/health
 ```
 
 ### 4.3 前端打包
@@ -108,7 +108,7 @@ server {
     }
 
     location /api/ {
-      proxy_pass http://127.0.0.1:6000/api/;
+      proxy_pass http://127.0.0.1:8080/api/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -143,7 +143,7 @@ cd C:\apps\nginx
 
 ```powershell
 nssm install AITestWebBackend C:\apps\AITestWeb\backend\.venv\Scripts\python.exe
-nssm set AITestWebBackend AppParameters "-m uvicorn main:app --host 127.0.0.1 --port 6000 --workers 2"
+nssm set AITestWebBackend AppParameters "-m uvicorn main:app --host 127.0.0.1 --port 8080 --workers 2"
 nssm set AITestWebBackend AppDirectory C:\apps\AITestWeb\backend
 nssm set AITestWebBackend AppEnvironmentExtra DATABASE_URL=sqlite:///C:/apps/AITestWeb/data/test_management.db
 nssm start AITestWebBackend
@@ -207,13 +207,13 @@ python migrate_db.py
 ```bash
 cd /opt/aitestweb/backend
 export DATABASE_URL="sqlite:////opt/aitestweb/data/test_management.db"
-.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 6000 --workers 2
+.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8080 --workers 2
 ```
 
 验证接口：
 
 ```bash
-curl http://127.0.0.1:6000/api/health
+curl http://127.0.0.1:8080/api/health
 ```
 
 ### 5.4 前端打包
@@ -245,7 +245,7 @@ User=aittest
 Group=aittest
 WorkingDirectory=/opt/aitestweb/backend
 EnvironmentFile=/etc/aitestweb/backend.env
-ExecStart=/opt/aitestweb/backend/.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 6000 --workers 2
+ExecStart=/opt/aitestweb/backend/.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8080 --workers 2
 Restart=always
 RestartSec=5
 
@@ -279,7 +279,7 @@ server {
     }
 
     location /api/ {
-      proxy_pass http://127.0.0.1:6000/api/;
+      proxy_pass http://127.0.0.1:8080/api/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -333,7 +333,7 @@ sudo systemctl reload nginx
 
 1. 页面打开空白或接口 404：
    - 检查 Nginx `try_files` 是否为 `/index.html`
-   - 检查 `/api/` 代理是否指向 `127.0.0.1:6000`
+   - 检查 `/api/` 代理是否指向 `127.0.0.1:8080`
 
 2. 启动后找不到数据库或写入到错误位置：
    - 检查是否设置了 `DATABASE_URL`

@@ -27,54 +27,58 @@
         </div>
       </template>
 
-      <div class="metrics-grid progress-overview-metrics">
-        <article class="metric-card accent-blue">
-          <div class="metric-card__label">{{ LT.metrics.total }}</div>
-          <div class="metric-card__value">{{ overviewStats.total }}</div>
-          <div class="metric-card__meta">{{ DT.metricsMeta.total }}</div>
-        </article>
-        <article class="metric-card accent-orange">
-          <div class="metric-card__label">Inprogress</div>
-          <div class="metric-card__value">{{ overviewStats.inprogress }}</div>
-          <div class="metric-card__meta">{{ DT.metricsMeta.running }}</div>
-        </article>
-        <article class="metric-card accent-green">
-          <div class="metric-card__label">Completed</div>
-          <div class="metric-card__value">{{ overviewStats.completed }}</div>
-          <div class="metric-card__meta">{{ DT.metricsMeta.completed }}</div>
-        </article>
-        <article class="metric-card accent-purple">
-          <div class="metric-card__label">{{ LT.metrics.passRate }}</div>
-          <div class="metric-card__value">{{ overviewStats.passRate }}%</div>
-          <div class="metric-card__meta">{{ DT.metricsMeta.passRate }}</div>
-        </article>
-      </div>
+      <div class="progress-overview-panels">
+        <section class="overview-panel overview-panel--tasks">
+          <div class="overview-panel__header">
+            <div>
+              <div class="overview-panel__eyebrow">Test Tasks</div>
+              <h4 class="overview-panel__title">Execution status by task</h4>
+            </div>
+          </div>
+          <div class="metrics-grid progress-overview-metrics progress-overview-metrics--tasks">
+            <article class="metric-card accent-blue">
+              <div class="metric-card__label">Total Tasks</div>
+              <div class="metric-card__value">{{ overviewStats.total }}</div>
+              <div class="metric-card__meta">{{ DT.metricsMeta.total }}</div>
+            </article>
+            <article class="metric-card accent-orange">
+              <div class="metric-card__label">In Progress</div>
+              <div class="metric-card__value">{{ overviewStats.inprogress }}</div>
+              <div class="metric-card__meta">{{ DT.metricsMeta.running }}</div>
+            </article>
+            <article class="metric-card accent-green">
+              <div class="metric-card__label">Completed</div>
+              <div class="metric-card__value">{{ overviewStats.completed }}</div>
+              <div class="metric-card__meta">{{ DT.metricsMeta.completed }}</div>
+            </article>
+          </div>
+        </section>
 
-      <div class="progress-overview-grid">
-        <v-chart class="progress-pie-chart" :option="progressPieOption" autoresize />
-        <div class="progress-overview-summary">
-          <div class="progress-summary-item progress-summary-item--passed">
-            <span class="progress-summary-item__dot"></span>
+        <section class="overview-panel overview-panel--cases">
+          <div class="overview-panel__header">
             <div>
-              <div class="progress-summary-item__label">{{ LT.summary.passed }}</div>
-              <div class="progress-summary-item__value">{{ overviewStats.passedCases }}</div>
+              <div class="overview-panel__eyebrow">Test Cases</div>
+              <h4 class="overview-panel__title">Execution outcome by case</h4>
             </div>
           </div>
-          <div class="progress-summary-item progress-summary-item--failed">
-            <span class="progress-summary-item__dot"></span>
-            <div>
-              <div class="progress-summary-item__label">{{ LT.summary.failed }}</div>
-              <div class="progress-summary-item__value">{{ overviewStats.failedCases }}</div>
-            </div>
+          <div class="metrics-grid progress-overview-metrics progress-overview-metrics--cases">
+            <article class="metric-card accent-cyan">
+              <div class="metric-card__label">Total Cases</div>
+              <div class="metric-card__value">{{ overviewStats.totalCases }}</div>
+              <div class="metric-card__meta">All tracked verification cases</div>
+            </article>
+            <article class="metric-card accent-green">
+              <div class="metric-card__label">{{ LT.summary.passed }}</div>
+              <div class="metric-card__value">{{ overviewStats.passedCases }}({{ overviewStats.passedRate }}%)</div>
+              <div class="metric-card__meta">Validated successfully</div>
+            </article>
+            <article class="metric-card accent-rose">
+              <div class="metric-card__label">{{ LT.summary.failed }}</div>
+              <div class="metric-card__value">{{ overviewStats.failedCases }}({{ overviewStats.failedRate }}%)</div>
+              <div class="metric-card__meta">Need fix or retest</div>
+            </article>
           </div>
-          <div class="progress-summary-item progress-summary-item--untested">
-            <span class="progress-summary-item__dot"></span>
-            <div>
-              <div class="progress-summary-item__label">{{ LT.summary.untested }}</div>
-              <div class="progress-summary-item__value">{{ overviewStats.untestedCases }}</div>
-            </div>
-          </div>
-        </div>
+        </section>
       </div>
     </el-card>
 
@@ -438,64 +442,12 @@ const overviewStats = computed(() => {
     failedCases,
     untestedCases,
     avgProgress,
-    passRate: totalCases ? Math.round((passedCases / totalCases) * 100) : 0
+    passedRate: totalCases ? Math.round((passedCases / totalCases) * 100) : 0,
+    passRate: totalCases ? Math.round((passedCases / totalCases) * 100) : 0,
+    failedRate: totalCases ? Math.round((failedCases / totalCases) * 100) : 0
   }
 })
 
-const progressPieOption = computed(() => ({
-  backgroundColor: 'transparent',
-  tooltip: {
-    trigger: 'item',
-    formatter: '{b}: {c} ({d}%)'
-  },
-  legend: {
-    bottom: 0,
-    left: 'center',
-    icon: 'circle',
-    textStyle: {
-      color: 'rgba(226, 232, 240, 0.9)'
-    }
-  },
-  series: [
-    {
-      type: 'pie',
-      radius: ['52%', '74%'],
-      center: ['50%', '44%'],
-      avoidLabelOverlap: true,
-      label: {
-        show: true,
-        color: '#f8fafc',
-        formatter: '{b}\n{d}%'
-      },
-      labelLine: {
-        lineStyle: {
-          color: 'rgba(148, 163, 184, 0.7)'
-        }
-      },
-      itemStyle: {
-        borderColor: 'rgba(8, 15, 33, 0.92)',
-        borderWidth: 4
-      },
-      data: [
-        {
-          value: overviewStats.value.passedCases,
-          name: LT.summary.passed,
-          itemStyle: { color: '#34d399' }
-        },
-        {
-          value: overviewStats.value.failedCases,
-          name: LT.summary.failed,
-          itemStyle: { color: '#fb7185' }
-        },
-        {
-          value: overviewStats.value.untestedCases,
-          name: LT.summary.untested,
-          itemStyle: { color: '#60a5fa' }
-        }
-      ]
-    }
-  ]
-}))
 
 const loadData = async () => {
   await runAsync(
@@ -840,70 +792,107 @@ onMounted(() => {
   margin-bottom: 24px;
 }
 
-.progress-overview-metrics {
-  margin-bottom: 18px;
-}
-
-.progress-overview-grid {
+.progress-overview-panels {
   display: grid;
-  grid-template-columns: minmax(280px, 1.1fr) minmax(220px, 0.9fr);
-  gap: 24px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
 }
 
-.progress-pie-chart {
-  height: 320px;
-  width: 100%;
-}
-
-.progress-overview-summary {
-  display: grid;
-  gap: 14px;
-}
-
-.progress-summary-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 18px;
-  border-radius: 18px;
-  background: rgba(15, 23, 42, 0.72);
+.overview-panel {
+  padding: 12px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.74));
   border: 1px solid rgba(148, 163, 184, 0.16);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-.progress-summary-item__dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  flex-shrink: 0;
+.overview-panel--tasks {
+  border-color: rgba(96, 165, 250, 0.24);
 }
 
-.progress-summary-item--passed .progress-summary-item__dot {
-  background: #34d399;
-  box-shadow: 0 0 16px rgba(52, 211, 153, 0.5);
+.overview-panel--cases {
+  border-color: rgba(45, 212, 191, 0.24);
 }
 
-.progress-summary-item--failed .progress-summary-item__dot {
-  background: #fb7185;
-  box-shadow: 0 0 16px rgba(251, 113, 133, 0.45);
+.overview-panel__header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  text-align: center;
 }
 
-.progress-summary-item--untested .progress-summary-item__dot {
-  background: #60a5fa;
-  box-shadow: 0 0 16px rgba(96, 165, 250, 0.45);
-}
-
-.progress-summary-item__label {
-  color: rgba(148, 163, 184, 0.86);
-  font-size: 13px;
-  margin-bottom: 4px;
-}
-
-.progress-summary-item__value {
-  color: #f8fafc;
-  font-size: 24px;
+.overview-panel__eyebrow {
+  color: rgba(148, 163, 184, 0.92);
+  font-size: 10px;
   font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.overview-panel__title {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.progress-overview-metrics {
+  margin-bottom: 0;
+}
+
+.progress-overview-metrics--tasks {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.progress-overview-metrics--cases {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.accent-cyan {
+  --metric-accent: #22d3ee;
+}
+
+.accent-rose {
+  --metric-accent: #fb7185;
+}
+
+.accent-sky {
+  --metric-accent: #60a5fa;
+}
+
+.test-progress-container :deep(.metric-card) {
+  padding: 12px 10px;
+  min-height: 112px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.test-progress-container :deep(.metric-card__label) {
+  text-align: center;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.test-progress-container :deep(.metric-card__value) {
+  text-align: center;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+
+.test-progress-container :deep(.metric-card__meta) {
+  text-align: center;
+  font-size: 12px;
+  margin-top: 10px;
 }
 
 .test-progress-container :deep(.test-progress-table .cell) {
@@ -925,12 +914,21 @@ onMounted(() => {
 }
 
 @media (max-width: 960px) {
-  .progress-overview-grid {
+  .progress-overview-panels {
     grid-template-columns: 1fr;
   }
+}
 
-  .progress-pie-chart {
-    height: 280px;
+@media (max-width: 960px) {
+  .progress-overview-metrics--tasks,
+  .progress-overview-metrics--cases {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .overview-panel {
+    padding: 10px;
   }
 }
 </style>

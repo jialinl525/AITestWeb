@@ -25,67 +25,50 @@
       </div>
     </section>
 
-    <div class="metrics-grid">
-      <article class="metric-card accent-blue">
-        <div class="metric-card__label">{{ LT.metrics.total }}</div>
-        <div class="metric-card__value">{{ bugStats.total || 0 }}</div>
-        <div class="metric-card__meta">{{ DT.metricsMeta.total }}</div>
-      </article>
-      <article class="metric-card accent-red">
-        <div class="metric-card__label">{{ LT.metrics.analysis }}</div>
-        <div class="metric-card__value">{{ bugStats.by_status?.analysis || 0 }}</div>
-        <div class="metric-card__meta">{{ DT.metricsMeta.analysis }}</div>
-      </article>
-      <article class="metric-card accent-orange">
-        <div class="metric-card__label">{{ LT.metrics.other }}</div>
-        <div class="metric-card__value">{{ bugStats.by_status?.other || 0 }}</div>
-        <div class="metric-card__meta">{{ DT.metricsMeta.other }}</div>
-      </article>
-      <article class="metric-card accent-green">
-        <div class="metric-card__label">{{ LT.metrics.fixed }}</div>
-        <div class="metric-card__value">{{ bugStats.by_status?.fixed || 0 }}</div>
-        <div class="metric-card__meta">{{ DT.metricsMeta.fixed }}</div>
-      </article>
-    </div>
-
     <el-card class="section-card bug-chart-card">
       <template #header>
         <div class="section-title">
           <div class="section-title__main">
-            <h3>Bug Distribution</h3>
-            <span class="section-title__meta">Bugs with CR created date >= today - 365 days</span>
+            <h3>Bug Overview</h3>
+            <span class="section-title__meta">Bugs with CR created date >= today - 365 days and monthly CR trend</span>
           </div>
         </div>
       </template>
-      <div class="bug-chart-grid">
-        <v-chart class="bug-pie-chart" :option="bugPieOption" autoresize />
-        <div class="bug-chart-summary">
-          <div class="bug-chart-summary__item">
-            <span class="bug-chart-summary__dot bug-chart-summary__dot--analysis"></span>
-            <span>Analysis {{ bugStats.by_status?.analysis || 0 }}</span>
+      <div class="bug-overview-content">
+        <div class="metrics-grid metrics-grid--compact">
+          <article class="metric-card accent-blue">
+            <div class="metric-card__label">{{ LT.metrics.total }}</div>
+            <div class="metric-card__value">{{ bugStats.total || 0 }}</div>
+            <div class="metric-card__meta">{{ DT.metricsMeta.total }}</div>
+          </article>
+          <article class="metric-card accent-red">
+            <div class="metric-card__label">{{ LT.metrics.analysis }}</div>
+            <div class="metric-card__value">{{ bugStats.by_status?.analysis || 0 }}</div>
+            <div class="metric-card__meta">{{ DT.metricsMeta.analysis }}</div>
+          </article>
+          <article class="metric-card accent-orange">
+            <div class="metric-card__label">{{ LT.metrics.other }}</div>
+            <div class="metric-card__value">{{ bugStats.by_status?.other || 0 }}</div>
+            <div class="metric-card__meta">{{ DT.metricsMeta.other }}</div>
+          </article>
+          <article class="metric-card accent-green">
+            <div class="metric-card__label">{{ LT.metrics.fixed }}</div>
+            <div class="metric-card__value">{{ bugStats.by_status?.fixed || 0 }}</div>
+            <div class="metric-card__meta">{{ DT.metricsMeta.fixed }}</div>
+          </article>
+        </div>
+
+        <div class="bugs-overview-grid">
+          <div class="bug-chart-panel">
+            <div class="bug-chart-panel__title">Bug Distribution</div>
+            <v-chart class="bug-pie-chart" :option="bugPieOption" autoresize />
           </div>
-          <div class="bug-chart-summary__item">
-            <span class="bug-chart-summary__dot bug-chart-summary__dot--other"></span>
-            <span>Other {{ bugStats.by_status?.other || 0 }}</span>
-          </div>
-          <div class="bug-chart-summary__item">
-            <span class="bug-chart-summary__dot bug-chart-summary__dot--fixed"></span>
-            <span>Fixed {{ bugStats.by_status?.fixed || 0 }}</span>
+          <div class="bug-chart-panel">
+            <div class="bug-chart-panel__title">Monthly Bug Trend</div>
+            <v-chart class="bug-line-chart" :option="bugTrendOption" autoresize />
           </div>
         </div>
       </div>
-    </el-card>
-
-    <el-card class="section-card bug-chart-card">
-      <template #header>
-        <div class="section-title">
-          <div class="section-title__main">
-            <h3>Monthly Bug Trend</h3>
-            <span class="section-title__meta">Monthly CR and Fixed CR trend by whole month</span>
-          </div>
-        </div>
-      </template>
-      <v-chart class="bug-line-chart" :option="bugTrendOption" autoresize />
     </el-card>
 
     <el-card class="section-card">
@@ -1087,57 +1070,64 @@ watch(
   margin-bottom: 24px;
 }
 
-.bug-chart-grid {
+.bug-overview-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.bugs-overview-grid {
   display: grid;
-  grid-template-columns: minmax(280px, 1.1fr) minmax(220px, 0.9fr);
-  gap: 24px;
-  align-items: center;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.1fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.bug-chart-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.bug-chart-panel__title {
+  color: #f8fafc;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.metrics-grid--compact {
+  gap: 10px;
+}
+
+.metrics-grid--compact :deep(.metric-card) {
+  padding: 8px 12px;
+  min-height: 68px;
+  border-radius: 14px;
+}
+
+.metrics-grid--compact :deep(.metric-card__label) {
+  font-size: 12px;
+}
+
+.metrics-grid--compact :deep(.metric-card__value) {
+  margin-top: 6px;
+  font-size: 20px;
+}
+
+.metrics-grid--compact :deep(.metric-card__meta) {
+  margin-top: 4px;
+  font-size: 10px;
 }
 
 .bug-pie-chart {
   width: 100%;
-  height: 320px;
+  height: 240px;
 }
 
 .bug-line-chart {
   width: 100%;
-  height: 360px;
-}
-
-.bug-chart-summary {
-  display: grid;
-  gap: 14px;
-}
-
-.bug-chart-summary__item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: rgba(15, 23, 42, 0.72);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  color: #f8fafc;
-  font-weight: 600;
-}
-
-.bug-chart-summary__dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  flex-shrink: 0;
-}
-
-.bug-chart-summary__dot--analysis {
-  background: #f97316;
-}
-
-.bug-chart-summary__dot--other {
-  background: #60a5fa;
-}
-
-.bug-chart-summary__dot--fixed {
-  background: #34d399;
+  height: 240px;
 }
 
 .quick-build-title {
@@ -1151,13 +1141,13 @@ watch(
     width: 100%;
   }
 
-  .bug-chart-grid {
+  .bugs-overview-grid {
     grid-template-columns: 1fr;
   }
 
   .bug-pie-chart,
   .bug-line-chart {
-    height: 280px;
+    height: 260px;
   }
 }
 </style>

@@ -28,8 +28,8 @@ export const queryBugs = (params = {}) => {
   return api.get('/bugs/query', { params })
 }
 
-export const getBugStats = () => {
-  return api.get('/bugs/stats/summary')
+export const getBugStats = (params = {}) => {
+  return api.get('/bugs/stats/summary', { params })
 }
 
 export const getBugCsvFields = (filePath) => {
