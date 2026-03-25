@@ -131,13 +131,25 @@
             <h3>{{ LT.section.listTitle }}</h3>
             <span class="section-title__meta">{{ pagination.total }} {{ DT.sectionMeta.list }}</span>
           </div>
-          <div v-if="canDeleteBug()" class="bug-list-toolbar">
-            <template v-if="!bulkDeleteMode">
-              <el-button class="btn-style-3" type="danger" plain @click="enterBulkDeleteMode">{{ BT.deleteBugs }}</el-button>
+          <div v-if="canDeleteBug() || canEditBug()" class="bug-list-toolbar">
+            <template v-if="!bulkActionMode">
+              <el-button v-if="canEditBug()" class="btn-style-3" type="success" plain @click="enterBulkVerifyMode">{{ BT.verifyBugs }}</el-button>
+              <el-button v-if="canDeleteBug()" class="btn-style-3" type="danger" plain @click="enterBulkDeleteMode">{{ BT.deleteBugs }}</el-button>
             </template>
             <template v-else>
-              <el-button class="btn-style-3" @click="cancelBulkDeleteMode">{{ BTCommon.cancel }}</el-button>
+              <el-button class="btn-style-3" @click="cancelBulkActionMode">{{ BTCommon.cancel }}</el-button>
               <el-button
+                v-if="bulkActionMode === 'verify'"
+                class="btn-style-2"
+                type="success"
+                :disabled="!selectedBugIds.length"
+                :loading="bulkVerifying"
+                @click="confirmBulkVerify"
+              >
+                {{ LT.toolbar.confirmVerify }} ({{ selectedBugIds.length }})
+              </el-button>
+              <el-button
+                v-else-if="bulkActionMode === 'delete'"
                 class="btn-style-2"
                 type="danger"
                 :disabled="!selectedBugIds.length"
@@ -158,7 +170,7 @@
         :editable="canEditBug()"
         :deletable="canDeleteBug()"
         :hide-delete-action="canDeleteBug()"
-        :enable-selection="bulkDeleteMode && canDeleteBug()"
+        :enable-selection="Boolean(bulkActionMode)"
         :clear-selection-key="bugTableSelectionResetKey"
         :is-verifying="isVerifying"
         :row-class-name="getTableRowClassName"
@@ -370,8 +382,9 @@ const quickBuildSaving = ref(false)
 const quickBuildTargetBug = ref(null)
 const quickBuildOptions = ref([])
 const quickBuildSelection = ref('')
-const bulkDeleteMode = ref(false)
+const bulkActionMode = ref('')
 const bulkDeleting = ref(false)
+const bulkVerifying = ref(false)
 const selectedBugIds = ref([])
 const bugTableSelectionResetKey = ref(0)
 const showExportDialog = ref(false)
@@ -676,7 +689,7 @@ const loadData = async () => {
     bugsList.value = data?.items || []
     setTotal(data?.total)
 
-    if (bulkDeleteMode.value) {
+    if (bulkActionMode.value) {
       const currentIds = new Set((bugsList.value || []).map((item) => Number(item.id)))
       selectedBugIds.value = selectedBugIds.value.filter((id) => currentIds.has(Number(id)))
     }
@@ -705,25 +718,83 @@ const handlePageChange = (page) => {
   loadData()
 }
 
-const enterBulkDeleteMode = () => {
-  bulkDeleteMode.value = true
+const enterBulkVerifyMode = () => {
+  bulkActionMode.value = 'verify'
   selectedBugIds.value = []
   bugTableSelectionResetKey.value += 1
 }
 
-const cancelBulkDeleteMode = () => {
-  bulkDeleteMode.value = false
+const enterBulkDeleteMode = () => {
+  bulkActionMode.value = 'delete'
+  selectedBugIds.value = []
+  bugTableSelectionResetKey.value += 1
+}
+
+const cancelBulkActionMode = () => {
+  bulkActionMode.value = ''
   selectedBugIds.value = []
   bugTableSelectionResetKey.value += 1
 }
 
 const handleBugSelectionChange = (rows) => {
-  if (!bulkDeleteMode.value) {
+  if (!bulkActionMode.value) {
     return
   }
   selectedBugIds.value = (rows || [])
     .map((row) => Number(row.id))
     .filter((id) => Number.isFinite(id))
+}
+
+const confirmBulkVerify = async () => {
+  const ids = [...selectedBugIds.value]
+  if (!ids.length) {
+    ElMessage.warning(DT.toast.selectBugsToVerify)
+    return
+  }
+
+  const bugMap = new Map((bugsList.value || []).map((item) => [Number(item.id), item]))
+
+  try {
+    await ElMessageBox.confirm(
+      `${DT.toast.bulkVerifyConfirmPrefix} ${ids.length} ${DT.toast.bulkVerifyConfirmSuffix}`,
+      DT.toast.bulkVerifyConfirmTitle,
+      {
+        confirmButtonText: BTCommon.confirm,
+        cancelButtonText: BTCommon.cancel,
+        type: 'warning'
+      }
+    )
+  } catch {
+    return
+  }
+
+  bulkVerifying.value = true
+  try {
+    const results = await Promise.allSettled(
+      ids.map((id) => {
+        const bug = bugMap.get(Number(id))
+        if (!bug) {
+          return Promise.reject(new Error(`Bug ${id} not found`))
+        }
+        return updateBug(id, toBugUpdatePayload(bug, { status: 'verified' }))
+      })
+    )
+    const successCount = results.filter((item) => item.status === 'fulfilled').length
+    const failedCount = results.length - successCount
+
+    if (successCount > 0) {
+      ElMessage.success(`${DT.toast.bulkVerifySuccessPrefix} ${successCount} ${DT.toast.bulkVerifySuccessSuffix}`)
+    }
+    if (failedCount > 0) {
+      ElMessage.error(`${DT.toast.bulkVerifyFailedPrefix} ${failedCount} ${DT.toast.bulkVerifyFailedSuffix}`)
+    }
+
+    await loadFilterOptions()
+    await loadData()
+    cancelBulkActionMode()
+  } finally {
+    bulkVerifying.value = false
+  }
 }
 
 const confirmBulkDelete = async () => {
@@ -762,7 +833,7 @@ const confirmBulkDelete = async () => {
 
     await loadFilterOptions()
     await loadData()
-    cancelBulkDeleteMode()
+    cancelBulkActionMode()
   } finally {
     bulkDeleting.value = false
   }

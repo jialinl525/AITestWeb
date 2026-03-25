@@ -52,6 +52,7 @@ export const LabelText = {
       discarded: 'Discarded'
     },
     toolbar: {
+      confirmVerify: 'Confirm Verify',
       confirmDelete: 'Confirm Delete'
     },
     metrics: {
