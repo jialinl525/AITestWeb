@@ -663,8 +663,22 @@ def get_bugs_by_test(test_id: int, db: Session = Depends(get_db)):
 
 @router.get("/stats/summary")
 def get_bug_stats(recent_days: int = 365, db: Session = Depends(get_db)):
-    """Get bug summary statistics."""
-    base_query = _apply_recent_bug_date_filter(db.query(models.Bug), recent_days=recent_days)
+    """Get bug summary statistics with exactly 12 complete calendar months of trend data."""
+    # Calculate the start of the 12-month window: first day of the month 11 months ago.
+    # e.g. if today is 2026-04-20, threshold = 2025-05-01 → 12 months: May 2025 ~ Apr 2026
+    today = datetime.now()
+    trend_start_month = today.month - 11
+    trend_start_year = today.year
+    if trend_start_month <= 0:
+        trend_start_month += 12
+        trend_start_year -= 1
+    trend_threshold = datetime(trend_start_year, trend_start_month, 1)
+
+    # Use the same 12-month window for all stats
+    base_query = db.query(models.Bug).filter(
+        models.Bug.cr_created_on.isnot(None),
+        models.Bug.cr_created_on >= trend_threshold
+    )
 
     total_bugs = base_query.count()
     status_rows = (
@@ -697,16 +711,25 @@ def get_bug_stats(recent_days: int = 365, db: Session = Depends(get_db)):
             continue
         month_key = created_on.strftime("%Y-%m")
         if month_key not in monthly_map:
-            monthly_map[month_key] = {
-                "month": month_key,
-                "total": 0,
-                "fixed": 0,
-            }
+            monthly_map[month_key] = {"month": month_key, "total": 0, "fixed": 0}
         monthly_map[month_key]["total"] += 1
         if _normalize_status(raw_status) == "fixed":
             monthly_map[month_key]["fixed"] += 1
 
-    monthly_trend = [monthly_map[key] for key in sorted(monthly_map.keys())]
+    # Generate all 12 month keys to ensure a complete, gap-free trend
+    month_keys = []
+    for i in range(12):
+        m = trend_start_month + i
+        y = trend_start_year
+        if m > 12:
+            m -= 12
+            y += 1
+        month_keys.append(f"{y:04d}-{m:02d}")
+
+    monthly_trend = [
+        monthly_map.get(key, {"month": key, "total": 0, "fixed": 0})
+        for key in month_keys
+    ]
 
     return {
         "total": total_bugs,

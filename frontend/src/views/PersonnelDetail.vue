@@ -70,6 +70,116 @@
           </el-descriptions>
         </el-card>
 
+        <!-- Task Gantt Timeline -->
+        <el-card class="section-card detail-inner-card">
+          <template #header>
+            <div class="section-title">
+              <div class="section-title__main">
+                <h3>Task Timeline</h3>
+                <span class="section-title__meta">
+                  <template v-if="ganttRange.start">
+                    {{ formatDate(ganttRange.start) }} ~ {{ formatDate(ganttRange.end) }}
+                  </template>
+                  <template v-else>No tasks to display</template>
+                </span>
+              </div>
+              <div class="gantt-header-controls">
+                <el-radio-group v-model="ganttViewMode" size="small">
+                  <el-radio-button value="active">Active Only</el-radio-button>
+                  <el-radio-button value="full_year">Full Year</el-radio-button>
+                </el-radio-group>
+                <div class="gantt-legend">
+                  <span class="gantt-legend-chip gantt-legend-chip--test">Test FR</span>
+                  <span class="gantt-legend-chip gantt-legend-chip--work">Work Task</span>
+                  <span class="gantt-legend-chip gantt-legend-chip--completed">Completed</span>
+                  <span class="gantt-legend-chip gantt-legend-chip--overlap">Overlap</span>
+                  <span class="gantt-legend-chip gantt-legend-chip--overload">⚠ Overload &gt;5d/wk</span>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <div v-if="ganttRange.start" class="gantt-container">
+            <!-- Month header -->
+            <div class="gantt-row gantt-row--header">
+              <div class="gantt-label-col"></div>
+              <div class="gantt-track gantt-track--header">
+                <div
+                  v-for="marker in ganttMonthMarkers"
+                  :key="marker.label"
+                  class="gantt-month-marker"
+                  :style="{ left: marker.left + '%', width: marker.width + '%' }"
+                >
+                  {{ marker.label }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Single person task row -->
+            <div class="gantt-row">
+              <div class="gantt-label-col gantt-label-col--name">{{ memberDetail.display_name }}</div>
+              <div class="gantt-track">
+                <!-- Weekly load backgrounds -->
+                <template v-for="seg in ganttWeeklyLoadBgs" :key="seg.key">
+                  <el-tooltip placement="top" effect="dark">
+                    <template #content>
+                      <div class="gantt-load-tooltip">
+                        <div class="gantt-load-tooltip__week">{{ seg.weekLabel }}</div>
+                        <div :class="seg.isOverloaded ? 'gantt-load-tooltip__overload' : 'gantt-load-tooltip__normal'">
+                          {{ seg.isOverloaded ? '⚠ Overloaded' : 'Overlap' }}: {{ seg.weekLoad }} / 5.0 manday
+                        </div>
+                      </div>
+                    </template>
+                    <div
+                      class="gantt-week-bg"
+                      :class="seg.isOverloaded ? 'gantt-week-bg--overload' : 'gantt-week-bg--overlap'"
+                      :style="seg.style"
+                    ></div>
+                  </el-tooltip>
+                </template>
+
+                <!-- Task bars -->
+                <template v-if="ganttTaskBars.length">
+                  <el-tooltip
+                    v-for="bar in ganttTaskBars"
+                    :key="bar._key"
+                    placement="top"
+                    effect="dark"
+                  >
+                    <template #content>
+                      <div class="gantt-tooltip">
+                        <div class="gantt-tooltip__title">{{ bar.task_label || bar.test_name }}</div>
+                        <div class="gantt-tooltip__row">
+                          {{ formatDate(bar.period_start) }} ~ {{ bar.period_end ? formatDate(bar.period_end) : 'Ongoing' }}
+                        </div>
+                        <div class="gantt-tooltip__row">Allocated: {{ bar.estimated_hours || 0 }} manday</div>
+                        <div class="gantt-tooltip__row">Status: {{ bar.status }}</div>
+                      </div>
+                    </template>
+                    <div class="gantt-bar" :class="bar.colorClass" :style="bar.style">
+                      <span v-if="bar.hoursLabel" class="gantt-bar__label">{{ bar.hoursLabel }}</span>
+                    </div>
+                  </el-tooltip>
+                </template>
+                <div v-else class="gantt-empty">No tasks</div>
+              </div>
+            </div>
+
+            <!-- Scale footer -->
+            <div class="gantt-row gantt-row--footer">
+              <div class="gantt-label-col"></div>
+              <div class="gantt-scale">
+                <span>{{ formatDate(ganttRange.start) }}</span>
+                <span>{{ formatDate(ganttRange.end) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="gantt-no-data">
+            No tasks with date information in {{ ganttViewMode === 'active' ? 'Active Only' : 'Full Year' }} mode.
+          </div>
+        </el-card>
+
         <el-card class="section-card detail-inner-card">
           <template #header>
             <div class="section-title">
@@ -79,65 +189,6 @@
               </div>
             </div>
           </template>
-
-          <div v-if="timelineSegments.length" class="overlap-timeline-card">
-            <div class="overlap-timeline-card__header">
-              <div>
-                <div class="overlap-timeline-card__title">Overlap Timeline</div>
-                <div class="overlap-timeline-card__meta">
-                  {{ formatDate(timelineRange.start) }} ~ {{ formatDate(timelineRange.end) }}
-                </div>
-              </div>
-              <div class="overlap-timeline-card__badge">
-                Max {{ memberDetail.overlap_count || 0 }} FR
-              </div>
-            </div>
-
-            <div class="overlap-timeline">
-              <div class="overlap-timeline__axis"></div>
-              <el-tooltip
-                v-for="(segment, index) in timelineSegments"
-                :key="`${segment.overlap_start}-${segment.overlap_end}-${index}`"
-                placement="top"
-                effect="dark"
-              >
-                <template #content>
-                  <div class="overlap-tooltip">
-                    <div class="overlap-tooltip__date">
-                      {{ formatDate(segment.overlap_start) }} ~ {{ formatDate(segment.overlap_end) }}
-                    </div>
-                    <div
-                      v-for="task in segment.tasks"
-                      :key="task.id"
-                      class="overlap-tooltip__item"
-                    >
-                      {{ task.fr_number || 'FR' }} | {{ task.task_name || '-' }}
-                    </div>
-                  </div>
-                </template>
-                <div
-                  class="overlap-timeline__segment"
-                  :class="segment.colorClass"
-                  :style="segment.style"
-                ></div>
-              </el-tooltip>
-            </div>
-
-            <div class="overlap-timeline__scale">
-              <span>{{ formatDate(timelineRange.start) }}</span>
-              <span>{{ formatDate(timelineRange.end) }}</span>
-            </div>
-
-            <div class="overlap-timeline__legend">
-              <span class="legend-chip legend-chip--level-2">2 FR</span>
-              <span class="legend-chip legend-chip--level-3">3 FR</span>
-              <span class="legend-chip legend-chip--level-4">4+ FR</span>
-            </div>
-
-          </div>
-          <div v-else class="detail-overlap-empty">
-            No overlapping test FR found
-          </div>
 
           <el-table :data="visibleTasks" :row-key="taskRowKey" stripe>
             <el-table-column :label="LTP.table.task" min-width="280" show-overflow-tooltip>
@@ -252,6 +303,170 @@ const profileForm = ref({
   specialty_tasks: ''
 })
 
+// ── Gantt Timeline ────────────────────────────────────────────────────────────
+
+const ganttViewMode = ref('active')
+
+const ACTIVE_STATUSES = new Set(['inprogress', 'in_progress', 'planning', 'in progress', 'planned'])
+
+const isTaskActiveStatus = (task) => {
+  const s = (task.status || '').toLowerCase().replace(/[\s-]/g, '_')
+  return ACTIVE_STATUSES.has(s) || s.includes('progress') || s === 'planning' || s === 'planned'
+}
+
+const isTaskVisibleInGantt = (task) => {
+  if (!task.period_start) return false
+  if (isTaskActiveStatus(task)) return true
+  if (!task.period_end) return false
+  if (ganttViewMode.value === 'active') return false
+  const endDate = new Date(task.period_end)
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - 365)
+  return endDate >= cutoff
+}
+
+const ganttRange = computed(() => {
+  const tasks = (memberDetail.value?.tasks || []).filter(t => isTaskVisibleInGantt(t))
+  if (!tasks.length) return { start: null, end: null, totalDays: 0 }
+
+  const starts = tasks.map(t => new Date(t.period_start))
+  const ends = tasks.map(t => new Date(t.period_end || new Date()))
+  const start = new Date(Math.min(...starts))
+  const end = new Date(Math.max(...ends))
+  const totalDays = Math.max(1, Math.round((end - start) / 86400000) + 1)
+  return { start, end, totalDays }
+})
+
+const ganttMonthMarkers = computed(() => {
+  const { start, end, totalDays } = ganttRange.value
+  if (!start || !end || !totalDays) return []
+
+  const markers = []
+  const current = new Date(start.getFullYear(), start.getMonth(), 1)
+  while (current <= end) {
+    const monthStart = new Date(current)
+    const monthEnd = new Date(current.getFullYear(), current.getMonth() + 1, 0)
+    const clampedStart = monthStart < start ? start : monthStart
+    const clampedEnd = monthEnd > end ? end : monthEnd
+    const leftDays = Math.round((clampedStart - start) / 86400000)
+    const widthDays = Math.round((clampedEnd - clampedStart) / 86400000) + 1
+    markers.push({
+      label: `${current.getFullYear()}/${String(current.getMonth() + 1).padStart(2, '0')}`,
+      left: (leftDays / totalDays) * 100,
+      width: (widthDays / totalDays) * 100
+    })
+    current.setMonth(current.getMonth() + 1)
+  }
+  return markers
+})
+
+const ganttTaskBars = computed(() => {
+  const { start, totalDays } = ganttRange.value
+  if (!start || !totalDays) return []
+
+  const tasks = (memberDetail.value?.tasks || []).filter(t => isTaskVisibleInGantt(t))
+  if (!tasks.length) return []
+
+  return tasks.map((task, index) => {
+    const taskStart = new Date(task.period_start)
+    const taskEnd = task.period_end ? new Date(task.period_end) : new Date()
+    const leftDays = Math.max(0, Math.round((taskStart - start) / 86400000))
+    const widthDays = Math.max(1, Math.round((taskEnd - taskStart) / 86400000) + 1)
+    const hours = task.estimated_hours || 0
+    const barHeight = 20
+
+    const status = (task.status || '').toLowerCase()
+    let colorClass = 'gantt-bar--test'
+    if (status === 'completed') colorClass = 'gantt-bar--completed'
+    else if (task.task_kind === 'work_task') colorClass = 'gantt-bar--work'
+
+    return {
+      ...task,
+      _key: `${task.task_kind || 'test'}-${task.id}-${index}`,
+      colorClass,
+      style: {
+        left: `${(leftDays / totalDays) * 100}%`,
+        width: `${Math.max((widthDays / totalDays) * 100, 0.8)}%`,
+        height: `${barHeight}px`,
+        top: `${(32 - barHeight) / 2}px`
+      },
+      hoursLabel: hours > 0 ? `${hours}d` : ''
+    }
+  })
+})
+
+const WEEK_CAPACITY = 5
+
+const ganttWeeklyLoadBgs = computed(() => {
+  const { start, totalDays } = ganttRange.value
+  if (!start || !totalDays) return []
+
+  const tasks = (memberDetail.value?.tasks || []).filter(t => isTaskVisibleInGantt(t))
+  if (!tasks.length) return []
+
+  const rangeEnd = new Date(start)
+  rangeEnd.setDate(rangeEnd.getDate() + totalDays - 1)
+
+  const firstMonday = new Date(start)
+  const dow = firstMonday.getDay()
+  const daysToMonday = dow === 0 ? -6 : 1 - dow
+  firstMonday.setDate(firstMonday.getDate() + daysToMonday)
+
+  const segments = []
+  const current = new Date(firstMonday)
+
+  while (current <= rangeEnd) {
+    const weekStart = new Date(current)
+    const weekEnd = new Date(current)
+    weekEnd.setDate(weekEnd.getDate() + 6)
+
+    let weekLoad = 0
+    let taskCount = 0
+
+    for (const task of tasks) {
+      const taskStart = new Date(task.period_start)
+      const taskEnd = task.period_end ? new Date(task.period_end) : new Date()
+      const taskDays = Math.max(1, Math.round((taskEnd - taskStart) / 86400000) + 1)
+
+      const overlapStart = taskStart > weekStart ? taskStart : weekStart
+      const overlapEnd = taskEnd < weekEnd ? taskEnd : weekEnd
+
+      if (overlapStart <= overlapEnd) {
+        const overlapDays = Math.round((overlapEnd - overlapStart) / 86400000) + 1
+        const dailyRate = (task.estimated_hours || 0) / taskDays
+        weekLoad += dailyRate * overlapDays
+        taskCount++
+      }
+    }
+
+    if (taskCount >= 3 || weekLoad > 4 || weekLoad > WEEK_CAPACITY) {
+      const clampedStart = weekStart < start ? start : weekStart
+      const clampedEnd = weekEnd > rangeEnd ? rangeEnd : weekEnd
+      const leftDays = Math.max(0, Math.round((clampedStart - start) / 86400000))
+      const widthDays = Math.max(1, Math.round((clampedEnd - clampedStart) / 86400000) + 1)
+      const isOverloaded = weekLoad > WEEK_CAPACITY
+      const weekLabel = `${weekStart.getMonth() + 1}/${weekStart.getDate()} ~ ${weekEnd.getMonth() + 1}/${weekEnd.getDate()}`
+
+      segments.push({
+        key: `wk-${weekStart.getTime()}`,
+        isOverloaded,
+        weekLoad: Math.round(weekLoad * 10) / 10,
+        weekLabel,
+        style: {
+          left: `${(leftDays / totalDays) * 100}%`,
+          width: `${Math.max((widthDays / totalDays) * 100, 0.5)}%`
+        }
+      })
+    }
+
+    current.setDate(current.getDate() + 7)
+  }
+
+  return segments
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 const completedTasks = computed(() => {
   return (memberDetail.value?.tasks || []).filter(task => String(task.status || '').toLowerCase() === 'completed').length
 })
@@ -285,67 +500,6 @@ const visibleTasks = computed(() => {
   const startIndex = (currentPage.value - 1) * pageSize
   const endIndex = startIndex + pageSize
   return sortedTasks.value.slice(startIndex, endIndex)
-})
-
-const overlapSummaryList = computed(() => {
-  return Array.isArray(memberDetail.value?.overlaps) ? memberDetail.value.overlaps : []
-})
-
-const timelineRange = computed(() => {
-  const segments = overlapSummaryList.value
-  if (!segments.length) {
-    return {
-      start: null,
-      end: null,
-      totalDays: 0
-    }
-  }
-
-  const starts = segments.map(item => new Date(item.overlap_start))
-  const ends = segments.map(item => new Date(item.overlap_end))
-  const start = new Date(Math.min(...starts))
-  const end = new Date(Math.max(...ends))
-  const totalDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1)
-
-  return {
-    start,
-    end,
-    totalDays
-  }
-})
-
-const getSegmentColorClass = (count) => {
-  if (count >= 4) return 'overlap-timeline__segment--level-4'
-  if (count >= 3) return 'overlap-timeline__segment--level-3'
-  return 'overlap-timeline__segment--level-2'
-}
-
-const timelineSegments = computed(() => {
-  if (!timelineRange.value.start || !timelineRange.value.end || !timelineRange.value.totalDays) {
-    return []
-  }
-
-  const rangeStartTime = timelineRange.value.start.getTime()
-  const dayMs = 1000 * 60 * 60 * 24
-
-  return overlapSummaryList.value.map(item => {
-    const segmentStart = new Date(item.overlap_start)
-    const segmentEnd = new Date(item.overlap_end)
-    const startOffset = Math.max(0, Math.round((segmentStart.getTime() - rangeStartTime) / dayMs))
-    const segmentDays = Math.max(1, Math.round((segmentEnd.getTime() - segmentStart.getTime()) / dayMs) + 1)
-    const left = (startOffset / timelineRange.value.totalDays) * 100
-    const width = (segmentDays / timelineRange.value.totalDays) * 100
-
-    return {
-      ...item,
-      colorClass: getSegmentColorClass(Number(item.concurrent_task_count || 0)),
-      style: {
-        left: `${left}%`,
-        width: `${Math.max(width, 1.5)}%`
-      },
-      tasks: Array.isArray(item.tasks) ? item.tasks : []
-    }
-  })
 })
 
 const formatTaskName = (task) => {
@@ -437,135 +591,225 @@ onMounted(() => {
   line-height: 1.6;
 }
 
-.overlap-timeline-card {
-  margin-bottom: 16px;
-  padding: 16px;
-  border: 1px solid rgba(248, 113, 113, 0.18);
-  border-radius: 14px;
-  background: rgba(15, 23, 42, 0.42);
-}
+/* ── Gantt Timeline ──────────────────────────────────────────────────────── */
 
-.overlap-timeline-card__header {
+.gantt-header-controls {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.gantt-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gantt-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
   gap: 12px;
-  margin-bottom: 14px;
+  align-items: center;
 }
 
-.overlap-timeline-card__title {
-  font-size: 15px;
-  font-weight: 700;
-  color: rgba(248, 250, 252, 0.96);
+.gantt-row--header,
+.gantt-row--footer {
+  align-items: flex-end;
 }
 
-.overlap-timeline-card__meta {
-  margin-top: 4px;
-  font-size: 12px;
+.gantt-label-col {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
   color: rgba(148, 163, 184, 0.9);
 }
 
-.overlap-timeline-card__badge {
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(127, 29, 29, 0.35);
-  color: rgba(254, 202, 202, 0.96);
-  font-size: 12px;
-  font-weight: 700;
+.gantt-label-col--name {
+  color: #7dd3fc;
+}
+
+.gantt-track {
+  position: relative;
+  height: 32px;
+  background: rgba(51, 65, 85, 0.35);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.gantt-track--header {
+  height: 20px;
+  background: transparent;
+  overflow: visible;
+}
+
+.gantt-month-marker {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: rgba(148, 163, 184, 0.9);
+  border-left: 1px solid rgba(148, 163, 184, 0.2);
+  overflow: hidden;
   white-space: nowrap;
 }
 
-.overlap-timeline {
-  position: relative;
-  height: 24px;
-  margin-bottom: 8px;
-}
-
-.overlap-timeline__axis {
+.gantt-week-bg {
   position: absolute;
-  inset: 7px 0;
-  border-radius: 999px;
-  background: rgba(51, 65, 85, 0.9);
+  top: 0;
+  height: 100%;
+  pointer-events: auto;
+  cursor: default;
+  z-index: 0;
 }
 
-.overlap-timeline__segment {
+.gantt-week-bg--overlap {
+  background: rgba(251, 191, 36, 0.22);
+  border-left: 2px solid rgba(251, 191, 36, 0.5);
+  border-right: 2px solid rgba(251, 191, 36, 0.5);
+}
+
+.gantt-week-bg--overload {
+  background: rgba(239, 68, 68, 0.32);
+  border-left: 2px solid rgba(239, 68, 68, 0.8);
+  border-right: 2px solid rgba(239, 68, 68, 0.8);
+  box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.4);
+}
+
+.gantt-bar {
   position: absolute;
-  top: 2px;
-  height: 20px;
-  border-radius: 999px;
-  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.45);
+  border-radius: 4px;
+  cursor: default;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  padding: 0 5px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  transition: opacity 0.15s, transform 0.1s;
+  z-index: 1;
 }
 
-.overlap-timeline__segment--level-2 {
-  background: linear-gradient(90deg, rgba(250, 204, 21, 0.92), rgba(249, 115, 22, 0.92));
+.gantt-bar:hover {
+  opacity: 0.88;
+  transform: scaleY(1.08);
+  z-index: 10;
 }
 
-.overlap-timeline__segment--level-3 {
-  background: linear-gradient(90deg, rgba(249, 115, 22, 0.96), rgba(239, 68, 68, 0.96));
+.gantt-bar--test {
+  background: linear-gradient(90deg, rgba(96, 165, 250, 0.92), rgba(59, 130, 246, 0.92));
 }
 
-.overlap-timeline__segment--level-4 {
-  background: linear-gradient(90deg, rgba(239, 68, 68, 0.96), rgba(127, 29, 29, 0.96));
+.gantt-bar--work {
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.92), rgba(245, 158, 11, 0.92));
 }
 
-.overlap-timeline__scale {
+.gantt-bar--completed {
+  background: linear-gradient(90deg, rgba(52, 211, 153, 0.92), rgba(16, 185, 129, 0.92));
+}
+
+.gantt-bar__label {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.gantt-empty {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: rgba(148, 163, 184, 0.5);
+}
+
+.gantt-no-data {
+  padding: 24px;
+  text-align: center;
+  font-size: 13px;
+  color: rgba(148, 163, 184, 0.7);
+}
+
+.gantt-scale {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
   font-size: 12px;
   color: rgba(148, 163, 184, 0.9);
-  margin-bottom: 12px;
+  padding-top: 4px;
 }
 
-.overlap-timeline__legend {
+.gantt-legend {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  margin-bottom: 14px;
+  flex-wrap: wrap;
 }
 
-.legend-chip {
+.gantt-legend-chip {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
+  padding: 3px 10px;
   border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   color: rgba(248, 250, 252, 0.96);
 }
 
-.legend-chip--level-2 {
-  background: rgba(245, 158, 11, 0.85);
+.gantt-legend-chip--test { background: rgba(59, 130, 246, 0.8); }
+.gantt-legend-chip--work { background: rgba(245, 158, 11, 0.8); }
+.gantt-legend-chip--completed { background: rgba(16, 185, 129, 0.8); }
+.gantt-legend-chip--overlap {
+  background: rgba(180, 130, 20, 0.85);
+  border: 1px solid rgba(251, 191, 36, 0.6);
+}
+.gantt-legend-chip--overload {
+  background: rgba(185, 28, 28, 0.85);
+  border: 1px solid rgba(239, 68, 68, 0.7);
 }
 
-.legend-chip--level-3 {
-  background: rgba(249, 115, 22, 0.88);
-}
+.gantt-tooltip { max-width: 320px; }
 
-.legend-chip--level-4 {
-  background: rgba(220, 38, 38, 0.88);
-}
-
-.detail-overlap-empty {
-  color: rgba(148, 163, 184, 0.92);
-}
-
-.overlap-tooltip {
-  max-width: 420px;
-}
-
-.overlap-tooltip__date {
+.gantt-tooltip__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(248, 250, 252, 0.96);
   margin-bottom: 6px;
+  word-break: break-word;
+}
+
+.gantt-tooltip__row {
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.9);
+  line-height: 1.6;
+}
+
+.gantt-load-tooltip { max-width: 260px; }
+
+.gantt-load-tooltip__week {
   font-size: 12px;
   font-weight: 700;
   color: rgba(253, 230, 138, 0.96);
+  margin-bottom: 4px;
 }
 
-.overlap-tooltip__item {
+.gantt-load-tooltip__normal {
   font-size: 12px;
-  line-height: 1.6;
-  color: rgba(248, 250, 252, 0.96);
-  word-break: break-word;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.gantt-load-tooltip__overload {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(252, 165, 165, 0.96);
 }
 
 :deep(.detail-info--ratio .el-descriptions__table) {

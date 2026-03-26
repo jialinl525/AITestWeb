@@ -36,21 +36,9 @@
             </div>
           </div>
           <div class="metrics-grid progress-overview-metrics progress-overview-metrics--tasks">
-            <article class="metric-card accent-white">
-              <div class="metric-card__label">Total Tasks</div>
-              <div class="metric-card__value">{{ overviewStats.total }}</div>
-              <div class="metric-card__meta">{{ DT.metricsMeta.total }}</div>
-            </article>
-            <article class="metric-card accent-yellow">
-              <div class="metric-card__label">In Progress</div>
-              <div class="metric-card__value">{{ overviewStats.inprogress }}</div>
-              <div class="metric-card__meta">{{ DT.metricsMeta.running }}</div>
-            </article>
-            <article class="metric-card accent-green">
-              <div class="metric-card__label">Completed</div>
-              <div class="metric-card__value">{{ overviewStats.completed }}</div>
-              <div class="metric-card__meta">{{ DT.metricsMeta.completed }}</div>
-            </article>
+            <MetricCard label="Total Tasks" :value="overviewStats.total" :meta="DT.metricsMeta.total" accent="white" />
+            <MetricCard label="In Progress" :value="overviewStats.inprogress" :meta="DT.metricsMeta.running" accent="yellow" />
+            <MetricCard label="Completed" :value="overviewStats.completed" :meta="DT.metricsMeta.completed" accent="green" />
           </div>
         </section>
 
@@ -62,21 +50,9 @@
             </div>
           </div>
           <div class="metrics-grid progress-overview-metrics progress-overview-metrics--cases">
-            <article class="metric-card accent-white">
-              <div class="metric-card__label">Total Cases</div>
-              <div class="metric-card__value">{{ overviewStats.totalCases }}</div>
-              <div class="metric-card__meta">All tracked verification cases</div>
-            </article>
-            <article class="metric-card accent-green">
-              <div class="metric-card__label">{{ LT.summary.passed }}</div>
-              <div class="metric-card__value">{{ overviewStats.passedCases }}({{ overviewStats.passedRate }}%)</div>
-              <div class="metric-card__meta">Validated successfully</div>
-            </article>
-            <article class="metric-card accent-red">
-              <div class="metric-card__label">{{ LT.summary.failed }}</div>
-              <div class="metric-card__value">{{ overviewStats.failedCases }}({{ overviewStats.failedRate }}%)</div>
-              <div class="metric-card__meta">Need fix or retest</div>
-            </article>
+            <MetricCard label="Total Cases" :value="overviewStats.totalCases" meta="All tracked verification cases" accent="white" />
+            <MetricCard :label="LT.summary.passed" :value="`${overviewStats.passedCases}(${overviewStats.passedRate}%)`" meta="Validated successfully" accent="green" />
+            <MetricCard :label="LT.summary.failed" :value="`${overviewStats.failedCases}(${overviewStats.failedRate}%)`" meta="Need fix or retest" accent="red" />
           </div>
         </section>
       </div>
@@ -315,6 +291,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import MetricCard from '../components/common/MetricCard.vue'
 import { LabelText } from '../texts/LabelText'
 import { ButtonText } from '../texts/ButtonText'
 import { DescriptionText } from '../texts/DescriptionText'
@@ -853,49 +830,6 @@ onMounted(() => {
 .progress-overview-metrics--cases {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-}
-
-.accent-cyan {
-  --metric-accent: #22d3ee;
-}
-
-.accent-rose {
-  --metric-accent: #fb7185;
-}
-
-.accent-sky {
-  --metric-accent: #60a5fa;
-}
-
-.test-progress-container :deep(.metric-card) {
-  padding: 12px 10px;
-  min-height: 112px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-}
-
-.test-progress-container :deep(.metric-card__label) {
-  text-align: center;
-  font-size: 13px;
-  font-weight: 700;
-  color: rgba(226, 232, 240, 0.95);
-  margin-bottom: 10px;
-}
-
-.test-progress-container :deep(.metric-card__value) {
-  text-align: center;
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-
-.test-progress-container :deep(.metric-card__meta) {
-  text-align: center;
-  font-size: 12px;
-  margin-top: 10px;
 }
 
 .test-progress-container :deep(.test-progress-table .cell) {

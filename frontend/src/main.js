@@ -9,12 +9,13 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, LineChart, PieChart, ScatterChart } from 'echarts/charts'
+import { BarChart, LineChart, PieChart, ScatterChart, RadarChart } from 'echarts/charts'
 import {
   TitleComponent,
   TooltipComponent,
   LegendComponent,
-  GridComponent
+  GridComponent,
+  RadarComponent
 } from 'echarts/components'
 
 // Register ECharts components.
@@ -24,10 +25,12 @@ use([
   LineChart,
   PieChart,
   ScatterChart,
+  RadarChart,
   TitleComponent,
   TooltipComponent,
   LegendComponent,
-  GridComponent
+  GridComponent,
+  RadarComponent
 ])
 
 const app = createApp(App)
