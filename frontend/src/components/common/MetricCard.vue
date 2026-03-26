@@ -44,9 +44,9 @@ defineProps({
   font-weight: 800;
   margin-bottom: 10px;
 }
-.size-sm .metric-card__label { font-size: 12px; }
-.size-md .metric-card__label { font-size: 13px; }
-.size-lg .metric-card__label { font-size: 14px; }
+.size-sm .metric-card__label { font-size: 16px; }
+.size-md .metric-card__label { font-size: 18px; }
+.size-lg .metric-card__label { font-size: 20px; }
 
 /* ── Value ─────────────────────────────────────────────────────────────────── */
 .metric-card__value {
@@ -66,32 +66,42 @@ defineProps({
 }
 
 /* ── Accent: white ─────────────────────────────────────────────────────────── */
-.accent-white { border-color: rgba(248, 250, 252, 0.14); }
+.accent-white { border-color: rgba(248, 250, 252, 0.18); }
 .accent-white .metric-card__label { color: #f8fafc; }
 .accent-white .metric-card__value { color: #f8fafc; }
 
 /* ── Accent: yellow ────────────────────────────────────────────────────────── */
-.accent-yellow { border-color: rgba(251, 191, 36, 0.22); }
-.accent-yellow .metric-card__label { color: #fbbf24; }
-.accent-yellow .metric-card__value { color: #fbbf24; }
+.accent-yellow { border-color: rgba(251, 191, 36, 0.32); background: rgba(251, 191, 36, 0.06); }
+.accent-yellow .metric-card__label { color: #fde68a;  }
+.accent-yellow .metric-card__value { color: #fbbf24;  }
 
 /* ── Accent: green ─────────────────────────────────────────────────────────── */
-.accent-green { border-color: rgba(94, 234, 212, 0.22); }
-.accent-green .metric-card__label { color: #5eead4; }
-.accent-green .metric-card__value { color: #5eead4; }
+.accent-green { border-color: rgba(52, 211, 153, 0.32); background: rgba(52, 211, 153, 0.06); }
+.accent-green .metric-card__label { color: #6ee7b7;  }
+.accent-green .metric-card__value { color: #34d399;  }
 
 /* ── Accent: red ───────────────────────────────────────────────────────────── */
-.accent-red { border-color: rgba(248, 113, 113, 0.22); }
-.accent-red .metric-card__label { color: #f87171; }
-.accent-red .metric-card__value { color: #f87171; }
+.accent-red { border-color: rgba(248, 113, 113, 0.32); background: rgba(248, 113, 113, 0.06); }
+.accent-red .metric-card__label { color: #fca5a5;  }
+.accent-red .metric-card__value { color: #f87171;  }
 
 /* ── Accent: cyan ──────────────────────────────────────────────────────────── */
-.accent-cyan { border-color: rgba(34, 211, 238, 0.22); }
-.accent-cyan .metric-card__label { color: #22d3ee; }
-.accent-cyan .metric-card__value { color: #22d3ee; }
+.accent-cyan { border-color: rgba(34, 211, 238, 0.28); background: rgba(34, 211, 238, 0.05); }
+.accent-cyan .metric-card__label { color: #67e8f9;  }
+.accent-cyan .metric-card__value { color: #22d3ee;  }
 
 /* ── Accent: blue ──────────────────────────────────────────────────────────── */
-.accent-blue { border-color: rgba(96, 165, 250, 0.22); }
-.accent-blue .metric-card__label { color: #60a5fa; }
-.accent-blue .metric-card__value { color: #60a5fa; }
+.accent-blue { border-color: rgba(96, 165, 250, 0.28); background: rgba(96, 165, 250, 0.05); }
+.accent-blue .metric-card__label { color: #93c5fd;  }
+.accent-blue .metric-card__value { color: #60a5fa;  }
+
+/* ── Accent: orange ────────────────────────────────────────────────────────── */
+.accent-orange { border-color: rgba(251, 146, 60, 0.28); background: rgba(251, 146, 60, 0.05); }
+.accent-orange .metric-card__label { color: #fdba74;  }
+.accent-orange .metric-card__value { color: #fb923c;  }
+
+/* ── Accent: purple ────────────────────────────────────────────────────────── */
+.accent-purple { border-color: rgba(167, 139, 250, 0.28); background: rgba(167, 139, 250, 0.05); }
+.accent-purple .metric-card__label { color: #c4b5fd;  }
+.accent-purple .metric-card__value { color: #a78bfa;  }
 </style>

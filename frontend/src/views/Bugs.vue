@@ -15,13 +15,7 @@
           <el-icon><Plus /></el-icon>
           {{ BT.newBug }}
         </el-button>
-        <input
-          ref="csvFileInput"
-          type="file"
-          accept=".csv,text/csv"
-          class="csv-file-input"
-          @change="handleCsvFileSelected"
-        />
+        <input ref="csvFileInput" type="file" accept=".csv,text/csv" class="csv-file-input" @change="handleCsvFileSelected" />
       </div>
     </section>
 
@@ -34,41 +28,7 @@
           </div>
         </div>
       </template>
-      <div class="bug-overview-content">
-        <div class="metrics-grid metrics-grid--compact">
-          <article class="metric-card accent-blue">
-            <div class="metric-card__label">{{ LT.metrics.total }}</div>
-            <div class="metric-card__value">{{ bugStats.total || 0 }}</div>
-            <div class="metric-card__meta">{{ DT.metricsMeta.total }}</div>
-          </article>
-          <article class="metric-card accent-red">
-            <div class="metric-card__label">{{ LT.metrics.analysis }}</div>
-            <div class="metric-card__value">{{ bugStats.by_status?.analysis || 0 }}</div>
-            <div class="metric-card__meta">{{ DT.metricsMeta.analysis }}</div>
-          </article>
-          <article class="metric-card accent-orange">
-            <div class="metric-card__label">{{ LT.metrics.other }}</div>
-            <div class="metric-card__value">{{ bugStats.by_status?.other || 0 }}</div>
-            <div class="metric-card__meta">{{ DT.metricsMeta.other }}</div>
-          </article>
-          <article class="metric-card accent-green">
-            <div class="metric-card__label">{{ LT.metrics.fixed }}</div>
-            <div class="metric-card__value">{{ bugStats.by_status?.fixed || 0 }}</div>
-            <div class="metric-card__meta">{{ DT.metricsMeta.fixed }}</div>
-          </article>
-        </div>
-
-        <div class="bugs-overview-grid">
-          <div class="bug-chart-panel">
-            <div class="bug-chart-panel__title">Bug Distribution</div>
-            <v-chart class="bug-pie-chart" :option="bugPieOption" autoresize />
-          </div>
-          <div class="bug-chart-panel">
-            <div class="bug-chart-panel__title">Monthly Bug Trend</div>
-            <v-chart class="bug-line-chart" :option="bugTrendOption" autoresize />
-          </div>
-        </div>
-      </div>
+      <BugOverviewPanel :stats="bugStats" />
     </el-card>
 
     <el-card class="section-card">
@@ -80,48 +40,13 @@
           </div>
         </div>
       </template>
-
-      <el-form :inline="true" class="filter-form">
-        <el-form-item :label="LT.filter.verification">
-          <el-select v-model="filters.verification_zone" class="filter-select" style="width: 180px" popper-class="bugs-filter-popper">
-            <el-option :label="LT.verificationOptions.all" value="all" />
-            <el-option :label="LT.verificationOptions.waitingBuild" value="waiting_build" />
-            <el-option :label="LT.verificationOptions.pendingVerification" value="pending_verification" />
-            <el-option :label="LT.verificationOptions.verified" value="verified" />
-            <el-option :label="LT.verificationOptions.discarded" value="discarded" />
-          </el-select>
-        </el-form-item>
-        <el-form-item :label="LT.filter.status">
-          <el-select v-model="filters.status" class="filter-select" :placeholder="DT.placeholders.all" clearable popper-class="bugs-filter-popper">
-            <el-option
-              v-for="status in statusOptions"
-              :key="status"
-              :label="status"
-              :value="status"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item :label="LT.filter.createdBy">
-          <el-select
-            v-model="filters.created_by"
-            class="filter-select"
-            :placeholder="DT.placeholders.all"
-            clearable
-            filterable
-            popper-class="bugs-filter-popper"
-          >
-            <el-option
-              v-for="name in createdByOptions"
-              :key="name"
-              :label="name"
-              :value="name"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button class="btn-style-3" @click="resetFilters">{{ BTCommon.reset }}</el-button>
-        </el-form-item>
-      </el-form>
+      <BugFilterBar
+        :filters="filters"
+        :status-options="statusOptions"
+        :created-by-options="createdByOptions"
+        @update:filters="Object.assign(filters, $event)"
+        @reset="resetFilters"
+      />
     </el-card>
 
     <el-card class="section-card">
@@ -131,37 +56,23 @@
             <h3>{{ LT.section.listTitle }}</h3>
             <span class="section-title__meta">{{ pagination.total }} {{ DT.sectionMeta.list }}</span>
           </div>
-          <div v-if="canDeleteBug() || canEditBug()" class="bug-list-toolbar">
-            <template v-if="!bulkActionMode">
-              <el-button v-if="canEditBug()" class="btn-style-3" type="success" plain @click="enterBulkVerifyMode">{{ BT.verifyBugs }}</el-button>
-              <el-button v-if="canDeleteBug()" class="btn-style-3" type="danger" plain @click="enterBulkDeleteMode">{{ BT.deleteBugs }}</el-button>
-            </template>
-            <template v-else>
-              <el-button class="btn-style-3" @click="cancelBulkActionMode">{{ BTCommon.cancel }}</el-button>
-              <el-button
-                v-if="bulkActionMode === 'verify'"
-                class="btn-style-2"
-                type="success"
-                :disabled="!selectedBugIds.length"
-                :loading="bulkVerifying"
-                @click="confirmBulkVerify"
-              >
-                {{ LT.toolbar.confirmVerify }} ({{ selectedBugIds.length }})
-              </el-button>
-              <el-button
-                v-else-if="bulkActionMode === 'delete'"
-                class="btn-style-2"
-                type="danger"
-                :disabled="!selectedBugIds.length"
-                :loading="bulkDeleting"
-                @click="confirmBulkDelete"
-              >
-                {{ LT.toolbar.confirmDelete }} ({{ selectedBugIds.length }})
-              </el-button>
-            </template>
-          </div>
+          <BugListToolbar
+            v-if="canDeleteBug() || canEditBug()"
+            :bulk-action-mode="bulkActionMode"
+            :selected-count="selectedBugIds.length"
+            :can-edit="canEditBug()"
+            :can-delete="canDeleteBug()"
+            :bulk-verifying="bulkVerifying"
+            :bulk-deleting="bulkDeleting"
+            @enter-verify="enterBulkVerifyMode"
+            @enter-delete="enterBulkDeleteMode"
+            @cancel="cancelBulkActionMode"
+            @confirm-verify="confirmBulkVerify"
+            @confirm-delete="confirmBulkDelete"
+          />
         </div>
       </template>
+
       <BugTable
         :bugs="bugsList"
         :loading="loading"
@@ -194,155 +105,49 @@
       </div>
     </el-card>
 
-    <el-dialog
+    <BugExportDialog
       v-model="showExportDialog"
-      :title="LT.dialog.exportTopNTitle"
-      width="420px"
-    >
-      <el-form label-width="120px">
-        <el-form-item :label="LT.dialog.exportArea">
-          <el-select v-model="exportArea" style="width: 100%">
-            <el-option :label="LT.verificationOptions.all" value="all" />
-            <el-option :label="LT.verificationOptions.waitingBuild" value="waiting_build" />
-            <el-option :label="LT.verificationOptions.pendingVerification" value="pending_verification" />
-            <el-option :label="LT.verificationOptions.verified" value="verified" />
-            <el-option :label="LT.verificationOptions.discarded" value="discarded" />
-          </el-select>
-        </el-form-item>
-        <el-form-item :label="LT.dialog.rowsToExport">
-          <el-input-number
-            v-model="exportTopN"
-            :min="1"
-            :max="Math.max(1, pagination.total)"
-            :step="1"
-            controls-position="right"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button class="btn-style-3" @click="showExportDialog = false">{{ BTCommon.cancel }}</el-button>
-        <el-button class="btn-style-2" type="primary" :loading="exporting" @click="handleExportTopN">{{ BT.export }}</el-button>
-      </template>
-    </el-dialog>
+      :area="exportArea"
+      :top-n="exportTopN"
+      :total="pagination.total"
+      :exporting="exporting"
+      @export="handleExportTopN"
+    />
 
-    <el-dialog
+    <BugQuickBuildDialog
       v-model="showQuickBuildDialog"
-      :title="LT.dialog.quickBuildTitle"
-      width="520px"
-    >
-      <el-form label-width="120px">
-        <el-form-item :label="LT.dialog.quickBuildCrNumber">
-          <span>{{ quickBuildTargetBug?.external_cr_number || '-' }}</span>
-        </el-form-item>
-        <el-form-item :label="LT.dialog.quickBuildBugTitle">
-          <span class="quick-build-title">{{ quickBuildTargetBug?.title || '-' }}</span>
-        </el-form-item>
-        <el-form-item :label="LT.dialog.quickBuildAvailableImage">
-          <el-select
-            v-model="quickBuildSelection"
-            filterable
-            :placeholder="DT.placeholders.selectImage"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="image in quickBuildOptions"
-              :key="`quick-build-${image}`"
-              :label="image"
-              :value="image"
-            />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button class="btn-style-3" @click="closeQuickBuildDialog">{{ BTCommon.cancel }}</el-button>
-        <el-button class="btn-style-2" type="primary" :loading="quickBuildSaving" @click="saveQuickBuildSelection">{{ BTCommon.save }}</el-button>
-      </template>
-    </el-dialog>
+      :bug="quickBuildTargetBug"
+      :options="quickBuildOptions"
+      :selection="quickBuildSelection"
+      :saving="quickBuildSaving"
+      @save="saveQuickBuildSelection"
+      @update:model-value="if (!$event) closeQuickBuildDialog()"
+    />
 
-    <!-- Create/Edit Dialog -->
-    <el-dialog
+    <BugCreateDialog
       v-model="showCreateDialog"
-      :title="editingBug ? LT.dialog.editTitle : LT.dialog.newTitle"
-      width="600px"
-    >
-      <el-form :model="bugForm" label-width="100px">
-        <el-form-item :label="LT.form.crNumber">
-          <el-input v-model="bugForm.external_cr_number" :placeholder="DT.placeholders.optionalCrNumber" />
-        </el-form-item>
-        <el-form-item :label="LT.form.testTask">
-          <el-select v-model="bugForm.test_progress_id" clearable filterable :placeholder="DT.placeholders.noFrKeyword" style="width: 100%">
-            <el-option
-              v-for="item in testOptions"
-              :key="item.id"
-              :label="`${item.fr_number || 'No FR'} | ${item.test_name}`"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item :label="LT.form.workTask">
-          <el-select v-model="bugForm.work_task_id" clearable filterable :placeholder="DT.placeholders.optionalManualLink" style="width: 100%">
-            <el-option
-              v-for="task in workTaskOptions"
-              :key="task.id"
-              :label="`${task.task_key} | ${task.task_name}`"
-              :value="task.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item :label="LT.form.title">
-          <el-input v-model="bugForm.title" />
-        </el-form-item>
-        <el-form-item :label="LT.form.createdBy">
-          <el-input v-model="bugForm.created_by" />
-        </el-form-item>
-        <el-form-item :label="LT.form.crAssignee">
-          <el-input v-model="bugForm.cr_assignee" />
-        </el-form-item>
-        <el-form-item :label="LT.form.createdOn">
-          <el-input v-model="bugForm.cr_created_on" :placeholder="DT.placeholders.createdOnFormat" />
-        </el-form-item>
-        <el-form-item :label="LT.form.build">
-          <el-select
-            v-if="bugBuildOptions.length"
-            v-model="bugForm.software_image_integration_build"
-            clearable
-            filterable
-            :placeholder="DT.placeholders.selectFromAvailableImages"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="image in bugBuildOptions"
-              :key="image"
-              :label="image"
-              :value="image"
-            />
-          </el-select>
-          <el-input v-else v-model="bugForm.software_image_integration_build" :placeholder="DT.placeholders.softwareBuild" />
-        </el-form-item>
-        <el-form-item :label="LT.form.status">
-          <el-select v-model="bugForm.status">
-            <el-option :label="LT.statusOptions.fixed" value="fixed" />
-            <el-option :label="LT.statusOptions.analysis" value="analysis" />
-            <el-option :label="LT.statusOptions.other" value="other" />
-            <el-option :label="LT.statusOptions.verified" value="verified" />
-            <el-option :label="LT.statusOptions.discarded" value="discarded" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button class="btn-style-3" @click="showCreateDialog = false">{{ BTCommon.cancel }}</el-button>
-        <el-button class="btn-style-2" type="primary" @click="saveBug">{{ BTCommon.save }}</el-button>
-      </template>
-    </el-dialog>
+      :form="bugForm"
+      :is-editing="Boolean(editingBug)"
+      :build-options="bugBuildOptions"
+      :test-options="testOptions"
+      :work-task-options="workTaskOptions"
+      @save="saveBug"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import BugTable from '../components/bugs/BugTable.vue'
+import BugOverviewPanel from '../components/bugs/BugOverviewPanel.vue'
+import BugFilterBar from '../components/bugs/BugFilterBar.vue'
+import BugListToolbar from '../components/bugs/BugListToolbar.vue'
+import BugCreateDialog from '../components/bugs/BugCreateDialog.vue'
+import BugExportDialog from '../components/bugs/BugExportDialog.vue'
+import BugQuickBuildDialog from '../components/bugs/BugQuickBuildDialog.vue'
 import { LabelText } from '../texts/LabelText'
 import { ButtonText } from '../texts/ButtonText'
 import { DescriptionText } from '../texts/DescriptionText'
@@ -350,13 +155,8 @@ import { getStatusBucket } from '../utils/bugDisplay'
 import { useFilterState, usePaginationState } from '../composables/useListState'
 import { useAsyncAction } from '../composables/useAsyncAction'
 import {
-  queryBugs,
-  createBug,
-  updateBug,
-  deleteBug as deleteBugApi,
-  getBugStats,
-  getBugFilterOptions,
-  importBugsFromCsvFile
+  queryBugs, createBug, updateBug, deleteBug as deleteBugApi,
+  getBugStats, getBugFilterOptions, importBugsFromCsvFile
 } from '../api/bugs'
 import { getTestProgressList } from '../api/testProgress'
 import { getWorkTasks } from '../api/workTasks'
@@ -369,6 +169,7 @@ const BT = ButtonText.bugs
 const BTCommon = ButtonText.common
 const DT = DescriptionText.bugs
 const { runAsync } = useAsyncAction()
+
 const loading = ref(false)
 const bugsList = ref([])
 const bugStats = ref({})
@@ -396,222 +197,43 @@ const workTaskOptions = ref([])
 const createdByOptions = ref([])
 const statusOptions = ref([])
 const bugBuildOptions = ref([])
-const {
-  pagination,
-  resetPage,
-  setPage,
-  setPageSize,
-  setTotal
-} = usePaginationState({
-  page: 1,
-  pageSize: 30,
-  total: 0
-})
 
-const {
-  filters,
-  resetFilters: resetFilterState
-} = useFilterState({
-  verification_zone: 'waiting_build',
-  status: null,
-  created_by: null
-})
+const { pagination, resetPage, setPage, setPageSize, setTotal } = usePaginationState({ page: 1, pageSize: 30, total: 0 })
+const { filters, resetFilters: resetFilterState } = useFilterState({ verification_zone: 'waiting_build', status: null, created_by: null })
 
 const createEmptyBugForm = () => ({
-  test_progress_id: null,
-  work_task_id: null,
-  external_cr_number: '',
-  created_by: '',
-  cr_assignee: '',
-  cr_created_on: '',
-  software_image_integration_build: '',
-  title: '',
-  severity: 'medium',
-  status: 'other'
+  test_progress_id: null, work_task_id: null, external_cr_number: '',
+  created_by: '', cr_assignee: '', cr_created_on: '',
+  software_image_integration_build: '', title: '', severity: 'medium', status: 'other'
 })
 
 const bugForm = ref(createEmptyBugForm())
 
-const bugPieOption = computed(() => ({
-  backgroundColor: 'transparent',
-  tooltip: {
-    trigger: 'item',
-    formatter: '{b}: {c} ({d}%)'
-  },
-  legend: {
-    bottom: 0,
-    left: 'center',
-    icon: 'circle',
-    textStyle: {
-      color: 'rgba(226, 232, 240, 0.9)'
-    }
-  },
-  series: [
-    {
-      type: 'pie',
-      radius: ['48%', '72%'],
-      center: ['50%', '42%'],
-      label: {
-        show: true,
-        color: '#f8fafc',
-        formatter: '{b}\n{d}%'
-      },
-      itemStyle: {
-        borderColor: 'rgba(8, 15, 33, 0.92)',
-        borderWidth: 4
-      },
-      data: [
-        {
-          value: bugStats.value.by_status?.analysis || 0,
-          name: 'Analysis',
-          itemStyle: { color: '#f97316' }
-        },
-        {
-          value: bugStats.value.by_status?.other || 0,
-          name: 'Other',
-          itemStyle: { color: '#60a5fa' }
-        },
-        {
-          value: bugStats.value.by_status?.fixed || 0,
-          name: 'Fixed',
-          itemStyle: { color: '#34d399' }
-        }
-      ]
-    }
-  ]
-}))
-
-const bugTrendOption = computed(() => {
-  const monthlyTrend = Array.isArray(bugStats.value.monthly_trend) ? bugStats.value.monthly_trend : []
-  return {
-    backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'axis'
-    },
-    legend: {
-      top: 0,
-      textStyle: {
-        color: 'rgba(226, 232, 240, 0.9)'
-      }
-    },
-    grid: {
-      left: 24,
-      right: 24,
-      top: 48,
-      bottom: 24,
-      containLabel: true
-    },
-    xAxis: {
-      type: 'category',
-      boundaryGap: false,
-      data: monthlyTrend.map(item => item.month),
-      axisLine: {
-        lineStyle: {
-          color: 'rgba(148, 163, 184, 0.4)'
-        }
-      },
-      axisLabel: {
-        color: 'rgba(226, 232, 240, 0.9)'
-      }
-    },
-    yAxis: {
-      type: 'value',
-      minInterval: 1,
-      axisLine: {
-        lineStyle: {
-          color: 'rgba(148, 163, 184, 0.4)'
-        }
-      },
-      splitLine: {
-        lineStyle: {
-          color: 'rgba(148, 163, 184, 0.12)'
-        }
-      },
-      axisLabel: {
-        color: 'rgba(226, 232, 240, 0.9)'
-      }
-    },
-    series: [
-      {
-        name: 'Total CR',
-        type: 'line',
-        smooth: true,
-        symbol: 'circle',
-        symbolSize: 8,
-        showSymbol: true,
-        data: monthlyTrend.map(item => item.total || 0),
-        lineStyle: {
-          width: 3,
-          color: '#60a5fa'
-        },
-        itemStyle: {
-          color: '#60a5fa'
-        },
-        areaStyle: {
-          color: 'rgba(96, 165, 250, 0.12)'
-        }
-      },
-      {
-        name: 'Fixed CR',
-        type: 'line',
-        smooth: true,
-        symbol: 'circle',
-        symbolSize: 8,
-        showSymbol: true,
-        data: monthlyTrend.map(item => item.fixed || 0),
-        lineStyle: {
-          width: 3,
-          color: '#34d399'
-        },
-        itemStyle: {
-          color: '#34d399'
-        },
-        areaStyle: {
-          color: 'rgba(52, 211, 153, 0.1)'
-        }
-      }
-    ]
-  }
-})
-
 const isPendingConfirmationBuild = (value) => String(value || '').trim().toLowerCase() === 'pending confirmation'
 
-const parseAvailableImages = (value = '') => {
-  return String(value || '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-}
+const parseAvailableImages = (value = '') =>
+  String(value || '').split(',').map(item => item.trim()).filter(Boolean)
 
 const getBugBuildOptions = (bug) => {
-  const options = []
-  const seen = new Set()
+  const options = [], seen = new Set()
   const addOption = (value) => {
     const text = String(value || '').trim()
     const key = text.toLowerCase()
-    if (!text || seen.has(key)) {
-      return
-    }
-    seen.add(key)
-    options.push(text)
+    if (!text || seen.has(key)) return
+    seen.add(key); options.push(text)
   }
-
   parseAvailableImages(bug?.available_images).forEach(addOption)
   addOption(bug?.software_image_integration_build)
   return options
 }
 
 const getQuickBuildOptions = (bug) => {
-  const options = []
-  const seen = new Set()
-  parseAvailableImages(bug?.available_images).forEach((item) => {
+  const options = [], seen = new Set()
+  parseAvailableImages(bug?.available_images).forEach(item => {
     const text = String(item || '').trim()
     const key = text.toLowerCase()
-    if (!text || isPendingConfirmationBuild(text) || seen.has(key)) {
-      return
-    }
-    seen.add(key)
-    options.push(text)
+    if (!text || isPendingConfirmationBuild(text) || seen.has(key)) return
+    seen.add(key); options.push(text)
   })
   return options
 }
@@ -624,219 +246,114 @@ const closeQuickBuildDialog = () => {
 }
 
 const openQuickBuildDialog = (bug) => {
-  if (!canEditBug()) {
-    return
-  }
-  if (!isPendingConfirmationBuild(bug?.software_image_integration_build)) {
-    return
-  }
-
+  if (!canEditBug() || !isPendingConfirmationBuild(bug?.software_image_integration_build)) return
   const options = getQuickBuildOptions(bug)
-  if (!options.length) {
-    ElMessage.warning(DT.toast.noAvailableImage)
-    return
-  }
-
+  if (!options.length) { ElMessage.warning(DT.toast.noAvailableImage); return }
   quickBuildTargetBug.value = bug
   quickBuildOptions.value = options
   quickBuildSelection.value = options[0]
   showQuickBuildDialog.value = true
 }
 
-const saveQuickBuildSelection = async () => {
+const saveQuickBuildSelection = async (selectedImage) => {
   const target = quickBuildTargetBug.value
-  const selectedImage = String(quickBuildSelection.value || '').trim()
-  if (!target?.id || !selectedImage) {
-    ElMessage.warning(DT.toast.selectImageRequired)
-    return
-  }
-
+  const image = String(selectedImage || '').trim()
+  if (!target?.id || !image) { ElMessage.warning(DT.toast.selectImageRequired); return }
   await runAsync(async () => {
-    await updateBug(target.id, toBugUpdatePayload(target, { software_image_integration_build: selectedImage }))
+    await updateBug(target.id, toBugUpdatePayload(target, { software_image_integration_build: image }))
     ElMessage.success(DT.toast.quickBuildUpdated)
     closeQuickBuildDialog()
     await loadFilterOptions()
     await loadData()
-  }, {
-    loadingRef: quickBuildSaving,
-    errorMessage: DT.toast.saveFailed
-  })
+  }, { loadingRef: quickBuildSaving, errorMessage: DT.toast.saveFailed })
 }
 
 const buildQueryParams = (override = {}) => {
   const page = override.page ?? pagination.value.page
   const pageSize = override.pageSize ?? pagination.value.pageSize
-  const params = {
-    skip: Math.max(0, (page - 1) * pageSize),
-    limit: pageSize,
-    recent_days: 365
-  }
-
+  const params = { skip: Math.max(0, (page - 1) * pageSize), limit: pageSize, recent_days: 365 }
   if (filters.value.verification_zone) params.verification_zone = filters.value.verification_zone
   if (filters.value.status) params.status = filters.value.status
   if (filters.value.created_by) params.created_by = filters.value.created_by
   if (route.query.testId) params.test_id = Number(route.query.testId)
-
   return params
 }
 
 const isVerifying = (row) => Boolean(verifyingMap.value?.[Number(row?.id)])
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
 const loadData = async () => {
   await runAsync(async () => {
     const data = await queryBugs(buildQueryParams())
     bugsList.value = data?.items || []
     setTotal(data?.total)
-
     if (bulkActionMode.value) {
-      const currentIds = new Set((bugsList.value || []).map((item) => Number(item.id)))
-      selectedBugIds.value = selectedBugIds.value.filter((id) => currentIds.has(Number(id)))
+      const currentIds = new Set((bugsList.value || []).map(item => Number(item.id)))
+      selectedBugIds.value = selectedBugIds.value.filter(id => currentIds.has(Number(id)))
     }
-    
-    // Load summary stats.
     const stats = await getBugStats({ recent_days: 365 })
     bugStats.value = stats
-  }, {
-    loadingRef: loading,
-    errorMessage: DT.toast.loadFailed
-  })
+  }, { loadingRef: loading, errorMessage: DT.toast.loadFailed })
 }
 
-const resetFilters = () => {
-  resetFilterState()
-  resetPage()
-}
+const resetFilters = () => { resetFilterState(); resetPage() }
+const handlePageSizeChange = (size) => { setPageSize(size); loadData() }
+const handlePageChange = (page) => { setPage(page); loadData() }
 
-const handlePageSizeChange = (size) => {
-  setPageSize(size)
-  loadData()
-}
-
-const handlePageChange = (page) => {
-  setPage(page)
-  loadData()
-}
-
-const enterBulkVerifyMode = () => {
-  bulkActionMode.value = 'verify'
-  selectedBugIds.value = []
-  bugTableSelectionResetKey.value += 1
-}
-
-const enterBulkDeleteMode = () => {
-  bulkActionMode.value = 'delete'
-  selectedBugIds.value = []
-  bugTableSelectionResetKey.value += 1
-}
-
-const cancelBulkActionMode = () => {
-  bulkActionMode.value = ''
-  selectedBugIds.value = []
-  bugTableSelectionResetKey.value += 1
-}
+const enterBulkVerifyMode = () => { bulkActionMode.value = 'verify'; selectedBugIds.value = []; bugTableSelectionResetKey.value += 1 }
+const enterBulkDeleteMode = () => { bulkActionMode.value = 'delete'; selectedBugIds.value = []; bugTableSelectionResetKey.value += 1 }
+const cancelBulkActionMode = () => { bulkActionMode.value = ''; selectedBugIds.value = []; bugTableSelectionResetKey.value += 1 }
 
 const handleBugSelectionChange = (rows) => {
-  if (!bulkActionMode.value) {
-    return
-  }
-  selectedBugIds.value = (rows || [])
-    .map((row) => Number(row.id))
-    .filter((id) => Number.isFinite(id))
+  if (!bulkActionMode.value) return
+  selectedBugIds.value = (rows || []).map(row => Number(row.id)).filter(id => Number.isFinite(id))
 }
 
 const confirmBulkVerify = async () => {
   const ids = [...selectedBugIds.value]
-  if (!ids.length) {
-    ElMessage.warning(DT.toast.selectBugsToVerify)
-    return
-  }
-
-  const bugMap = new Map((bugsList.value || []).map((item) => [Number(item.id), item]))
-
+  if (!ids.length) { ElMessage.warning(DT.toast.selectBugsToVerify); return }
+  const bugMap = new Map((bugsList.value || []).map(item => [Number(item.id), item]))
   try {
     await ElMessageBox.confirm(
       `${DT.toast.bulkVerifyConfirmPrefix} ${ids.length} ${DT.toast.bulkVerifyConfirmSuffix}`,
       DT.toast.bulkVerifyConfirmTitle,
-      {
-        confirmButtonText: BTCommon.confirm,
-        cancelButtonText: BTCommon.cancel,
-        type: 'warning'
-      }
+      { confirmButtonText: BTCommon.confirm, cancelButtonText: BTCommon.cancel, type: 'warning' }
     )
-  } catch {
-    return
-  }
-
+  } catch { return }
   bulkVerifying.value = true
   try {
-    const results = await Promise.allSettled(
-      ids.map((id) => {
-        const bug = bugMap.get(Number(id))
-        if (!bug) {
-          return Promise.reject(new Error(`Bug ${id} not found`))
-        }
-        return updateBug(id, toBugUpdatePayload(bug, { status: 'verified' }))
-      })
-    )
-    const successCount = results.filter((item) => item.status === 'fulfilled').length
+    const results = await Promise.allSettled(ids.map(id => {
+      const bug = bugMap.get(Number(id))
+      if (!bug) return Promise.reject(new Error(`Bug ${id} not found`))
+      return updateBug(id, toBugUpdatePayload(bug, { status: 'verified' }))
+    }))
+    const successCount = results.filter(item => item.status === 'fulfilled').length
     const failedCount = results.length - successCount
-
-    if (successCount > 0) {
-      ElMessage.success(`${DT.toast.bulkVerifySuccessPrefix} ${successCount} ${DT.toast.bulkVerifySuccessSuffix}`)
-    }
-    if (failedCount > 0) {
-      ElMessage.error(`${DT.toast.bulkVerifyFailedPrefix} ${failedCount} ${DT.toast.bulkVerifyFailedSuffix}`)
-    }
-
-    await loadFilterOptions()
-    await loadData()
-    cancelBulkActionMode()
-  } finally {
-    bulkVerifying.value = false
-  }
+    if (successCount > 0) ElMessage.success(`${DT.toast.bulkVerifySuccessPrefix} ${successCount} ${DT.toast.bulkVerifySuccessSuffix}`)
+    if (failedCount > 0) ElMessage.error(`${DT.toast.bulkVerifyFailedPrefix} ${failedCount} ${DT.toast.bulkVerifyFailedSuffix}`)
+    await loadFilterOptions(); await loadData(); cancelBulkActionMode()
+  } finally { bulkVerifying.value = false }
 }
 
 const confirmBulkDelete = async () => {
   const ids = [...selectedBugIds.value]
-  if (!ids.length) {
-    ElMessage.warning(DT.toast.selectBugsToDelete)
-    return
-  }
-
+  if (!ids.length) { ElMessage.warning(DT.toast.selectBugsToDelete); return }
   try {
     await ElMessageBox.confirm(
       `${DT.toast.bulkDeleteConfirmPrefix} ${ids.length} ${DT.toast.bulkDeleteConfirmSuffix}`,
       DT.toast.bulkDeleteConfirmTitle,
-      {
-        confirmButtonText: BTCommon.confirm,
-        cancelButtonText: BTCommon.cancel,
-        type: 'warning'
-      }
+      { confirmButtonText: BTCommon.confirm, cancelButtonText: BTCommon.cancel, type: 'warning' }
     )
-  } catch {
-    return
-  }
-
+  } catch { return }
   bulkDeleting.value = true
   try {
-    const results = await Promise.allSettled(ids.map((id) => deleteBugApi(id)))
-    const successCount = results.filter((item) => item.status === 'fulfilled').length
+    const results = await Promise.allSettled(ids.map(id => deleteBugApi(id)))
+    const successCount = results.filter(item => item.status === 'fulfilled').length
     const failedCount = results.length - successCount
-
-    if (successCount > 0) {
-      ElMessage.success(`${DT.toast.bulkDeleteSuccessPrefix} ${successCount} ${DT.toast.bulkDeleteSuccessSuffix}`)
-    }
-    if (failedCount > 0) {
-      ElMessage.error(`${DT.toast.bulkDeleteFailedPrefix} ${failedCount} ${DT.toast.bulkDeleteFailedSuffix}`)
-    }
-
-    await loadFilterOptions()
-    await loadData()
-    cancelBulkActionMode()
-  } finally {
-    bulkDeleting.value = false
-  }
+    if (successCount > 0) ElMessage.success(`${DT.toast.bulkDeleteSuccessPrefix} ${successCount} ${DT.toast.bulkDeleteSuccessSuffix}`)
+    if (failedCount > 0) ElMessage.error(`${DT.toast.bulkDeleteFailedPrefix} ${failedCount} ${DT.toast.bulkDeleteFailedSuffix}`)
+    await loadFilterOptions(); await loadData(); cancelBulkActionMode()
+  } finally { bulkDeleting.value = false }
 }
 
 const loadFilterOptions = async () => {
@@ -844,23 +361,13 @@ const loadFilterOptions = async () => {
     const options = await getBugFilterOptions()
     createdByOptions.value = options?.created_by || []
     statusOptions.value = options?.status || []
-  }, {
-    onError: () => {
-      createdByOptions.value = []
-      statusOptions.value = []
-    }
-  })
+  }, { onError: () => { createdByOptions.value = []; statusOptions.value = [] } })
 }
 
-const clearTestFilter = () => {
-  router.push({ path: '/bugs' })
-}
+const clearTestFilter = () => router.push({ path: '/bugs' })
 
 const openExportDialog = () => {
-  if (!pagination.value.total) {
-    ElMessage.warning(DT.toast.noDataToExport)
-    return
-  }
+  if (!pagination.value.total) { ElMessage.warning(DT.toast.noDataToExport); return }
   exportArea.value = filters.value.verification_zone || 'all'
   exportTopN.value = Math.min(30, Math.max(1, pagination.value.total))
   showExportDialog.value = true
@@ -868,181 +375,102 @@ const openExportDialog = () => {
 
 const escapeCsvCell = (value) => {
   const text = String(value ?? '')
-  if (text.includes('"') || text.includes(',') || text.includes('\n')) {
-    return `"${text.replaceAll('"', '""')}"`
-  }
+  if (text.includes('"') || text.includes(',') || text.includes('\n')) return `"${text.replaceAll('"', '""')}"`
   return text
 }
 
 const downloadCsv = (rows, areaKey) => {
-  const headers = [
-    'CR Number',
-    'Title',
-    'Status',
-    'Created By',
-    'CR Assignee',
-    'Created On',
-    'Software Image Integration Build'
-  ]
-
+  const headers = ['CR Number', 'Title', 'Status', 'Created By', 'CR Assignee', 'Created On', 'Software Image Integration Build']
   const lines = [headers.join(',')]
-  rows.forEach((item) => {
+  rows.forEach(item => {
     lines.push([
-      item.external_cr_number || '',
-      item.title || '',
-      item.status || '',
-      item.created_by || '',
-      item.cr_assignee || '',
-      item.cr_created_on || '',
+      item.external_cr_number || '', item.title || '', item.status || '',
+      item.created_by || '', item.cr_assignee || '', item.cr_created_on || '',
       item.software_image_integration_build || ''
     ].map(escapeCsvCell).join(','))
   })
-
   const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
-  link.href = url
-  link.download = `bugs_${areaKey}_top_${rows.length}.csv`
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+  link.href = url; link.download = `bugs_${areaKey}_top_${rows.length}.csv`
+  document.body.appendChild(link); link.click(); document.body.removeChild(link)
   URL.revokeObjectURL(url)
 }
 
-const handleExportTopN = async () => {
-  const desired = Math.max(1, Number(exportTopN.value || 1))
-  const limit = desired
-
+const handleExportTopN = async ({ area, topN }) => {
+  const limit = Math.max(1, Number(topN || 1))
   await runAsync(async () => {
-    const data = await queryBugs({
-      ...buildQueryParams({ page: 1, pageSize: limit }),
-      skip: 0,
-      limit,
-      verification_zone: exportArea.value || 'all'
-    })
+    const data = await queryBugs({ ...buildQueryParams({ page: 1, pageSize: limit }), skip: 0, limit, verification_zone: area || 'all' })
     const rows = data?.items || []
-    downloadCsv(rows, exportArea.value || 'all')
+    downloadCsv(rows, area || 'all')
     showExportDialog.value = false
     ElMessage.success(`${DT.toast.exportSuccessPrefix} ${rows.length} ${DT.toast.exportSuccessSuffix}`)
-  }, {
-    loadingRef: exporting,
-    errorMessage: DT.toast.exportFailed
-  })
+  }, { loadingRef: exporting, errorMessage: DT.toast.exportFailed })
 }
 
-const toBugUpdatePayload = (row, patch = {}) => {
-  return {
-    test_progress_id: row.test_progress_id || null,
-    work_task_id: row.work_task_id || null,
-    external_cr_number: row.external_cr_number || '',
-    created_by: row.created_by || '',
-    cr_assignee: row.cr_assignee || '',
-    cr_created_on: row.cr_created_on || '',
-    software_image_integration_build: row.software_image_integration_build || '',
-    title: row.title || '',
-    severity: row.severity || 'medium',
-    status: row.status || 'other',
-    ...patch
-  }
-}
+const toBugUpdatePayload = (row, patch = {}) => ({
+  test_progress_id: row.test_progress_id || null, work_task_id: row.work_task_id || null,
+  external_cr_number: row.external_cr_number || '', created_by: row.created_by || '',
+  cr_assignee: row.cr_assignee || '', cr_created_on: row.cr_created_on || '',
+  software_image_integration_build: row.software_image_integration_build || '',
+  title: row.title || '', severity: row.severity || 'medium', status: row.status || 'other',
+  ...patch
+})
 
 const markBugVerified = async (row) => {
   const bugId = Number(row?.id)
-  if (!bugId || isVerifying(row)) {
-    return
-  }
-
+  if (!bugId || isVerifying(row)) return
   verifyingMap.value[bugId] = true
   await runAsync(async () => {
     await delay(1000)
     await updateBug(row.id, toBugUpdatePayload(row, { status: 'verified' }))
     ElMessage.success(DT.toast.movedToVerified)
-    await loadFilterOptions()
-    await loadData()
-  }, {
-    errorMessage: DT.toast.saveFailed,
-    onFinally: () => {
-      verifyingMap.value[bugId] = false
-    }
-  })
+    await loadFilterOptions(); await loadData()
+  }, { errorMessage: DT.toast.saveFailed, onFinally: () => { verifyingMap.value[bugId] = false } })
 }
 
 const loadReferenceOptions = async () => {
   await runAsync(async () => {
-    const [tests, tasks] = await Promise.all([
-      getTestProgressList({ limit: 500 }),
-      getWorkTasks()
-    ])
-    testOptions.value = tests || []
-    workTaskOptions.value = tasks || []
-  }, {
-    onError: () => {
-      testOptions.value = []
-      workTaskOptions.value = []
-    }
-  })
+    const [tests, tasks] = await Promise.all([getTestProgressList({ limit: 500 }), getWorkTasks()])
+    testOptions.value = tests || []; workTaskOptions.value = tasks || []
+  }, { onError: () => { testOptions.value = []; workTaskOptions.value = [] } })
 }
 
 const importCsvBugs = async () => {
   if (!csvFileInput.value) return
-  csvFileInput.value.value = ''
-  csvFileInput.value.click()
+  csvFileInput.value.value = ''; csvFileInput.value.click()
 }
 
 const handleCsvFileSelected = async (event) => {
   const file = event?.target?.files?.[0]
   if (!file) return
-
   await runAsync(async () => {
     const result = await importBugsFromCsvFile(file)
-    ElMessage.success(
-      `${file.name}: imported ${result.imported}, updated ${result.updated}, skipped ${result.skipped}`
-    )
-    await loadFilterOptions()
-    await loadData()
-  }, {
-    loadingRef: importingCsv,
-    errorMessage: DT.toast.importFailed,
-    onFinally: () => {
-      if (event?.target) {
-        event.target.value = ''
-      }
-    }
-  })
+    ElMessage.success(`${file.name}: imported ${result.imported}, updated ${result.updated}, skipped ${result.skipped}`)
+    await loadFilterOptions(); await loadData()
+  }, { loadingRef: importingCsv, errorMessage: DT.toast.importFailed, onFinally: () => { if (event?.target) event.target.value = '' } })
 }
 
 const getTableRowClassName = ({ row }) => {
   const created = row?.cr_created_on ? new Date(row.cr_created_on) : null
   if (!created || Number.isNaN(created.getTime())) return ''
-  const now = new Date()
-  const diffDays = Math.floor((now.getTime() - created.getTime()) / 86400000)
-  if (diffDays > 14 && getStatusBucket(row.status) !== 'fixed') {
-    return 'stale-cr-row'
-  }
-  return ''
+  const diffDays = Math.floor((new Date().getTime() - created.getTime()) / 86400000)
+  return diffDays > 14 && getStatusBucket(row.status) !== 'fixed' ? 'stale-cr-row' : ''
 }
 
 const openCreateBugDialog = () => {
-  editingBug.value = null
-  bugBuildOptions.value = []
-  bugForm.value = createEmptyBugForm()
-  showCreateDialog.value = true
+  editingBug.value = null; bugBuildOptions.value = []; bugForm.value = createEmptyBugForm(); showCreateDialog.value = true
 }
 
 const editBug = (bug) => {
   editingBug.value = bug
   bugBuildOptions.value = getBugBuildOptions(bug)
   bugForm.value = {
-    test_progress_id: bug.test_progress_id,
-    work_task_id: bug.work_task_id || null,
-    external_cr_number: bug.external_cr_number || '',
-    created_by: bug.created_by || '',
-    cr_assignee: bug.cr_assignee || '',
-    cr_created_on: bug.cr_created_on || '',
+    test_progress_id: bug.test_progress_id, work_task_id: bug.work_task_id || null,
+    external_cr_number: bug.external_cr_number || '', created_by: bug.created_by || '',
+    cr_assignee: bug.cr_assignee || '', cr_created_on: bug.cr_created_on || '',
     software_image_integration_build: bug.software_image_integration_build || '',
-    title: bug.title,
-    severity: bug.severity,
-    status: bug.status
+    title: bug.title, severity: bug.severity, status: bug.status
   }
   showCreateDialog.value = true
 }
@@ -1056,169 +484,47 @@ const saveBug = async () => {
       await createBug(bugForm.value)
       ElMessage.success(DT.toast.createSuccess)
     }
-    showCreateDialog.value = false
-    editingBug.value = null
-    bugBuildOptions.value = []
+    showCreateDialog.value = false; editingBug.value = null; bugBuildOptions.value = []
     bugForm.value = createEmptyBugForm()
-    await loadFilterOptions()
-    loadData()
-  }, {
-    errorMessage: DT.toast.saveFailed
-  })
+    await loadFilterOptions(); loadData()
+  }, { errorMessage: DT.toast.saveFailed })
 }
 
 const deleteBug = async (id) => {
   try {
     await ElMessageBox.confirm(DT.toast.deleteConfirmContent, DT.toast.deleteConfirmTitle, {
-      confirmButtonText: BTCommon.confirm,
-      cancelButtonText: BTCommon.cancel,
-      type: 'warning'
+      confirmButtonText: BTCommon.confirm, cancelButtonText: BTCommon.cancel, type: 'warning'
     })
     await deleteBugApi(id)
     ElMessage.success(DT.toast.deleteSuccess)
-    await loadFilterOptions()
-    loadData()
+    await loadFilterOptions(); loadData()
   } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(DT.toast.deleteFailed)
-    }
+    if (error !== 'cancel') ElMessage.error(DT.toast.deleteFailed)
   }
 }
 
-onMounted(() => {
-  loadReferenceOptions()
-  loadFilterOptions()
-  loadData()
-})
+onMounted(() => { loadReferenceOptions(); loadFilterOptions(); loadData() })
 
-watch(() => route.query.testId, () => {
-  resetPage()
-  loadData()
-})
+watch(() => route.query.testId, () => { resetPage(); loadData() })
 
 watch(
   () => [filters.value.verification_zone, filters.value.status, filters.value.created_by],
-  () => {
-    resetPage()
-    loadData()
-  }
+  () => { resetPage(); loadData() }
 )
 </script>
 
 <style scoped>
-.bugs-container {
-  width: 100%;
-}
-
-.filter-form {
-  margin-bottom: 0;
-}
-
-.csv-file-input {
-  display: none;
-}
-
-.filter-select {
-  min-width: 180px;
-}
-
-:deep(.bugs-filter-popper .el-select-dropdown__item) {
-  white-space: nowrap;
-}
+.bugs-container { width: 100%; }
+.csv-file-input { display: none; }
+.bug-chart-card { margin-bottom: 24px; }
 
 .bugs-container :deep(.stale-cr-row > td.el-table__cell) {
   background: rgba(239, 68, 68, 0.14) !important;
 }
 
-.bug-list-toolbar {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.bug-chart-card {
-  margin-bottom: 24px;
-}
-
-.bug-overview-content {
+.bugs-list-footer {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.bugs-overview-grid {
-  display: grid;
-  grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.1fr);
-  gap: 14px;
-  align-items: stretch;
-}
-
-.bug-chart-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-}
-
-.bug-chart-panel__title {
-  color: #f8fafc;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.metrics-grid--compact {
-  gap: 10px;
-}
-
-.metrics-grid--compact :deep(.metric-card) {
-  padding: 8px 12px;
-  min-height: 68px;
-  border-radius: 14px;
-}
-
-.metrics-grid--compact :deep(.metric-card__label) {
-  font-size: 12px;
-}
-
-.metrics-grid--compact :deep(.metric-card__value) {
-  margin-top: 6px;
-  font-size: 20px;
-}
-
-.metrics-grid--compact :deep(.metric-card__meta) {
-  margin-top: 4px;
-  font-size: 10px;
-}
-
-.bug-pie-chart {
-  width: 100%;
-  height: 240px;
-}
-
-.bug-line-chart {
-  width: 100%;
-  height: 240px;
-}
-
-.quick-build-title {
-  line-height: 1.6;
-  word-break: break-word;
-}
-
-@media (max-width: 768px) {
-  .filter-form :deep(.el-form-item) {
-    margin-right: 0;
-    width: 100%;
-  }
-
-  .bugs-overview-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .bug-pie-chart,
-  .bug-line-chart {
-    height: 260px;
-  }
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 </style>
