@@ -36,12 +36,12 @@
             </div>
           </div>
           <div class="metrics-grid progress-overview-metrics progress-overview-metrics--tasks">
-            <article class="metric-card accent-blue">
+            <article class="metric-card accent-white">
               <div class="metric-card__label">Total Tasks</div>
               <div class="metric-card__value">{{ overviewStats.total }}</div>
               <div class="metric-card__meta">{{ DT.metricsMeta.total }}</div>
             </article>
-            <article class="metric-card accent-orange">
+            <article class="metric-card accent-yellow">
               <div class="metric-card__label">In Progress</div>
               <div class="metric-card__value">{{ overviewStats.inprogress }}</div>
               <div class="metric-card__meta">{{ DT.metricsMeta.running }}</div>
@@ -62,7 +62,7 @@
             </div>
           </div>
           <div class="metrics-grid progress-overview-metrics progress-overview-metrics--cases">
-            <article class="metric-card accent-cyan">
+            <article class="metric-card accent-white">
               <div class="metric-card__label">Total Cases</div>
               <div class="metric-card__value">{{ overviewStats.totalCases }}</div>
               <div class="metric-card__meta">All tracked verification cases</div>
@@ -72,7 +72,7 @@
               <div class="metric-card__value">{{ overviewStats.passedCases }}({{ overviewStats.passedRate }}%)</div>
               <div class="metric-card__meta">Validated successfully</div>
             </article>
-            <article class="metric-card accent-rose">
+            <article class="metric-card accent-red">
               <div class="metric-card__label">{{ LT.summary.failed }}</div>
               <div class="metric-card__value">{{ overviewStats.failedCases }}({{ overviewStats.failedRate }}%)</div>
               <div class="metric-card__meta">Need fix or retest</div>
@@ -879,12 +879,15 @@ onMounted(() => {
 .test-progress-container :deep(.metric-card__label) {
   text-align: center;
   font-size: 13px;
+  font-weight: 700;
+  color: rgba(226, 232, 240, 0.95);
   margin-bottom: 10px;
 }
 
 .test-progress-container :deep(.metric-card__value) {
   text-align: center;
-  font-size: 18px;
+  font-size: 20px;
+  font-weight: 700;
   line-height: 1.2;
 }
 

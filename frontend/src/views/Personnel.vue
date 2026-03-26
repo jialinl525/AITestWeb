@@ -177,6 +177,78 @@
       </el-table>
     </el-card>
 
+    <!-- Overlap Timeline for all members -->
+    <el-card v-if="allTimelineRange.start" class="section-card">
+      <template #header>
+        <div class="section-title">
+          <div class="section-title__main">
+            <h3>Overlap Timeline</h3>
+            <span class="section-title__meta">
+              {{ formatDate(allTimelineRange.start) }} ~ {{ formatDate(allTimelineRange.end) }}
+            </span>
+          </div>
+          <div class="overlap-timeline__legend">
+            <span class="legend-chip legend-chip--level-2">2 FR</span>
+            <span class="legend-chip legend-chip--level-3">3 FR</span>
+            <span class="legend-chip legend-chip--level-4">4+ FR</span>
+          </div>
+        </div>
+      </template>
+
+      <div class="all-members-timeline">
+        <div
+          v-for="person in workload"
+          :key="person.user_id"
+          class="member-timeline-row"
+        >
+          <button
+            type="button"
+            class="member-timeline-row__name member-link"
+            @click="viewMemberDetail(person.user_id)"
+          >
+            {{ person.display_name }}
+          </button>
+          <div class="member-timeline-row__track">
+            <div class="overlap-timeline__axis"></div>
+            <template v-if="getMemberTimelineSegments(person).length">
+              <el-tooltip
+                v-for="(segment, index) in getMemberTimelineSegments(person)"
+                :key="`${segment.overlap_start}-${segment.overlap_end}-${index}`"
+                placement="top"
+                effect="dark"
+              >
+                <template #content>
+                  <div class="overlap-tooltip">
+                    <div class="overlap-tooltip__date">
+                      {{ formatDate(segment.overlap_start) }} ~ {{ formatDate(segment.overlap_end) }}
+                    </div>
+                    <div
+                      v-for="task in segment.tasks"
+                      :key="task.id"
+                      class="overlap-tooltip__item"
+                    >
+                      {{ task.fr_number || 'FR' }} | {{ task.task_name || '-' }}
+                    </div>
+                  </div>
+                </template>
+                <div
+                  class="overlap-timeline__segment"
+                  :class="segment.colorClass"
+                  :style="segment.style"
+                ></div>
+              </el-tooltip>
+            </template>
+            <div v-else class="member-timeline-row__empty">No overlaps</div>
+          </div>
+        </div>
+
+        <div class="all-members-timeline__scale">
+          <span>{{ formatDate(allTimelineRange.start) }}</span>
+          <span>{{ formatDate(allTimelineRange.end) }}</span>
+        </div>
+      </div>
+    </el-card>
+
     <el-dialog v-model="showAllocationDialog" :title="`${LT.dialog.taskMandayAllocation} - ${allocationTask.test_name || ''}`" width="980px">
       <div class="muted-text allocation-summary">{{ LT.dialog.totalTaskManday }}: {{ Number(allocationTask.total_estimated_hours || 0).toFixed(1) }} manday</div>
       <el-table :data="allocationRows" size="small" stripe>
@@ -252,7 +324,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onErrorCaptured, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { LabelText } from '../texts/LabelText'
@@ -450,6 +522,56 @@ const toggleExpand = (row) => {
 const viewMemberDetail = (userId) => {
   router.push({ path: `/personnel/${userId}` })
 }
+
+// ── Overlap Timeline (all members) ──────────────────────────────────────────
+
+const allTimelineRange = computed(() => {
+  const allSegments = workload.value.flatMap(person => person.overlaps || [])
+  if (!allSegments.length) return { start: null, end: null, totalDays: 0 }
+
+  const starts = allSegments.map(item => new Date(item.overlap_start))
+  const ends = allSegments.map(item => new Date(item.overlap_end))
+  const start = new Date(Math.min(...starts))
+  const end = new Date(Math.max(...ends))
+  const totalDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1)
+
+  return { start, end, totalDays }
+})
+
+const getSegmentColorClass = (count) => {
+  if (count >= 4) return 'overlap-timeline__segment--level-4'
+  if (count >= 3) return 'overlap-timeline__segment--level-3'
+  return 'overlap-timeline__segment--level-2'
+}
+
+const getMemberTimelineSegments = (person) => {
+  const { start, totalDays } = allTimelineRange.value
+  if (!start || !totalDays) return []
+
+  const rangeStartTime = start.getTime()
+  const dayMs = 1000 * 60 * 60 * 24
+
+  return (person.overlaps || []).map(item => {
+    const segmentStart = new Date(item.overlap_start)
+    const segmentEnd = new Date(item.overlap_end)
+    const startOffset = Math.max(0, Math.round((segmentStart.getTime() - rangeStartTime) / dayMs))
+    const segmentDays = Math.max(1, Math.round((segmentEnd.getTime() - segmentStart.getTime()) / dayMs) + 1)
+    const left = (startOffset / totalDays) * 100
+    const width = (segmentDays / totalDays) * 100
+
+    return {
+      ...item,
+      colorClass: getSegmentColorClass(Number(item.concurrent_task_count || 0)),
+      style: {
+        left: `${left}%`,
+        width: `${Math.max(width, 1.5)}%`
+      },
+      tasks: Array.isArray(item.tasks) ? item.tasks : []
+    }
+  })
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 
 const resetCreateUserForm = () => {
   createUserForm.value = {
@@ -748,5 +870,126 @@ onBeforeUnmount(() => {})
   gap: 8px;
 }
 
+/* ── Overlap Timeline ─────────────────────────────────────────────────────── */
 
+.all-members-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.member-timeline-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.member-timeline-row__name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+
+.member-timeline-row__track {
+  position: relative;
+  height: 24px;
+}
+
+.member-timeline-row__empty {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: rgba(148, 163, 184, 0.6);
+}
+
+.overlap-timeline__axis {
+  position: absolute;
+  inset: 7px 0;
+  border-radius: 999px;
+  background: rgba(51, 65, 85, 0.9);
+}
+
+.overlap-timeline__segment {
+  position: absolute;
+  top: 2px;
+  height: 20px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.45);
+  cursor: default;
+}
+
+.overlap-timeline__segment--level-2 {
+  background: linear-gradient(90deg, rgba(250, 204, 21, 0.92), rgba(249, 115, 22, 0.92));
+}
+
+.overlap-timeline__segment--level-3 {
+  background: linear-gradient(90deg, rgba(249, 115, 22, 0.96), rgba(239, 68, 68, 0.96));
+}
+
+.overlap-timeline__segment--level-4 {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.96), rgba(127, 29, 29, 0.96));
+}
+
+.all-members-timeline__scale {
+  display: flex;
+  justify-content: space-between;
+  padding-left: 132px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.overlap-timeline__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(248, 250, 252, 0.96);
+}
+
+.legend-chip--level-2 {
+  background: rgba(245, 158, 11, 0.85);
+}
+
+.legend-chip--level-3 {
+  background: rgba(249, 115, 22, 0.88);
+}
+
+.legend-chip--level-4 {
+  background: rgba(220, 38, 38, 0.88);
+}
+
+.overlap-tooltip {
+  max-width: 420px;
+}
+
+.overlap-tooltip__date {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(253, 230, 138, 0.96);
+}
+
+.overlap-tooltip__item {
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(248, 250, 252, 0.96);
+  word-break: break-word;
+}
 </style>

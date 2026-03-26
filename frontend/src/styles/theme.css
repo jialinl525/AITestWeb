@@ -249,8 +249,16 @@ a {
   color: #fdba74;
 }
 
+.accent-yellow .metric-card__value {
+  color: #fbbf24;
+}
+
 .accent-red .metric-card__value {
-  color: #fda4af;
+  color: #f87171;
+}
+
+.accent-white .metric-card__value {
+  color: #f8fafc;
 }
 
 .table-title-link {
