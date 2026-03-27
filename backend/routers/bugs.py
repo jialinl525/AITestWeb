@@ -329,6 +329,8 @@ def _apply_bug_filters(query, status: Optional[str] = None, severity: Optional[s
 
 
 def _apply_recent_bug_date_filter(query, recent_days: int = 365):
+    if recent_days <= 0:
+        return query  # No date filter – return all records
     threshold = datetime.now() - timedelta(days=recent_days)
     return query.filter(models.Bug.cr_created_on.isnot(None), models.Bug.cr_created_on >= threshold)
 
@@ -663,10 +665,40 @@ def get_bugs_by_test(test_id: int, db: Session = Depends(get_db)):
 
 @router.get("/stats/summary")
 def get_bug_stats(recent_days: int = 365, db: Session = Depends(get_db)):
-    """Get bug summary statistics with exactly 12 complete calendar months of trend data."""
-    # Calculate the start of the 12-month window: first day of the month 11 months ago.
-    # e.g. if today is 2026-04-20, threshold = 2025-05-01 → 12 months: May 2025 ~ Apr 2026
+    """Get bug summary statistics.
+
+    Summary metrics (total, by_status, by_severity) respect the ``recent_days``
+    parameter (0 = all time).  The monthly trend chart always covers the last
+    12 complete calendar months so it remains useful regardless of the filter.
+    """
     today = datetime.now()
+
+    # ── Summary stats: respect the requested time range ──────────────────────
+    stats_query = db.query(models.Bug)
+    if recent_days > 0:
+        stats_threshold = today - timedelta(days=recent_days)
+        stats_query = stats_query.filter(
+            models.Bug.cr_created_on.isnot(None),
+            models.Bug.cr_created_on >= stats_threshold,
+        )
+
+    total_bugs = stats_query.count()
+    status_rows = (
+        stats_query.with_entities(models.Bug.status, func.count(models.Bug.id))
+        .group_by(models.Bug.status)
+        .all()
+    )
+    status_summary = {"fixed": 0, "analysis": 0, "other": 0}
+    for raw_status, count in status_rows:
+        bucket = _normalize_status(raw_status)
+        status_summary[bucket] += count
+
+    critical_bugs = stats_query.filter(models.Bug.severity == "critical").count()
+    high_bugs = stats_query.filter(models.Bug.severity == "high").count()
+    medium_bugs = stats_query.filter(models.Bug.severity == "medium").count()
+    low_bugs = stats_query.filter(models.Bug.severity == "low").count()
+
+    # ── Monthly trend: always the last 12 complete calendar months ────────────
     trend_start_month = today.month - 11
     trend_start_year = today.year
     if trend_start_month <= 0:
@@ -674,36 +706,11 @@ def get_bug_stats(recent_days: int = 365, db: Session = Depends(get_db)):
         trend_start_year -= 1
     trend_threshold = datetime(trend_start_year, trend_start_month, 1)
 
-    # Use the same 12-month window for all stats
-    base_query = db.query(models.Bug).filter(
+    trend_query = db.query(models.Bug).filter(
         models.Bug.cr_created_on.isnot(None),
-        models.Bug.cr_created_on >= trend_threshold
+        models.Bug.cr_created_on >= trend_threshold,
     )
-
-    total_bugs = base_query.count()
-    status_rows = (
-        base_query.with_entities(models.Bug.status, func.count(models.Bug.id))
-        .group_by(models.Bug.status)
-        .all()
-    )
-    status_summary = {
-        "fixed": 0,
-        "analysis": 0,
-        "other": 0,
-    }
-    for raw_status, count in status_rows:
-        bucket = _normalize_status(raw_status)
-        status_summary[bucket] += count
-
-    critical_bugs = base_query.filter(models.Bug.severity == "critical").count()
-    high_bugs = base_query.filter(models.Bug.severity == "high").count()
-    medium_bugs = base_query.filter(models.Bug.severity == "medium").count()
-    low_bugs = base_query.filter(models.Bug.severity == "low").count()
-
-    trend_rows = (
-        base_query.with_entities(models.Bug.cr_created_on, models.Bug.status)
-        .all()
-    )
+    trend_rows = trend_query.with_entities(models.Bug.cr_created_on, models.Bug.status).all()
 
     monthly_map = {}
     for created_on, raw_status in trend_rows:
@@ -716,7 +723,6 @@ def get_bug_stats(recent_days: int = 365, db: Session = Depends(get_db)):
         if _normalize_status(raw_status) == "fixed":
             monthly_map[month_key]["fixed"] += 1
 
-    # Generate all 12 month keys to ensure a complete, gap-free trend
     month_keys = []
     for i in range(12):
         m = trend_start_month + i
@@ -742,7 +748,7 @@ def get_bug_stats(recent_days: int = 365, db: Session = Depends(get_db)):
             "critical": critical_bugs,
             "high": high_bugs,
             "medium": medium_bugs,
-            "low": low_bugs
+            "low": low_bugs,
         },
-        "monthly_trend": monthly_trend
+        "monthly_trend": monthly_trend,
     }

@@ -7,6 +7,8 @@
     :row-key="resolveRowKey"
     v-loading="loading"
     stripe
+    header-align="center"
+    align="center"
     @selection-change="handleSelectionChange"
   >
     <el-table-column v-if="enableSelection" type="selection" width="52" />
@@ -26,7 +28,7 @@
       </template>
     </el-table-column>
 
-    <el-table-column prop="title" label="Title" min-width="340">
+    <el-table-column prop="title" label="Title" min-width="340" align="center">
       <template #default="{ row }">
         <el-tooltip
           :content="row.title || ''"

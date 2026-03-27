@@ -50,6 +50,7 @@
         @view="viewDetail"
         @view-bugs="viewBugs"
         @edit="editTest"
+        @pass="handlePassFR"
         @page-change="handlePageChange"
       />
     </el-card>
@@ -67,7 +68,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import TestOverviewPanel from '../components/testProgress/TestOverviewPanel.vue'
 import TestProgressTable from '../components/testProgress/TestProgressTable.vue'
@@ -199,6 +200,41 @@ const handlePageChange = (page) => { currentPage.value = page }
 
 const viewDetail = (testId) => router.push({ path: `/test-progress/${testId}` })
 const viewBugs = (testId) => router.push({ path: '/bugs', query: { testId } })
+
+const handlePassFR = async (test) => {
+  const frLabel = test.fr_number ? `FR ${test.fr_number}` : test.test_name
+  try {
+    await ElMessageBox.confirm(
+      `Mark "${frLabel}" as Completed and set completion date to today?`,
+      'Confirm Pass',
+      {
+        confirmButtonText: ButtonText.common.confirm,
+        cancelButtonText: ButtonText.common.cancel,
+        type: 'warning'
+      }
+    )
+  } catch {
+    return
+  }
+
+  const today = new Date()
+  const yyyy = today.getFullYear()
+  const mm = String(today.getMonth() + 1).padStart(2, '0')
+  const dd = String(today.getDate()).padStart(2, '0')
+  const todayStr = `${yyyy}-${mm}-${dd}`
+
+  await runAsync(async () => {
+    await updateTestProgress(test.id, {
+      ...test,
+      status: 'Completed',
+      completion_date: todayStr,
+      test_owners: test.test_owners || '',
+      test_owners_list: undefined
+    })
+    ElMessage.success(`${frLabel} marked as Completed.`)
+    loadData()
+  }, { errorMessage: DT.toast.saveFailed })
+}
 
 const editTest = (test) => {
   editingTest.value = test

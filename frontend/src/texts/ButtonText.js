@@ -27,11 +27,15 @@ export const ButtonText = {
   testProgress: {
     newTest: 'New Test',
     details: 'Details',
-    bugs: 'Bugs'
+    bugs: 'Bugs',
+    pass: 'Pass'
   },
   testDetail: {
     backToList: 'Back to List',
-    manageBugs: 'Manage Bugs'
+    edit: 'Edit FR',
+    manageBugs: 'Manage Bugs',
+    bulkVerify: 'Bulk Verify',
+    confirmBulkVerify: 'Confirm Verify'
   },
   personnel: {
     allocateManday: 'Allocate Manday',

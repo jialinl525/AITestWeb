@@ -1,4 +1,30 @@
-/* Global button style management: shared base + 5 variants. */
+/*
+ * ═══════════════════════════════════════════════════════════════
+ *  GLOBAL BUTTON STYLE SYSTEM  –  frontend/src/styles/buttons.css
+ * ═══════════════════════════════════════════════════════════════
+ *
+ *  All <el-button> elements share the base radius, weight and
+ *  transition defined below.  Use one of the five semantic
+ *  variant classes to set the colour:
+ *
+ *  ┌─────────────┬──────────────────────────────┬──────────────────────────┐
+ *  │  Class       │  Colour                      │  Typical use             │
+ *  ├─────────────┼──────────────────────────────┼──────────────────────────┤
+ *  │ btn-style-1  │ Light cyan / sky gradient    │ Highlight / info action  │
+ *  │ btn-style-2  │ Blue → purple gradient       │ Primary / confirm action │
+ *  │ btn-style-3  │ Dark glass (neutral)         │ Secondary / cancel       │
+ *  │ btn-style-4  │ Yellow → orange gradient     │ Warning / caution        │
+ *  │ btn-style-5  │ Rose → red gradient          │ Danger / delete          │
+ *  └─────────────┴──────────────────────────────┴──────────────────────────┘
+ *
+ *  Usage:
+ *    <el-button class="btn-style-2">Save</el-button>
+ *    <el-button class="btn-style-3">Cancel</el-button>
+ *
+ *  Do NOT combine with Element Plus type="primary/success/danger" –
+ *  the btn-style-* class already sets all colours.
+ * ═══════════════════════════════════════════════════════════════
+ */
 
 :root {
   --btn-radius: 12px;

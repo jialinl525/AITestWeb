@@ -1,5 +1,13 @@
 <template>
   <el-form :inline="true" class="filter-form">
+    <el-form-item :label="LT.filter.timeRange">
+      <el-select v-model="localFilters.recent_days" class="filter-select" style="width: 160px" popper-class="bugs-filter-popper">
+        <el-option :label="LT.timeRangeOptions.all" :value="0" />
+        <el-option :label="LT.timeRangeOptions.oneYear" :value="365" />
+        <el-option :label="LT.timeRangeOptions.thirtyDays" :value="30" />
+        <el-option :label="LT.timeRangeOptions.oneWeek" :value="7" />
+      </el-select>
+    </el-form-item>
     <el-form-item :label="LT.filter.verification">
       <el-select v-model="localFilters.verification_zone" class="filter-select" style="width: 180px" popper-class="bugs-filter-popper">
         <el-option :label="LT.verificationOptions.all" value="all" />

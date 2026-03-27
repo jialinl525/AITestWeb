@@ -42,7 +42,14 @@ export const LabelText = {
     filter: {
       verification: 'Verification',
       status: 'Status',
-      createdBy: 'Created By'
+      createdBy: 'Created By',
+      timeRange: 'Time Range'
+    },
+    timeRangeOptions: {
+      all: 'All Time',
+      oneYear: 'Last 1 Year',
+      thirtyDays: 'Last 30 Days',
+      oneWeek: 'Last 1 Week'
     },
     verificationOptions: {
       all: 'All',
@@ -158,6 +165,8 @@ export const LabelText = {
       l2DueDate: 'L2 Due Date',
       l4Cases: 'L4 Cases',
       l4DueDate: 'L4 Due Date',
+      startDate: 'Start Date',
+      completionDate: 'Completion Date',
       progress: 'Progress'
     },
     statusText: {

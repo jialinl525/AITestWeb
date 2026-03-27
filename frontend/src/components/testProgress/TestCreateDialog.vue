@@ -79,6 +79,13 @@
         <el-date-picker v-model="form.l4_due_date" type="date" value-format="YYYY-MM-DD" :placeholder="DT.placeholders.l4DueDate" style="width: 100%" />
       </el-form-item>
 
+      <el-form-item :label="LT.form.startDate">
+        <el-date-picker v-model="form.start_date" type="date" value-format="YYYY-MM-DD" placeholder="YYYY-MM-DD" style="width: 100%" />
+      </el-form-item>
+      <el-form-item :label="LT.form.completionDate">
+        <el-date-picker v-model="form.completion_date" type="date" value-format="YYYY-MM-DD" placeholder="YYYY-MM-DD" style="width: 100%" />
+      </el-form-item>
+
       <el-form-item>
         <span class="form-helper">{{ DT.helper.inputFormat }}</span>
       </el-form-item>

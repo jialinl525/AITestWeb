@@ -24,7 +24,7 @@
         <div class="section-title">
           <div class="section-title__main">
             <h3>Bug Overview</h3>
-            <span class="section-title__meta">Bugs with CR created date >= today - 365 days and monthly CR trend</span>
+            <span class="section-title__meta">{{ overviewMetaText }}</span>
           </div>
         </div>
       </template>
@@ -121,7 +121,7 @@
       :selection="quickBuildSelection"
       :saving="quickBuildSaving"
       @save="saveQuickBuildSelection"
-      @update:model-value="if (!$event) closeQuickBuildDialog()"
+        @update:model-value="!$event && closeQuickBuildDialog()"
     />
 
     <BugCreateDialog
@@ -137,7 +137,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
@@ -199,7 +199,15 @@ const statusOptions = ref([])
 const bugBuildOptions = ref([])
 
 const { pagination, resetPage, setPage, setPageSize, setTotal } = usePaginationState({ page: 1, pageSize: 30, total: 0 })
-const { filters, resetFilters: resetFilterState } = useFilterState({ verification_zone: 'waiting_build', status: null, created_by: null })
+const { filters, resetFilters: resetFilterState } = useFilterState({ verification_zone: 'waiting_build', status: null, created_by: null, recent_days: 365 })
+
+const overviewMetaText = computed(() => {
+  const days = filters.value.recent_days
+  if (!days || days <= 0) return 'All-time bug statistics and monthly CR trend (last 12 months)'
+  if (days === 7) return 'Bug statistics for the last 7 days and monthly CR trend (last 12 months)'
+  if (days === 30) return 'Bug statistics for the last 30 days and monthly CR trend (last 12 months)'
+  return 'Bug statistics for the last 365 days and monthly CR trend (last 12 months)'
+})
 
 const createEmptyBugForm = () => ({
   test_progress_id: null, work_task_id: null, external_cr_number: '',
@@ -271,7 +279,8 @@ const saveQuickBuildSelection = async (selectedImage) => {
 const buildQueryParams = (override = {}) => {
   const page = override.page ?? pagination.value.page
   const pageSize = override.pageSize ?? pagination.value.pageSize
-  const params = { skip: Math.max(0, (page - 1) * pageSize), limit: pageSize, recent_days: 365 }
+  const recentDays = override.recent_days ?? filters.value.recent_days ?? 365
+  const params = { skip: Math.max(0, (page - 1) * pageSize), limit: pageSize, recent_days: recentDays }
   if (filters.value.verification_zone) params.verification_zone = filters.value.verification_zone
   if (filters.value.status) params.status = filters.value.status
   if (filters.value.created_by) params.created_by = filters.value.created_by
@@ -291,7 +300,7 @@ const loadData = async () => {
       const currentIds = new Set((bugsList.value || []).map(item => Number(item.id)))
       selectedBugIds.value = selectedBugIds.value.filter(id => currentIds.has(Number(id)))
     }
-    const stats = await getBugStats({ recent_days: 365 })
+    const stats = await getBugStats({ recent_days: filters.value.recent_days ?? 365 })
     bugStats.value = stats
   }, { loadingRef: loading, errorMessage: DT.toast.loadFailed })
 }
@@ -508,7 +517,7 @@ onMounted(() => { loadReferenceOptions(); loadFilterOptions(); loadData() })
 watch(() => route.query.testId, () => { resetPage(); loadData() })
 
 watch(
-  () => [filters.value.verification_zone, filters.value.status, filters.value.created_by],
+  () => [filters.value.verification_zone, filters.value.status, filters.value.created_by, filters.value.recent_days],
   () => { resetPage(); loadData() }
 )
 </script>

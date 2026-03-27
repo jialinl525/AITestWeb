@@ -88,8 +88,8 @@
         <template #default="{ row }">
           <div class="table-action-group">
             <el-button size="small" @click="emit('view', row.id)">{{ BT.details }}</el-button>
-            <el-button size="small" @click="emit('view-bugs', row.id)">{{ BT.bugs }}</el-button>
-            <el-button v-if="canEdit" size="small" type="primary" @click="emit('edit', row)">{{ BTCommon.edit }}</el-button>
+            <el-button v-if="canEdit" size="small" class="btn-style-2" @click="emit('pass', row)">{{ BT.pass }}</el-button>
+            <el-button v-if="canEdit" size="small" @click="emit('edit', row)">{{ BTCommon.edit }}</el-button>
           </div>
         </template>
       </el-table-column>
@@ -125,7 +125,7 @@ defineProps({
   currentPage: { type: Number, default: 1 }
 })
 
-const emit = defineEmits(['view', 'view-bugs', 'edit', 'page-change'])
+const emit = defineEmits(['view', 'view-bugs', 'edit', 'pass', 'page-change'])
 
 const LT = LabelText.testProgress
 const BT = ButtonText.testProgress

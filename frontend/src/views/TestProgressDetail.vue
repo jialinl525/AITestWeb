@@ -7,8 +7,8 @@
         <p class="page-hero__desc">{{ DT.hero }}</p>
       </div>
       <div class="page-hero__actions">
-        <el-button @click="goBack">{{ BT.backToList }}</el-button>
-        <el-button v-if="canEditBug()" type="primary" @click="goToBugs">{{ BT.manageBugs }}</el-button>
+        <el-button v-if="canCreateOrEditTest()" class="btn-style-4" @click="openEditDialog">{{ BT.edit }}</el-button>
+        <el-button v-if="canEditBug()" class="btn-style-2" @click="goToBugs">{{ BT.manageBugs }}</el-button>
       </div>
     </section>
 
@@ -31,32 +31,34 @@
         </div>
 
         <div class="metrics-grid detail-metrics">
-          <article class="metric-card accent-blue">
-            <div class="metric-card__label">{{ LT.metrics.currentProgress }}</div>
-            <div class="metric-card__value">{{ testDetail.progress }}%</div>
-            <div class="metric-card__meta">{{ DT.metricsMeta.currentProgress }}</div>
-          </article>
-          <article class="metric-card accent-green">
-            <div class="metric-card__label">{{ LT.metrics.passedTotal }}</div>
-            <div class="metric-card__value">{{ testDetail.passed_cases }}/{{ testDetail.total_cases }}</div>
-            <div class="metric-card__meta">{{ DT.metricsMeta.passedTotal }}</div>
-          </article>
-          <article class="metric-card accent-red">
-            <div class="metric-card__label">{{ LT.metrics.linkedBugs }}</div>
-            <div class="metric-card__value">{{ testDetail.bugs?.length || 0 }}</div>
-            <div class="metric-card__meta">{{ DT.metricsMeta.linkedBugs }}</div>
-          </article>
-          <article class="metric-card accent-purple">
-            <div class="metric-card__label">{{ LT.metrics.estimatedManday }}</div>
-            <div class="metric-card__value metric-card__value--small">{{ formatManday(testDetail.estimated_hours) }}</div>
-            <div class="metric-card__meta">{{ DT.metricsMeta.estimatedManday }}</div>
-          </article>
-        </div>
-
-        <div class="detail-people" v-if="testDetail.test_owners || testDetail.developers">
-          <span class="people-item"><strong>{{ LT.people.frNumber }}: </strong>{{ testDetail.fr_number || '-' }}</span>
-          <span class="people-item"><strong>{{ LT.people.testers }}: </strong>{{ testDetail.test_owners || '-' }}</span>
-          <span class="people-item"><strong>{{ LT.people.developers }}: </strong>{{ testDetail.developers || '-' }}</span>
+          <MetricCard
+            :label="LT.metrics.currentProgress"
+            :value="`${testDetail.progress}%`"
+            :meta="DT.metricsMeta.currentProgress"
+            accent="blue"
+            size="sm"
+          />
+          <MetricCard
+            :label="LT.metrics.passedTotal"
+            :value="`${testDetail.passed_cases}/${testDetail.total_cases}`"
+            :meta="DT.metricsMeta.passedTotal"
+            accent="green"
+            size="sm"
+          />
+          <MetricCard
+            :label="LT.metrics.linkedBugs"
+            :value="testDetail.bugs?.length || 0"
+            :meta="DT.metricsMeta.linkedBugs"
+            accent="red"
+            size="sm"
+          />
+          <MetricCard
+            :label="LT.metrics.estimatedManday"
+            :value="formatManday(testDetail.estimated_hours)"
+            :meta="DT.metricsMeta.estimatedManday"
+            accent="purple"
+            size="sm"
+          />
         </div>
 
         <el-card class="section-card detail-inner-card">
@@ -159,18 +161,34 @@
           </el-descriptions>
         </el-card>
 
-        <el-card class="section-card detail-inner-card">
+        <el-card id="linked-bugs-section" class="section-card detail-inner-card">
           <template #header>
             <div class="section-title">
               <div class="section-title__main">
                 <h3>{{ LT.section.linkedBugs }} ({{ testDetail.bugs?.length || 0 }})</h3>
                 <span class="section-title__meta">{{ DT.sectionMeta.linkedBugs }}</span>
               </div>
+              <div v-if="canEditBug()" class="bug-bulk-toolbar">
+                <template v-if="!bulkVerifyMode">
+                  <el-button class="btn-style-2" @click="enterBulkVerifyMode">{{ BT.bulkVerify }}</el-button>
+                </template>
+                <template v-else>
+                  <el-button class="btn-style-3" @click="cancelBulkVerifyMode">{{ BTCommon.cancel }}</el-button>
+                  <el-button
+                    class="btn-style-2"
+                    :disabled="!totalSelectedCount"
+                    :loading="bulkVerifying"
+                    @click="confirmBulkVerify"
+                  >
+                    {{ BT.confirmBulkVerify }} ({{ totalSelectedCount }})
+                  </el-button>
+                </template>
+              </div>
             </div>
           </template>
           <div class="bug-zone-stack">
             <section class="bug-zone-item">
-              <div class="bug-zone-item__title">{{ LT.bugZones.pendingBuild }} ({{ pendingBuildBugs.length }})</div>
+              <div class="bug-zone-item__title">{{ LT.bugZones.pendingBuild }} ({{ allPendingBuildBugs.length }})</div>
               <BugTable
                 :bugs="pendingBuildBugs"
                 :empty-text="DT.tableEmptyBugs"
@@ -178,16 +196,28 @@
                 :show-verify-action="canEditBug()"
                 :editable="canEditBug()"
                 :deletable="canDeleteBug()"
+                :enable-selection="bulkVerifyMode"
+                :clear-selection-key="bugTableSelectionResetKey"
                 :is-verifying="isVerifying"
                 :row-class-name="getBugTableRowClassName"
+                @selection-change="handlePendingBuildSelectionChange"
                 @verify="markBugVerified"
                 @edit="editBug"
                 @delete="deleteBug"
               />
+              <div v-if="allPendingBuildBugs.length > BUG_ZONE_PAGE_SIZE" class="bug-zone-pagination">
+                <el-pagination
+                  :current-page="pendingBuildPage"
+                  :page-size="BUG_ZONE_PAGE_SIZE"
+                  :total="allPendingBuildBugs.length"
+                  layout="total, prev, pager, next"
+                  @current-change="pendingBuildPage = $event"
+                />
+              </div>
             </section>
 
             <section class="bug-zone-item">
-              <div class="bug-zone-item__title">{{ LT.bugZones.pendingVerification }} ({{ pendingVerificationBugs.length }})</div>
+              <div class="bug-zone-item__title">{{ LT.bugZones.pendingVerification }} ({{ allPendingVerificationBugs.length }})</div>
               <BugTable
                 :bugs="pendingVerificationBugs"
                 :empty-text="DT.tableEmptyBugs"
@@ -195,16 +225,28 @@
                 :show-verify-action="canEditBug()"
                 :editable="canEditBug()"
                 :deletable="canDeleteBug()"
+                :enable-selection="bulkVerifyMode"
+                :clear-selection-key="bugTableSelectionResetKey"
                 :is-verifying="isVerifying"
                 :row-class-name="getBugTableRowClassName"
+                @selection-change="handlePendingVerificationSelectionChange"
                 @verify="markBugVerified"
                 @edit="editBug"
                 @delete="deleteBug"
               />
+              <div v-if="allPendingVerificationBugs.length > BUG_ZONE_PAGE_SIZE" class="bug-zone-pagination">
+                <el-pagination
+                  :current-page="pendingVerificationPage"
+                  :page-size="BUG_ZONE_PAGE_SIZE"
+                  :total="allPendingVerificationBugs.length"
+                  layout="total, prev, pager, next"
+                  @current-change="pendingVerificationPage = $event"
+                />
+              </div>
             </section>
 
             <section class="bug-zone-item">
-              <div class="bug-zone-item__title">{{ LT.bugZones.verified }} ({{ verifiedBugs.length }})</div>
+              <div class="bug-zone-item__title">{{ LT.bugZones.verified }} ({{ allVerifiedBugs.length }})</div>
               <BugTable
                 :bugs="verifiedBugs"
                 :empty-text="DT.tableEmptyBugs"
@@ -212,12 +254,24 @@
                 :show-verify-action="canEditBug()"
                 :editable="canEditBug()"
                 :deletable="canDeleteBug()"
+                :enable-selection="bulkVerifyMode"
+                :clear-selection-key="bugTableSelectionResetKey"
                 :is-verifying="isVerifying"
                 :row-class-name="getBugTableRowClassName"
+                @selection-change="handleVerifiedSelectionChange"
                 @verify="markBugVerified"
                 @edit="editBug"
                 @delete="deleteBug"
               />
+              <div v-if="allVerifiedBugs.length > BUG_ZONE_PAGE_SIZE" class="bug-zone-pagination">
+                <el-pagination
+                  :current-page="verifiedPage"
+                  :page-size="BUG_ZONE_PAGE_SIZE"
+                  :total="allVerifiedBugs.length"
+                  layout="total, prev, pager, next"
+                  @current-change="verifiedPage = $event"
+                />
+              </div>
             </section>
           </div>
         </el-card>
@@ -293,11 +347,19 @@
           </el-form>
           <template #footer>
             <el-button class="btn-style-3" @click="showBugDialog = false">{{ BTCommon.cancel }}</el-button>
-            <el-button class="btn-style-2" type="primary" @click="saveBug">{{ BTCommon.save }}</el-button>
+            <el-button class="btn-style-2" @click="saveBug">{{ BTCommon.save }}</el-button>
           </template>
         </el-dialog>
       </template>
     </el-card>
+
+    <TestCreateDialog
+      v-model="showEditDialog"
+      :form="editForm"
+      :is-editing="true"
+      :owner-options="ownerOptions"
+      @save="saveEdit"
+    />
   </div>
 </template>
 
@@ -306,10 +368,12 @@ import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import BugTable from '../components/bugs/BugTable.vue'
-import { getTestProgressDetail, getTestProgressList } from '../api/testProgress'
+import MetricCard from '../components/common/MetricCard.vue'
+import TestCreateDialog from '../components/testProgress/TestCreateDialog.vue'
+import { getTestProgressDetail, getTestProgressList, updateTestProgress } from '../api/testProgress'
 import { updateBug, deleteBug as deleteBugApi } from '../api/bugs'
 import { getWorkTasks } from '../api/workTasks'
-import { canEditBug, canDeleteBug } from '../stores/auth'
+import { canEditBug, canDeleteBug, canCreateOrEditTest } from '../stores/auth'
 import { LabelText } from '../texts/LabelText'
 import { ButtonText } from '../texts/ButtonText'
 import { DescriptionText } from '../texts/DescriptionText'
@@ -331,11 +395,25 @@ const loading = ref(false)
 const testDetail = ref(null)
 const DAYS_TO_WARNING = 3
 const showBugDialog = ref(false)
+const showEditDialog = ref(false)
 const editingBug = ref(null)
+const ownerOptions = ref([])
+const editForm = ref({})
 const verifyingMap = ref({})
 const testOptions = ref([])
 const workTaskOptions = ref([])
 const bugBuildOptions = ref([])
+
+// ── Bulk verify state ────────────────────────────────────────────────────────
+const bulkVerifyMode = ref(false)
+const bulkVerifying = ref(false)
+const bugTableSelectionResetKey = ref(0)
+const pendingBuildSelectedIds = ref([])
+const pendingVerificationSelectedIds = ref([])
+const verifiedSelectedIds = ref([])
+const totalSelectedCount = computed(
+  () => pendingBuildSelectedIds.value.length + pendingVerificationSelectedIds.value.length + verifiedSelectedIds.value.length
+)
 
 const bugForm = ref({
   test_progress_id: null,
@@ -351,9 +429,34 @@ const bugForm = ref({
 })
 
 const linkedBugs = computed(() => testDetail.value?.bugs || [])
-const pendingBuildBugs = computed(() => linkedBugs.value.filter((row) => getVerificationZone(row, { includeDiscardedZone: false }) === 'waiting_build'))
-const pendingVerificationBugs = computed(() => linkedBugs.value.filter((row) => getVerificationZone(row, { includeDiscardedZone: false }) === 'pending_verification'))
-const verifiedBugs = computed(() => linkedBugs.value.filter((row) => getVerificationZone(row, { includeDiscardedZone: false }) === 'verified'))
+const allPendingBuildBugs = computed(() => linkedBugs.value.filter((row) => getVerificationZone(row, { includeDiscardedZone: false }) === 'waiting_build'))
+const allPendingVerificationBugs = computed(() => linkedBugs.value.filter((row) => getVerificationZone(row, { includeDiscardedZone: false }) === 'pending_verification'))
+const allVerifiedBugs = computed(() => linkedBugs.value.filter((row) => getVerificationZone(row, { includeDiscardedZone: false }) === 'verified'))
+
+// ── Per-zone pagination ───────────────────────────────────────────────────────
+const BUG_ZONE_PAGE_SIZE = 30
+const pendingBuildPage = ref(1)
+const pendingVerificationPage = ref(1)
+const verifiedPage = ref(1)
+
+const pendingBuildBugs = computed(() => {
+  const start = (pendingBuildPage.value - 1) * BUG_ZONE_PAGE_SIZE
+  return allPendingBuildBugs.value.slice(start, start + BUG_ZONE_PAGE_SIZE)
+})
+const pendingVerificationBugs = computed(() => {
+  const start = (pendingVerificationPage.value - 1) * BUG_ZONE_PAGE_SIZE
+  return allPendingVerificationBugs.value.slice(start, start + BUG_ZONE_PAGE_SIZE)
+})
+const verifiedBugs = computed(() => {
+  const start = (verifiedPage.value - 1) * BUG_ZONE_PAGE_SIZE
+  return allVerifiedBugs.value.slice(start, start + BUG_ZONE_PAGE_SIZE)
+})
+
+const resetZonePages = () => {
+  pendingBuildPage.value = 1
+  pendingVerificationPage.value = 1
+  verifiedPage.value = 1
+}
 
 const parseAvailableImages = (value = '') => {
   return String(value || '')
@@ -385,18 +488,63 @@ const loadDetail = async () => {
   if (!id) return
   await runAsync(async () => {
     testDetail.value = await getTestProgressDetail(id)
+    resetZonePages()
   }, {
     loadingRef: loading,
     errorMessage: DT.toast.loadFailed
   })
 }
 
-const goBack = () => {
-  router.push('/test-progress')
+const openEditDialog = () => {
+  if (!testDetail.value) return
+  const d = testDetail.value
+  editForm.value = {
+    fr_number: d.fr_number || '',
+    test_name: d.test_name || '',
+    model_name: d.model_name || '',
+    description: d.description || '',
+    config_method: d.config_method || '',
+    test_owners_list: d.test_owners ? d.test_owners.split(',').map(s => s.trim()).filter(Boolean) : [],
+    developers: d.developers || '',
+    status: d.status || 'not_started',
+    l0_passed_cases: d.l0_passed_cases ?? 0,
+    l0_failed_cases: d.l0_failed_cases ?? 0,
+    l0_total_cases: d.l0_total_cases ?? 0,
+    l0_due_date: d.l0_due_date || null,
+    l2_passed_cases: d.l2_passed_cases ?? 0,
+    l2_failed_cases: d.l2_failed_cases ?? 0,
+    l2_total_cases: d.l2_total_cases ?? 0,
+    l2_due_date: d.l2_due_date || null,
+    l4_passed_cases: d.l4_passed_cases ?? 0,
+    l4_failed_cases: d.l4_failed_cases ?? 0,
+    l4_total_cases: d.l4_total_cases ?? 0,
+    l4_due_date: d.l4_due_date || null,
+    start_date: d.start_date || null,
+    completion_date: d.completion_date || null
+  }
+  ownerOptions.value = editForm.value.test_owners_list
+  showEditDialog.value = true
+}
+
+const saveEdit = async () => {
+  const id = route.params.id
+  if (!id) return
+  await runAsync(async () => {
+    const payload = {
+      ...editForm.value,
+      test_owners: (editForm.value.test_owners_list || []).join(', ')
+    }
+    delete payload.test_owners_list
+    await updateTestProgress(id, payload)
+    ElMessage.success(DTBug.toast.updateSuccess)
+    showEditDialog.value = false
+    await loadDetail()
+  }, { errorMessage: DTBug.toast.saveFailed })
 }
 
 const goToBugs = () => {
-  router.push({ path: '/bugs', query: { testId: route.params.id } })
+  const el = document.getElementById('linked-bugs-section')
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 const getStatusType = (status) => getTaskStatusTagType(status)
@@ -580,9 +728,93 @@ const getCompletionDate = (row) => {
   return formatDueDate(row?.completion_date)
 }
 
+// ── Bulk verify logic ────────────────────────────────────────────────────────
+const enterBulkVerifyMode = () => {
+  bulkVerifyMode.value = true
+  pendingBuildSelectedIds.value = []
+  pendingVerificationSelectedIds.value = []
+  verifiedSelectedIds.value = []
+  bugTableSelectionResetKey.value += 1
+}
+
+const cancelBulkVerifyMode = () => {
+  bulkVerifyMode.value = false
+  pendingBuildSelectedIds.value = []
+  pendingVerificationSelectedIds.value = []
+  verifiedSelectedIds.value = []
+  bugTableSelectionResetKey.value += 1
+}
+
+const handlePendingBuildSelectionChange = (rows) => {
+  if (!bulkVerifyMode.value) return
+  pendingBuildSelectedIds.value = (rows || []).map(r => Number(r.id)).filter(id => Number.isFinite(id))
+}
+
+const handlePendingVerificationSelectionChange = (rows) => {
+  if (!bulkVerifyMode.value) return
+  pendingVerificationSelectedIds.value = (rows || []).map(r => Number(r.id)).filter(id => Number.isFinite(id))
+}
+
+const handleVerifiedSelectionChange = (rows) => {
+  if (!bulkVerifyMode.value) return
+  verifiedSelectedIds.value = (rows || []).map(r => Number(r.id)).filter(id => Number.isFinite(id))
+}
+
+const confirmBulkVerify = async () => {
+  const allIds = [
+    ...pendingBuildSelectedIds.value,
+    ...pendingVerificationSelectedIds.value,
+    ...verifiedSelectedIds.value
+  ]
+  if (!allIds.length) { ElMessage.warning(DTBug.toast.selectBugsToVerify); return }
+
+  const allBugs = linkedBugs.value
+  const bugMap = new Map(allBugs.map(b => [Number(b.id), b]))
+
+  try {
+    await ElMessageBox.confirm(
+      `${DTBug.toast.bulkVerifyConfirmPrefix} ${allIds.length} ${DTBug.toast.bulkVerifyConfirmSuffix}`,
+      DTBug.toast.bulkVerifyConfirmTitle,
+      { confirmButtonText: BTCommon.confirm, cancelButtonText: BTCommon.cancel, type: 'warning' }
+    )
+  } catch { return }
+
+  bulkVerifying.value = true
+  try {
+    const results = await Promise.allSettled(allIds.map(id => {
+      const bug = bugMap.get(Number(id))
+      if (!bug) return Promise.reject(new Error(`Bug ${id} not found`))
+      return updateBug(id, toBugUpdatePayload(bug, { status: 'verified' }))
+    }))
+    const successCount = results.filter(r => r.status === 'fulfilled').length
+    const failedCount = results.length - successCount
+    if (successCount > 0) ElMessage.success(`${DTBug.toast.bulkVerifySuccessPrefix} ${successCount} ${DTBug.toast.bulkVerifySuccessSuffix}`)
+    if (failedCount > 0) ElMessage.error(`${DTBug.toast.bulkVerifyFailedPrefix} ${failedCount} ${DTBug.toast.bulkVerifyFailedSuffix}`)
+    await loadDetail()
+    cancelBulkVerifyMode()
+  } finally {
+    bulkVerifying.value = false
+  }
+}
+
 onMounted(() => {
   loadReferenceOptions()
   loadDetail()
 })
 </script>
 <style scoped src="../styles/detail-shared.css"></style>
+<style scoped>
+.bug-bulk-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bug-zone-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+</style>
